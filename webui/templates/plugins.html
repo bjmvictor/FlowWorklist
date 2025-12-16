@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-plug text-3xl text-indigo-500"></i>
+      <h2 class="text-4xl font-bold" data-i18n="plugins">Plugins</h2>
+    </div>
+    <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
+      <i class="fas fa-arrow-left"></i>
+      <span data-i18n="back">Back</span>
+    </a>
+  </div>
+
+  <!-- Description -->
+  <p class="text-gray-600 dark:text-gray-400">
+    <span data-i18n="plugins_desc">Install or remove optional plugins that extend functionality (e.g., database drivers). Current DB type:</span>
+    <span class="font-semibold"> {{ current|upper if current else 'N/A' }}</span>.
+  </p>
+
+  <!-- Plugins List -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% for p in plugins %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="text-xl font-semibold">{{ p.label }}</div>
+          <div class="text-sm text-gray-500"><span data-i18n="module">Module</span>: <code>{{ p.module }}</code> • <span data-i18n="package">Package</span>: <code>{{ p.package }}</code></div>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-bold {{ 'bg-green-100 text-green-700' if p.installed else 'bg-red-100 text-red-700' }}">
+          <span data-i18n="installed" class="{{ '' if p.installed else 'hidden' }}">Installed</span>
+          <span data-i18n="not_installed" class="{{ 'hidden' if p.installed else '' }}">Not installed</span>
+        </span>
+      </div>
+      <div class="flex items-center gap-3">
+        {% if p.installed %}
+          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return confirm('Uninstall {{ p.label }}?');">
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+              <i class="fas fa-trash"></i>
+              <span data-i18n="uninstall">Uninstall</span>
+            </button>
+          </form>
+        {% else %}
+          <form action="/plugin/install/{{ p.id }}" method="POST">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+              <i class="fas fa-download"></i>
+              <span data-i18n="install">Install</span>
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+# Virtual Environment
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Application
+logs/
+service_logs/
+*.log
+service.pid
+mwl_server.lock
+service_state.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration (local)
+config.local.json
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.temp
+*~

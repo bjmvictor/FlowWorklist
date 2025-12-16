@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+  <!-- Logs Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-file-alt text-3xl text-blue-500"></i>
+      <h2 class="text-4xl font-bold" data-i18n="logs">Log Files</h2>
+    </div>
+    <div class="flex items-center gap-3">
+      <form action="/logs/clear" method="POST" onsubmit="return confirm('Clear all log files?');">
+        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
+          <i class="fas fa-trash"></i>
+          <span data-i18n="clear_logs">Clear Logs</span>
+        </button>
+      </form>
+      <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
+        <i class="fas fa-arrow-left"></i>
+        <span data-i18n="back">Back</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Log Files List -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+    {% if logs %}
+      <div class="divide-y dark:divide-gray-700">
+        {% for log in logs %}
+          <a
+            href="/logs/view?path={{ log.path|urlencode }}"
+            class="block p-6 hover:bg-blue-50 dark:hover:bg-gray-700 transition border-l-4 border-transparent hover:border-blue-500"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <i class="fas fa-scroll text-2xl text-gray-500"></i>
+                <div>
+                  <p class="font-semibold text-lg">{{ log.name }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+                </div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-400 text-2xl"></i>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="p-8 text-center">
+        <i class="fas fa-inbox text-4xl text-gray-400 mb-4 block"></i>
+        <p class="text-gray-500 dark:text-gray-400" data-i18n="no_logs">No logs found</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

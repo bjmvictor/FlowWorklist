@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+  <!-- Status Card with Gradient -->
+  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-700 dark:to-indigo-800 rounded-xl shadow-lg p-8 text-white">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-blue-100 mb-2">
+          <i class="fas fa-circle-notch mr-2"></i> <span data-i18n="service_status">Service Status</span>
+        </h2>
+        <p class="text-4xl font-bold flex items-center gap-3">
+          <span id="service-status" class="{% if status.running %}text-green-300{% else %}text-red-300{% endif %}">
+            {% if status.running %}
+              <i class="fas fa-check-circle"></i> <span data-i18n="running">Running</span>
+            {% else %}
+              <i class="fas fa-times-circle"></i> <span data-i18n="stopped">Stopped</span>
+            {% endif %}
+          </span>
+        </p>
+        {% if status.pid %}<p class="text-blue-100 mt-2">PID: <span class="font-mono">{{ status.pid }}</span></p>{% endif %}
+      </div>
+      <div class="text-6xl opacity-20">
+        <i class="fas fa-server"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Control Buttons - 3 Column Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Start Button -->
+    <button 
+      onclick="executeAction('start')" 
+      class="bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800 text-white font-bold py-6 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4"
+    >
+      <i class="fas fa-play text-4xl"></i>
+      <span class="text-lg" data-i18n="start">Start</span>
+      <span class="text-xs opacity-75" data-i18n="service_label">Service</span>
+    </button>
+
+    <!-- Stop Button -->
+    <button 
+      onclick="executeAction('stop')" 
+      class="bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-white font-bold py-6 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4"
+    >
+      <i class="fas fa-stop text-4xl"></i>
+      <span class="text-lg" data-i18n="stop">Stop</span>
+      <span class="text-xs opacity-75" data-i18n="service_label">Service</span>
+    </button>
+
+    <!-- Restart Button -->
+    <button 
+      onclick="executeAction('restart')" 
+      class="bg-blue-500 hover:bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-800 text-white font-bold py-6 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4"
+    >
+      <i class="fas fa-sync text-4xl"></i>
+      <span class="text-lg" data-i18n="restart">Restart</span>
+      <span class="text-xs opacity-75" data-i18n="service_label">Service</span>
+    </button>
+  </div>
+
+  <!-- Recent Logs Card -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+    <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <i class="fas fa-history text-blue-500"></i>
+      <span data-i18n="recent_logs">Recent Logs</span>
+    </h3>
+    <div class="space-y-3 max-h-96 overflow-y-auto">
+      {% if logs %}
+        {% for log in logs[:10] %}
+          <a 
+            href="/logs/view?path={{ log.path|urlencode }}" 
+            class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-600 transition border-l-4 border-blue-500"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-file-alt text-gray-500"></i>
+                <div>
+                  <p class="font-semibold">{{ log.name }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+                </div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-400"></i>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <p class="text-gray-500 dark:text-gray-400 text-center py-8">
+          <i class="fas fa-inbox text-2xl mb-2 block"></i>
+          <span data-i18n="no_logs">No logs yet</span>
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  async function executeAction(action) {
+    try {
+      // Mostrar notificação de início
+      const startingMsg = {
+        'start': t('service_starting'),
+        'stop': t('service_stopping'),
+        'restart': t('service_restarting')
+      };
+      showNotification(startingMsg[action], 'info');
+
+      const response = await fetch(`/action/${action}`, {method: 'POST'});
+      const data = await response.json();
+
+      if (data.ok) {
+        // Sucesso
+        const successMsg = {
+          'start': t('service_started'),
+          'stop': t('service_stopped'),
+          'restart': t('service_restarted')
+        };
+        showNotification(successMsg[action], 'success', 5000);
+        
+        // Mostrar detalhes do log se disponível
+        if (data.log) {
+          showNotification(`📋 Log: ${data.log.split('\\').pop()}`, 'info', 3000);
+        }
+        
+        // Recarregar status
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        // Erro
+        const errorMsg = {
+          'start': t('service_start_failed'),
+          'stop': t('service_stop_failed'),
+          'restart': t('service_restart_failed')
+        };
+        const msg = data.msg ? `${errorMsg[action]}: ${data.msg}` : errorMsg[action];
+        showNotification(msg, 'error', 5000);
+      }
+    } catch (err) {
+      showNotification(`⚠️ ${err.message}`, 'error', 5000);
+    }
+  }
+</script>
+{% endblock %}

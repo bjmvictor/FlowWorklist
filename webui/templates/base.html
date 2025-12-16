@@ -1,0 +1,692 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FlowWorklist</title>
+    <link rel="icon" type="image/svg+xml" href="/static/brand/logo-mark.svg">
+    <link rel="alternate icon" type="image/png" href="/static/brand/logo-mark.png">
+    <meta name="theme-color" content="#1e3a8a">
+    <script>
+      // Configure Tailwind dark mode to use the 'class' strategy
+      tailwind = window.tailwind || {};
+      tailwind.config = { darkMode: 'class' };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      .notification { position: fixed; top: 80px; right: 20px; z-index: 1000; max-width: 400px; }
+      @keyframes slideIn { from { transform: translateX(450px); } to { transform: translateX(0); } }
+      .notification-enter { animation: slideIn 0.3s ease-out; }
+      @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(450px); } }
+      .notification-exit { animation: slideOut 0.3s ease-out; }
+      
+      /* Badge de notificação não lida */
+      .notification-badge { 
+        position: absolute; 
+        top: -5px; 
+        right: -5px; 
+        background: #ef4444; 
+        color: white; 
+        border-radius: 50%; 
+        width: 22px; 
+        height: 22px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 12px; 
+        font-weight: bold;
+      }
+      
+      /* Estilo do dropdown de notificações */
+      .notification-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 380px;
+        max-height: 500px;
+        background: white;
+        dark:background: #1f2937;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        margin-top: 8px;
+        display: none;
+        overflow-x: hidden;
+      }
+      
+      .notification-dropdown.show {
+        display: block;
+      }
+      
+      .notification-item {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      
+      .notification-item:hover {
+        background-color: #f3f4f6;
+      }
+      
+      .dark .notification-item:hover {
+        background-color: #374151;
+      }
+      
+      .notification-item.unread {
+        background-color: #dbeafe;
+      }
+      
+      .dark .notification-item.unread {
+        background-color: #1e40af;
+      }
+      
+      .notification-item-time {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+    </style>
+    <script>
+      // Inicializar tema ANTES de renderizar a página
+      (function() {
+        const isDark = localStorage.getItem('theme') === 'dark' || 
+                      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        }
+      })();
+      // Sistema de tradução COMPLETO com múltiplos idiomas
+      const translations = {
+        pt: {
+          'home': 'Início', 'config': 'Configuração', 'logs': 'Logs', 'tests': 'Testes', 'plugins': 'Plugins',
+          'start': 'Iniciar', 'stop': 'Parar', 'restart': 'Reiniciar', 'recent_logs': 'Logs Recentes', 'back': 'Voltar',
+          'save': 'Salvar', 'clear': 'Limpar', 'clear_logs': 'Limpar Logs', 'no_logs': 'Nenhum log encontrado', 'language': 'Idioma',
+          'theme': 'Tema', 'status': 'Status', 'service_status': 'Status do Serviço', 'service_label': 'Serviço',
+          'service_starting': 'Serviço iniciando...', 'service_started': 'Serviço iniciado com sucesso', 'service_start_failed': 'Falha ao iniciar serviço',
+          'service_stopping': 'Serviço parando...', 'service_stopped': 'Serviço parado com sucesso', 'service_stop_failed': 'Falha ao parar serviço',
+          'service_restarting': 'Serviço reiniciando...', 'service_restarted': 'Serviço reiniciado com sucesso', 'service_restart_failed': 'Falha ao reiniciar serviço',
+          'test_dcm_echo': 'Teste DICOM C-ECHO', 'test_dcm_find': 'Teste DICOM C-FIND', 'test_dcm_worklist': 'Teste DICOM Worklist',
+          'desc_echo': 'Teste a associação DICOM e a resposta do servidor.', 'desc_find': 'Pesquise itens da worklist no banco de dados.', 'desc_worklist': 'Teste resposta DICOM C-FIND worklist com dados de pacientes reais.',
+          'desc_db_conn': 'Teste a conectividade do banco de dados', 'desc_status': 'Verifique se o serviço está acessível e respondendo.',
+          'check_availability': 'Verificar Disponibilidade', 'test_connection': 'Testar Conexão', 'test_worklist': 'Resposta da Worklist', 'install_db_driver': 'Instalar Plugin de Banco', 'install_pynetdicom': 'Instalar Plugin pynetdicom', 'install_pynetdicom': 'Instalar Plugin pynetdicom',
+          'running_test': 'Executando teste...', 'test_passed': 'Teste passou', 'test_failed': 'Teste falhou', 'output': 'Saída', 'copy': 'Copiar',
+          'running': 'Em execução', 'stopped': 'Parado', 'notifications': 'Notificações', 'no_notifications': 'Nenhuma notificação',
+          'server_settings': 'CONFIGURAÇÕES DO SERVIDOR', 'aet_title': 'AE Title', 'aet_title_full': 'Título DICOM Application Entity',
+          'listen_all_interfaces': 'Escutar em todas as interfaces', 'host': 'Host/IP', 'port': 'Porta', 'server_port_full': 'Porta do servidor DICOM',
+          'client_aet': 'Client AE', 'client_aet_title_full': 'Título AE do cliente esperado', 'database_settings': 'CONFIGURAÇÕES DO BANCO DE DADOS',
+          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PORTA/DB (ex.: 192.168.1.3:1521/PRD)',
+          'database_user': 'Usuário', 'database_password': 'Senha', 'database_query': 'Query', 'sql_hint': 'Consulta SQL que retorna os itens da Worklist',
+          'sql_guide_title': 'Guia de colunas esperadas pela Worklist', 'error_missing_module': 'Erro: Módulo não encontrado',
+          'test_database': 'Teste de Banco de Dados', 'test_status': 'Teste de Status', 'test_console': 'Console de Testes',
+          'plugins_desc': 'Instale ou remova plugins opcionais que estendem funcionalidades (ex.: drivers de banco). Tipo de banco atual:',
+          'module': 'Módulo', 'package': 'Pacote', 'install': 'Instalar', 'uninstall': 'Desinstalar',
+          'installed': 'Instalado', 'not_installed': 'Não instalado', 'current': 'atual', 'console_ready': '$ Pronto para testes...'
+        },
+        en: {
+          'home': 'Home', 'config': 'Config', 'logs': 'Logs', 'tests': 'Tests', 'plugins': 'Plugins',
+          'start': 'Start', 'stop': 'Stop', 'restart': 'Restart', 'recent_logs': 'Recent Logs', 'back': 'Back',
+          'save': 'Save', 'clear': 'Clear', 'clear_logs': 'Clear Logs', 'no_logs': 'No logs found', 'language': 'Language',
+          'theme': 'Theme', 'status': 'Status', 'service_status': 'Service Status', 'service_label': 'Service',
+          'service_starting': 'Service starting...', 'service_started': 'Service started successfully', 'service_start_failed': 'Failed to start service',
+          'service_stopping': 'Service stopping...', 'service_stopped': 'Service stopped successfully', 'service_stop_failed': 'Failed to stop service',
+          'service_restarting': 'Service restarting...', 'service_restarted': 'Service restarted successfully', 'service_restart_failed': 'Failed to restart service',
+          'test_dcm_echo': 'DICOM C-ECHO Test', 'test_dcm_find': 'DICOM C-FIND Test', 'test_dcm_worklist': 'DICOM Worklist Test',
+          'desc_echo': 'Test the DICOM association and echo response from the server.', 'desc_find': 'Search for worklist items in the DICOM database.', 'desc_worklist': 'Test DICOM C-FIND worklist response with actual patient data.',
+          'desc_db_conn': 'Test database connectivity', 'desc_status': 'Check if the service is accessible and responding.',
+          'check_availability': 'Check Availability', 'test_connection': 'Test Connection', 'test_worklist': 'Worklist Response', 'install_db_driver': 'Install DB Driver', 'install_pynetdicom': 'Install pynetdicom Plugin', 'install_pynetdicom': 'Install pynetdicom Plugin',
+          'running_test': 'Running test...', 'test_passed': 'Test passed', 'test_failed': 'Test failed', 'output': 'Output', 'copy': 'Copy',
+          'running': 'Running', 'stopped': 'Stopped', 'notifications': 'Notifications', 'no_notifications': 'No notifications',
+          'server_settings': 'SERVER SETTINGS', 'aet_title': 'AE Title', 'aet_title_full': 'DICOM Application Entity Title',
+          'listen_all_interfaces': 'Listen on all interfaces', 'host': 'Host/IP', 'port': 'Port', 'server_port_full': 'DICOM server port',
+          'client_aet': 'Client AE', 'client_aet_title_full': 'Expected client AE Title', 'database_settings': 'DATABASE SETTINGS',
+          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (e.g., 192.168.1.3:1521/PRD)',
+          'database_user': 'User', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'SQL query that returns Worklist items',
+          'sql_guide_title': 'Guide to expected Worklist columns', 'error_missing_module': 'Error: Module not found',
+          'test_database': 'Database Test', 'test_status': 'Status Test', 'test_console': 'Test Console',
+          'plugins_desc': 'Install or remove optional plugins that extend functionality (e.g., database drivers). Current DB type:',
+          'module': 'Module', 'package': 'Package', 'install': 'Install', 'uninstall': 'Uninstall',
+          'installed': 'Installed', 'not_installed': 'Not installed', 'current': 'current', 'console_ready': '$ Ready for tests...'
+        },
+        fr: {
+          'home': 'Accueil', 'config': 'Configuration', 'logs': 'Journaux', 'tests': 'Tests', 'plugins': 'Plugins',
+          'start': 'Démarrer', 'stop': 'Arrêter', 'restart': 'Redémarrer', 'recent_logs': 'Journaux Récents', 'back': 'Retour',
+          'save': 'Enregistrer', 'clear': 'Effacer', 'clear_logs': 'Effacer les journaux', 'no_logs': 'Aucun journal trouvé', 'language': 'Langue',
+          'theme': 'Thème', 'status': 'Statut', 'service_status': 'Statut du Service', 'service_label': 'Service',
+          'service_starting': 'Service en cours de démarrage...', 'service_started': 'Service démarré avec succès', 'service_start_failed': 'Échec du démarrage du service',
+          'service_stopping': 'Service en cours d\'arrêt...', 'service_stopped': 'Service arrêté avec succès', 'service_stop_failed': 'Échec de l\'arrêt du service',
+          'service_restarting': 'Service en cours de redémarrage...', 'service_restarted': 'Service redémarré avec succès', 'service_restart_failed': 'Échec du redémarrage du service',
+          'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND',
+          'desc_echo': 'Testez l\'association DICOM et la réponse d\'écho du serveur.', 'desc_find': 'Recherchez des éléments de la liste de travail dans la base de données DICOM.',
+          'desc_db_conn': 'Testez la connectivité de la base de données', 'desc_status': 'Vérifiez si le service est accessible et répond.',
+          'check_availability': 'Vérifier la disponibilité', 'test_connection': 'Tester la connexion', 'install_db_driver': 'Installer le plugin de base de données', 'install_pynetdicom': 'Installer le plugin pynetdicom',
+          'running_test': 'Test en cours d\'exécution...', 'test_passed': 'Test réussi', 'test_failed': 'Échec du test', 'output': 'Sortie', 'copy': 'Copier',
+          'running': 'En cours d\'exécution', 'stopped': 'Arrêté', 'notifications': 'Notifications', 'no_notifications': 'Aucune notification',
+          'server_settings': 'PARAMÈTRES DU SERVEUR', 'aet_title': 'Titre AE', 'aet_title_full': 'Titre DICOM Application Entity',
+          'listen_all_interfaces': 'Écouter sur toutes les interfaces', 'host': 'Hôte/IP', 'port': 'Port', 'server_port_full': 'Port du serveur DICOM',
+          'client_aet': 'AE Client', 'client_aet_title_full': 'Titre AE du client attendu', 'database_settings': 'PARAMÈTRES DE LA BASE DE DONNÉES',
+          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (ex: 192.168.1.3:1521/PRD)',
+          'database_user': 'Utilisateur', 'database_password': 'Mot de passe', 'database_query': 'Requête', 'sql_hint': 'Requête SQL qui retourne les éléments de la liste de travail',
+          'sql_guide_title': 'Guide des colonnes attendues par la liste de travail', 'error_missing_module': 'Erreur: Module introuvable',
+          'test_database': 'Test de base de données', 'test_status': 'Test de statut', 'test_console': 'Console de test',
+          'plugins_desc': 'Installez ou supprimez des plugins optionnels qui étendent les fonctionnalités (ex: drivers de base de données). Type de base de données actuel:',
+          'module': 'Module', 'package': 'Paquet', 'install': 'Installer', 'uninstall': 'Désinstaller',
+          'installed': 'Installé', 'not_installed': 'Non installé', 'current': 'actuel', 'console_ready': '$ Prêt pour les tests...'
+        },
+        es: {
+          'home': 'Inicio', 'config': 'Configuración', 'logs': 'Registros', 'tests': 'Pruebas', 'plugins': 'Complementos',
+          'start': 'Iniciar', 'stop': 'Detener', 'restart': 'Reiniciar', 'recent_logs': 'Registros Recientes', 'back': 'Atrás',
+          'save': 'Guardar', 'clear': 'Limpiar', 'clear_logs': 'Limpiar registros', 'no_logs': 'Sin registros aún', 'language': 'Idioma',
+          'theme': 'Tema', 'status': 'Estado', 'service_status': 'Estado del Servicio', 'service_label': 'Servicio',
+          'service_starting': 'Iniciando servicio...', 'service_started': 'Servicio iniciado exitosamente', 'service_start_failed': 'Falló al iniciar el servicio',
+          'service_stopping': 'Deteniendo servicio...', 'service_stopped': 'Servicio detenido exitosamente', 'service_stop_failed': 'Falló al detener el servicio',
+          'service_restarting': 'Reiniciando servicio...', 'service_restarted': 'Servicio reiniciado exitosamente', 'service_restart_failed': 'Falló al reiniciar el servicio',
+          'test_dcm_echo': 'Prueba DICOM C-ECHO', 'test_dcm_find': 'Prueba DICOM C-FIND', 'test_dcm_worklist': 'Prueba DICOM Worklist',
+          'desc_echo': 'Pruebe la asociación DICOM y la respuesta de eco del servidor.', 'desc_find': 'Busque elementos de la lista de trabajo en la base de datos DICOM.', 'desc_worklist': 'Pruebe la respuesta DICOM C-FIND worklist con datos reales de pacientes.',
+          'desc_db_conn': 'Pruebe la conectividad de la base de datos', 'desc_status': 'Verifique si el servicio es accesible y responde.',
+          'check_availability': 'Verificar disponibilidad', 'test_connection': 'Prueba de conexión', 'test_worklist': 'Respuesta de Worklist', 'install_db_driver': 'Instalar controlador de base de datos', 'install_pynetdicom': 'Instalar plugin pynetdicom', 'install_pynetdicom': 'Instalar plugin pynetdicom',
+          'running_test': 'Ejecutando prueba...', 'test_passed': 'Prueba aprobada', 'test_failed': 'Falló la prueba', 'output': 'Salida', 'copy': 'Copiar',
+          'running': 'Ejecutándose', 'stopped': 'Detenido', 'notifications': 'Notificaciones', 'no_notifications': 'Sin notificaciones',
+          'server_settings': 'CONFIGURACIÓN DEL SERVIDOR', 'aet_title': 'Título AE', 'aet_title_full': 'Título DICOM Application Entity',
+          'listen_all_interfaces': 'Escuchar en todas las interfaces', 'host': 'Host/IP', 'port': 'Puerto', 'server_port_full': 'Puerto del servidor DICOM',
+          'client_aet': 'AE del cliente', 'client_aet_title_full': 'Título AE del cliente esperado', 'database_settings': 'CONFIGURACIÓN DE LA BASE DE DATOS',
+          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PUERTO/BD (ej: 192.168.1.3:1521/PRD)',
+          'database_user': 'Usuario', 'database_password': 'Contraseña', 'database_query': 'Consulta', 'sql_hint': 'Consulta SQL que devuelve los elementos de la lista de trabajo',
+          'sql_guide_title': 'Guía de columnas esperadas por la lista de trabajo', 'error_missing_module': 'Error: Módulo no encontrado',
+          'test_database': 'Prueba de base de datos', 'test_status': 'Prueba de estado', 'test_console': 'Consola de prueba',
+          'plugins_desc': 'Instale o elimine complementos opcionales que amplíen la funcionalidad (ej: drivers de base de datos). Tipo de base de datos actual:',
+          'module': 'Módulo', 'package': 'Paquete', 'install': 'Instalar', 'uninstall': 'Desinstalar',
+          'installed': 'Instalado', 'not_installed': 'No instalado', 'current': 'actual',
+          'console_ready': '$ Listo para pruebas...'
+        },
+        zh: {
+          'home': '主页', 'config': '配置', 'logs': '日志', 'tests': '测试', 'plugins': '插件',
+          'start': '启动', 'stop': '停止', 'restart': '重新启动', 'recent_logs': '最近的日志', 'back': '返回',
+          'save': '保存', 'clear': '清除', 'clear_logs': '清除日志', 'no_logs': '未找到日志', 'language': '语言',
+          'theme': '主题', 'status': '状态', 'service_status': '服务状态', 'service_label': '服务',
+          'service_starting': '服务启动中...', 'service_started': '服务成功启动', 'service_start_failed': '服务启动失败',
+          'service_stopping': '服务停止中...', 'service_stopped': '服务成功停止', 'service_stop_failed': '服务停止失败',
+          'service_restarting': '服务重启中...', 'service_restarted': '服务成功重启', 'service_restart_failed': '服务重启失败',
+          'test_dcm_echo': 'DICOM C-ECHO测试', 'test_dcm_find': 'DICOM C-FIND测试', 'test_dcm_worklist': 'DICOM Worklist测试',
+          'desc_echo': '测试DICOM关联和服务器的回显响应。', 'desc_find': '在DICOM数据库中搜索工作列表项。', 'desc_worklist': '使用实际患者数据测试DICOM C-FIND worklist响应。',
+          'desc_db_conn': '测试数据库连接性', 'desc_status': '检查服务是否可访问且响应。',
+          'check_availability': '检查可用性', 'test_connection': '测试接绝', 'test_worklist': 'Worklist应答', 'install_db_driver': '安装数据库驱动程序', 'install_pynetdicom': '安装pynetdicom插件',
+          'running_test': '测试运行中...', 'test_passed': '测试通过', 'test_failed': '测试失败', 'output': '输出', 'copy': '复制',
+          'running': '运行中', 'stopped': '已停止', 'notifications': '通知', 'no_notifications': '无通知',
+          'server_settings': '服务器设置', 'aet_title': '应用实体标题', 'aet_title_full': 'DICOM应用实体标题',
+          'listen_all_interfaces': '监听所有接口', 'host': '主机/IP', 'port': '端口', 'server_port_full': 'DICOM服务器端口',
+          'client_aet': '客户端AE', 'client_aet_title_full': '预期的客户端应用实体标题', 'database_settings': '数据库设置',
+          'database_type': '类型', 'database_dsn': 'DSN', 'dsn_hint': '格式: IP:PORT/DB (例如: 192.168.1.3:1521/PRD)',
+          'database_user': '用户', 'database_password': '密码', 'database_query': '查询', 'sql_hint': '返回工作列表项的SQL查询',
+          'sql_guide_title': '工作列表预期列指南', 'error_missing_module': '错误: 找不到模块',
+          'test_database': '数据库测试', 'test_status': '状态测试', 'test_console': '测试控制台',
+          'plugins_desc': '安装或卸载扩展功能的可选插件 (例如: 数据库驱动程序)。 当前数据库类型:',
+          'module': '模块', 'package': '包', 'install': '安装', 'uninstall': '卸载',
+          'installed': '已安装', 'not_installed': '未安装', 'current': '当前',
+          'console_ready': '$ 准备测试...'
+        },
+        ru: {
+          'home': 'Главная', 'config': 'Конфигурация', 'logs': 'Логи', 'tests': 'Тесты', 'plugins': 'Плагины',
+          'start': 'Начать', 'stop': 'Остановить', 'restart': 'Перезагрузить', 'recent_logs': 'Последние логи', 'back': 'Назад',
+          'save': 'Сохранить', 'clear': 'Очистить', 'clear_logs': 'Очистить логи', 'no_logs': 'Логи не найдены', 'language': 'Язык',
+          'theme': 'Тема', 'status': 'Статус', 'service_status': 'Статус сервиса', 'service_label': 'Сервис',
+          'service_starting': 'Сервис запускается...', 'service_started': 'Сервис успешно запущен', 'service_start_failed': 'Ошибка запуска сервиса',
+          'service_stopping': 'Сервис останавливается...', 'service_stopped': 'Сервис успешно остановлен', 'service_stop_failed': 'Ошибка остановки сервиса',
+          'service_restarting': 'Сервис перезагружается...', 'service_restarted': 'Сервис успешно перезагружен', 'service_restart_failed': 'Ошибка перезагрузки сервиса',
+          'test_dcm_echo': 'Тест DICOM C-ECHO', 'test_dcm_find': 'Тест DICOM C-FIND', 'test_dcm_worklist': 'Тест DICOM Worklist',
+          'desc_echo': 'Протестируйте ассоциацию DICOM и ответ echo сервера.', 'desc_find': 'Поиск элементов рабочего списка в базе данных DICOM.', 'desc_worklist': 'Тестируйте ответ DICOM C-FIND worklist с реальными данными пациентов.',
+          'desc_db_conn': 'Протестируйте подключение к базе данных', 'desc_status': 'Проверьте доступность и отзывчивость сервиса.',
+          'check_availability': 'Проверить доступность', 'test_connection': 'Тест подключения', 'test_worklist': 'Ответ Worklist', 'install_db_driver': 'Установить драйвер БД', 'install_pynetdicom': 'Установить плагин pynetdicom',
+          'running_test': 'Выполнение теста...', 'test_passed': 'Тест пройден', 'test_failed': 'Тест не пройден', 'output': 'Вывод', 'copy': 'Копировать',
+          'running': 'Выполняется', 'stopped': 'Остановлено', 'notifications': 'Уведомления', 'no_notifications': 'Нет уведомлений',
+          'server_settings': 'ПАРАМЕТРЫ СЕРВЕРА', 'aet_title': 'Название AE', 'aet_title_full': 'Название DICOM Application Entity',
+          'listen_all_interfaces': 'Слушать на всех интерфейсах', 'host': 'Хост/IP', 'port': 'Порт', 'server_port_full': 'Порт DICOM сервера',
+          'client_aet': 'AE Клиента', 'client_aet_title_full': 'Ожидаемое название AE клиента', 'database_settings': 'ПАРАМЕТРЫ БАЗЫ ДАННЫХ',
+          'database_type': 'Тип', 'database_dsn': 'DSN', 'dsn_hint': 'Формат: IP:PORT/DB (напр: 192.168.1.3:1521/PRD)',
+          'database_user': 'Пользователь', 'database_password': 'Пароль', 'database_query': 'Запрос', 'sql_hint': 'SQL запрос, который возвращает элементы рабочего списка',
+          'sql_guide_title': 'Руководство по ожидаемым столбцам рабочего списка', 'error_missing_module': 'Ошибка: Модуль не найден',
+          'test_database': 'Тест БД', 'test_status': 'Тест статуса', 'test_console': 'Консоль тестирования',
+          'plugins_desc': 'Установите или удалите дополнительные плагины, расширяющие функциональность (напр: драйверы БД). Текущий тип БД:',
+          'module': 'Модуль', 'package': 'Пакет', 'install': 'Установить', 'uninstall': 'Удалить',
+          'installed': 'Установлено', 'not_installed': 'Не установлено', 'current': 'текущий',
+          'console_ready': '$ Готов к тестам...'
+        },
+        ja: {
+          'home': 'ホーム', 'config': '設定', 'logs': 'ログ', 'tests': 'テスト', 'plugins': 'プラグイン',
+          'start': '開始', 'stop': '停止', 'restart': '再起動', 'recent_logs': '最近のログ', 'back': '戻る',
+          'save': '保存', 'clear': 'クリア', 'clear_logs': 'ログをクリア', 'no_logs': 'ログが見つかりません', 'language': '言語',
+          'theme': 'テーマ', 'status': 'ステータス', 'service_status': 'サービスステータス', 'service_label': 'サービス',
+          'service_starting': 'サービス開始中...', 'service_started': 'サービスが正常に開始しました', 'service_start_failed': 'サービスの開始に失敗しました',
+          'service_stopping': 'サービス停止中...', 'service_stopped': 'サービスが正常に停止しました', 'service_stop_failed': 'サービスの停止に失敗しました',
+          'service_restarting': 'サービス再起動中...', 'service_restarted': 'サービスが正常に再起動しました', 'service_restart_failed': 'サービスの再起動に失敗しました',
+          'test_dcm_echo': 'DICOM C-ECHOテスト', 'test_dcm_find': 'DICOM C-FINDテスト', 'test_dcm_worklist': 'DICOM Worklistテスト',
+          'desc_echo': 'DICOM関連付けとサーバーのエコー応答をテストします。', 'desc_find': 'DICOMデータベースでワークリストアイテムを検索します。', 'desc_worklist': '実患者データを使用してDICOM C-FIND worklist応答をテストします。',
+          'desc_db_conn': 'データベース接続をテストします', 'desc_status': 'サービスがアクセス可能で応答しているかを確認します。',
+          'check_availability': '可用性を確認', 'test_connection': '接竞をテスト', 'test_worklist': 'Worklist応答', 'install_db_driver': 'DBドライバをインストール', 'install_pynetdicom': 'pynetdicomプラグインをインストール',
+          'running_test': 'テスト実行中...', 'test_passed': 'テスト成功', 'test_failed': 'テスト失敗', 'output': '出力', 'copy': 'コピー',
+          'running': '実行中', 'stopped': '停止', 'notifications': '通知', 'no_notifications': '通知がありません',
+          'server_settings': 'サーバー設定', 'aet_title': 'AEタイトル', 'aet_title_full': 'DICOMアプリケーションエンティティタイトル',
+          'listen_all_interfaces': 'すべてのインターフェースをリッスン', 'host': 'ホスト/IP', 'port': 'ポート', 'server_port_full': 'DICOMサーバーポート',
+          'client_aet': 'クライアントAE', 'client_aet_title_full': '予想されるクライアントAEタイトル', 'database_settings': 'データベース設定',
+          'database_type': 'タイプ', 'database_dsn': 'DSN', 'dsn_hint': '形式: IP:PORT/DB (例: 192.168.1.3:1521/PRD)',
+          'database_user': 'ユーザー', 'database_password': 'パスワード', 'database_query': 'クエリ', 'sql_hint': 'ワークリストアイテムを返すSQLクエリ',
+          'sql_guide_title': 'ワークリストで予想される列のガイド', 'error_missing_module': 'エラー: モジュールが見つかりません',
+          'test_database': 'データベーステスト', 'test_status': 'ステータステスト', 'test_console': 'テストコンソール',
+          'plugins_desc': '機能を拡張するオプションプラグインをインストールまたはアンインストールします (例: DBドライバ)。 現在のDBタイプ:',
+          'module': 'モジュール', 'package': 'パッケージ', 'install': 'インストール', 'uninstall': 'アンインストール',
+          'installed': 'インストール済み', 'not_installed': 'インストールされていません', 'current': '現在',
+          'console_ready': '$ テストの準備完了...'
+        },
+        it: {
+          'home': 'Home', 'config': 'Configurazione', 'logs': 'Log', 'tests': 'Test', 'plugins': 'Plugin',
+          'start': 'Avvia', 'stop': 'Arresta', 'restart': 'Riavvia', 'recent_logs': 'Log Recenti', 'back': 'Indietro',
+          'save': 'Salva', 'clear': 'Cancella', 'clear_logs': 'Cancella log', 'no_logs': 'Nessun log trovato', 'language': 'Lingua',
+          'theme': 'Tema', 'status': 'Stato', 'service_status': 'Stato del Servizio', 'service_label': 'Servizio',
+          'service_starting': 'Servizio in avvio...', 'service_started': 'Servizio avviato con successo', 'service_start_failed': 'Errore nell\'avvio del servizio',
+          'service_stopping': 'Servizio in arresto...', 'service_stopped': 'Servizio arrestato con successo', 'service_stop_failed': 'Errore nell\'arresto del servizio',
+          'service_restarting': 'Servizio in riavvio...', 'service_restarted': 'Servizio riavviato con successo', 'service_restart_failed': 'Errore nel riavvio del servizio',
+          'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND', 'test_dcm_worklist': 'Test DICOM Worklist',
+          'desc_echo': 'Testare l\'associazione DICOM e la risposta di echo del server.', 'desc_find': 'Ricerca di elementi dell\'elenco di lavoro nel database DICOM.', 'desc_worklist': 'Testare la risposta DICOM C-FIND worklist con dati pazienti reali.',
+          'desc_db_conn': 'Testare la connettività del database', 'desc_status': 'Verificare se il servizio è accessibile e risponde.',
+          'check_availability': 'Verifica disponibilità', 'test_connection': 'Testa connessione', 'test_worklist': 'Risposta Worklist', 'install_db_driver': 'Installa driver database', 'install_pynetdicom': 'Installa plugin pynetdicom',
+          'running_test': 'Test in esecuzione...', 'test_passed': 'Test superato', 'test_failed': 'Test non superato', 'output': 'Output', 'copy': 'Copia',
+          'running': 'In esecuzione', 'stopped': 'Arrestato', 'notifications': 'Notifiche', 'no_notifications': 'Nessuna notifica',
+          'server_settings': 'IMPOSTAZIONI SERVER', 'aet_title': 'Titolo AE', 'aet_title_full': 'Titolo DICOM Application Entity',
+          'listen_all_interfaces': 'Ascolta su tutte le interfacce', 'host': 'Host/IP', 'port': 'Porta', 'server_port_full': 'Porta server DICOM',
+          'client_aet': 'AE Client', 'client_aet_title_full': 'Titolo AE client previsto', 'database_settings': 'IMPOSTAZIONI DATABASE',
+          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PORT/DB (es: 192.168.1.3:1521/PRD)',
+          'database_user': 'Utente', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'Query SQL che restituisce gli elementi dell\'elenco di lavoro',
+          'sql_guide_title': 'Guida alle colonne previste dell\'elenco di lavoro', 'error_missing_module': 'Errore: Modulo non trovato',
+          'test_database': 'Test Database', 'test_status': 'Test di stato', 'test_console': 'Console di test',
+          'plugins_desc': 'Installa o disinstalla plugin opzionali che estendono la funzionalità (es: driver database). Tipo DB attuale:',
+          'module': 'Modulo', 'package': 'Pacchetto', 'install': 'Installa', 'uninstall': 'Disinstalla',
+          'installed': 'Installato', 'not_installed': 'Non installato', 'current': 'attuale',
+          'console_ready': '$ Pronto per i test...'
+        },
+        tr: {
+          'home': 'Anasayfa', 'config': 'Yapılandırma', 'logs': 'Günlükler', 'tests': 'Testler', 'plugins': 'Eklentiler',
+          'start': 'Başlat', 'stop': 'Durdur', 'restart': 'Yeniden Başlat', 'recent_logs': 'Son Günlükler', 'back': 'Geri',
+          'save': 'Kaydet', 'clear': 'Temizle', 'clear_logs': 'Günlükleri Temizle', 'no_logs': 'Günlük bulunamadı', 'language': 'Dil',
+          'theme': 'Tema', 'status': 'Durum', 'service_status': 'Hizmet Durumu', 'service_label': 'Hizmet',
+          'service_starting': 'Hizmet başlatılıyor...', 'service_started': 'Hizmet başarıyla başlatıldı', 'service_start_failed': 'Hizmet başlatılamadı',
+          'service_stopping': 'Hizmet durduruluyor...', 'service_stopped': 'Hizmet başarıyla durduruldu', 'service_stop_failed': 'Hizmet durdurulamadı',
+          'service_restarting': 'Hizmet yeniden başlatılıyor...', 'service_restarted': 'Hizmet başarıyla yeniden başlatıldı', 'service_restart_failed': 'Hizmet yeniden başlatılamadı',
+          'test_dcm_echo': 'DICOM C-ECHO Testi', 'test_dcm_find': 'DICOM C-FIND Testi', 'test_dcm_worklist': 'DICOM Worklist Testi',
+          'desc_echo': 'DICOM ilişkilendirmesi ve sunucu echo yanıtını test edin.', 'desc_find': 'DICOM veritabanında çalışma listesi öğelerini arayın.', 'desc_worklist': 'Gerçek hasta verileri ile DICOM C-FIND worklist yanıtını test edin.',
+          'desc_db_conn': 'Veritabanı bağlantısını test edin', 'desc_status': 'Hizmetin erişilebilir ve yanıt verip vermediğini kontrol edin.',
+          'check_availability': 'Kullanılabilirliği Kontrol Et', 'test_connection': 'Bağlantıyı Test Et', 'test_worklist': 'Worklist Yanıtı', 'install_db_driver': 'Veritabanı Sürücsünü Yükle', 'install_pynetdicom': 'pynetdicom Eklentisini Yükle',
+          'running_test': 'Test çalışıyor...', 'test_passed': 'Test başarıyla geçti', 'test_failed': 'Test başarısız oldu', 'output': 'Çıktı', 'copy': 'Kopyala',
+          'running': 'Çalışıyor', 'stopped': 'Durduruldu', 'notifications': 'Bildirimler', 'no_notifications': 'Bildirim yok',
+          'server_settings': 'SUNUCU AYARLARI', 'aet_title': 'AE Başlığı', 'aet_title_full': 'DICOM Uygulama Kuruluşu Başlığı',
+          'listen_all_interfaces': 'Tüm arabirimlerde dinle', 'host': 'Ana Bilgisayar/IP', 'port': 'Port', 'server_port_full': 'DICOM sunucu portu',
+          'client_aet': 'İstemci AE', 'client_aet_title_full': 'Beklenen istemci AE başlığı', 'database_settings': 'VERİTABANI AYARLARI',
+          'database_type': 'Tür', 'database_dsn': 'DSN', 'dsn_hint': 'Biçim: IP:PORT/DB (örn: 192.168.1.3:1521/PRD)',
+          'database_user': 'Kullanıcı', 'database_password': 'Şifre', 'database_query': 'Sorgu', 'sql_hint': 'Çalışma listesi öğelerini döndüren SQL sorgusu',
+          'sql_guide_title': 'Çalışma listesi tarafından beklenen sütunlara kılavuz', 'error_missing_module': 'Hata: Modül bulunamadı',
+          'test_database': 'Veritabanı Testi', 'test_status': 'Durum Testi', 'test_console': 'Test Konsolu',
+          'plugins_desc': 'İşlevsellieği genişleten isteğe bağlı eklentileri yükleyin veya kaldırın (örn: veritabanı sürücüleri). Güncel DB türü:',
+          'module': 'Modül', 'package': 'Paket', 'install': 'Yükle', 'uninstall': 'Kaldır',
+          'installed': 'Yüklü', 'not_installed': 'Yüklü değil', 'current': 'mevcut',
+          'console_ready': '$ Testler için hazır...'
+        },
+        fil: {
+          'home': 'Tahanan', 'config': 'Pagsasaayos', 'logs': 'Mga Log', 'tests': 'Mga Pagsubok', 'plugins': 'Mga Plugin',
+          'start': 'Magsimula', 'stop': 'Huminto', 'restart': 'I-restart', 'recent_logs': 'Mga Kamakailang Log', 'back': 'Bumalik',
+          'save': 'I-save', 'clear': 'Burahin', 'clear_logs': 'Burahin ang mga Log', 'no_logs': 'Walang nakitang log', 'language': 'Wika',
+          'theme': 'Tema', 'status': 'Katayuan', 'service_status': 'Katayuan ng Serbisyo', 'service_label': 'Serbisyo',
+          'service_starting': 'Nagsisimula ang serbisyo...', 'service_started': 'Matagumpay na nagsimula ang serbisyo', 'service_start_failed': 'Nabigo ang paglunsad ng serbisyo',
+          'service_stopping': 'Titigil ang serbisyo...', 'service_stopped': 'Matagumpay na tumitigil ang serbisyo', 'service_stop_failed': 'Nabigo ang paghinto ng serbisyo',
+          'service_restarting': 'Nag-restart ang serbisyo...', 'service_restarted': 'Matagumpay na nag-restart ang serbisyo', 'service_restart_failed': 'Nabigo ang pag-restart ng serbisyo',
+          'test_dcm_echo': 'DICOM C-ECHO Pagsubok', 'test_dcm_find': 'DICOM C-FIND Pagsubok', 'test_dcm_worklist': 'DICOM Worklist Pagsubok',
+          'desc_echo': 'Subukan ang DICOM association at echo response ng server.', 'desc_find': 'Maghanap ng worklist items sa DICOM database.', 'desc_worklist': 'Subukan ang DICOM C-FIND worklist response gamit ang tunay na patient data.',
+          'desc_db_conn': 'Subukan ang database connectivity', 'desc_status': 'Suriin kung ang serbisyo ay accessible at tumutugon.',
+          'check_availability': 'Suriin ang Pagkakaroon', 'test_connection': 'Subukan ang Koneksyon', 'test_worklist': 'Worklist Response', 'install_db_driver': 'I-install ang DB Driver', 'install_pynetdicom': 'I-install ang pynetdicom Plugin', 'install_pynetdicom': 'I-install ang pynetdicom Plugin',
+          'running_test': 'Tumatakbo ang pagsubok...', 'test_passed': 'Ang pagsubok ay lumampas', 'test_failed': 'Ang pagsubok ay nabigo', 'output': 'Output', 'copy': 'Kopyahin',
+          'running': 'Tumatakbo', 'stopped': 'Tumitigil', 'notifications': 'Mga Notipikasyon', 'no_notifications': 'Walang notipikasyon',
+          'server_settings': 'MGA SETTING NG SERVER', 'aet_title': 'AE Title', 'aet_title_full': 'DICOM Application Entity Title',
+          'listen_all_interfaces': 'Makinig sa lahat ng interface', 'host': 'Host/IP', 'port': 'Port', 'server_port_full': 'DICOM server port',
+          'client_aet': 'Client AE', 'client_aet_title_full': 'Inaasahang client AE Title', 'database_settings': 'MGA SETTING NG DATABASE',
+          'database_type': 'Uri', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (hal: 192.168.1.3:1521/PRD)',
+          'database_user': 'User', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'SQL query na nagbabalik ng worklist items',
+          'sql_guide_title': 'Gabay sa inaasahang column ng worklist', 'error_missing_module': 'Error: Module not found',
+          'test_database': 'Database Test', 'test_status': 'Status Test', 'test_console': 'Test Console',
+          'plugins_desc': 'I-install o alisin ang optional plugins na nagpapalakas ng functionality (hal: database drivers). Kasalukuyang DB type:',
+          'module': 'Module', 'package': 'Package', 'install': 'I-install', 'uninstall': 'I-uninstall',
+          'installed': 'Naka-install', 'not_installed': 'Hindi naka-install', 'current': 'kasalukuyan',
+          'console_ready': '$ Handa para sa mga pagsubok...'
+        }
+      };
+
+      let currentLang = localStorage.getItem('lang') || 'pt';
+
+      function t(key) {
+        return translations[currentLang]?.[key] || key;
+      }
+
+      function setLang(lang) {
+        localStorage.setItem('lang', lang);
+        currentLang = lang;
+        document.getElementById('langCode').textContent = lang.toUpperCase();
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+          el.title = t(el.dataset.i18nTitle);
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+          el.placeholder = t(el.dataset.i18nPlaceholder);
+        });
+        document.querySelectorAll('[data-i18n-value]').forEach(el => {
+          el.value = t(el.dataset.i18nValue);
+        });
+
+        // Persist server-side so MWLSCP picks it up for logs
+        fetch('/set-language', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lang })
+        }).catch(() => {});
+      }
+
+      function toggleTheme() {
+        const html = document.documentElement;
+        const isDark = html.classList.contains('dark');
+        
+        if (isDark) {
+          html.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        } else {
+          html.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        }
+        
+        // Force update the icons
+        const sunIcon = document.querySelector('.fa-sun');
+        const moonIcon = document.querySelector('.fa-moon');
+        if (sunIcon && moonIcon) {
+          sunIcon.classList.toggle('hidden');
+          moonIcon.classList.toggle('hidden');
+        }
+      }
+
+      function showNotification(message, type = 'info', duration = 4000) {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-enter p-4 rounded-lg shadow-lg text-white ${
+          type === 'success' ? 'bg-green-500' :
+          type === 'error' ? 'bg-red-500' :
+          type === 'warning' ? 'bg-yellow-500' :
+          'bg-blue-500'
+        }`;
+        notification.innerHTML = `
+          <div class="flex items-center gap-3">
+            <i class="fas ${
+              type === 'success' ? 'fa-check-circle' :
+              type === 'error' ? 'fa-times-circle' :
+              type === 'warning' ? 'fa-exclamation-circle' :
+              'fa-info-circle'
+            }"></i>
+            <span>${message}</span>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Adicionar ao histórico
+        addNotificationToHistory(message, type);
+        
+        setTimeout(() => {
+          notification.classList.remove('notification-enter');
+          notification.classList.add('notification-exit');
+          setTimeout(() => notification.remove(), 300);
+        }, duration);
+      }
+
+      // Sistema de histórico de notificações
+      let notificationHistory = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
+      let unreadCount = parseInt(localStorage.getItem('unreadNotifications') || '0');
+
+      function addNotificationToHistory(message, type) {
+        const notif = {
+          id: Date.now(),
+          message: message,
+          type: type,
+          timestamp: new Date().toLocaleTimeString('pt-BR'),
+          read: false
+        };
+        
+        notificationHistory.unshift(notif);
+        if (notificationHistory.length > 20) notificationHistory.pop();
+        
+        unreadCount++;
+        localStorage.setItem('notificationHistory', JSON.stringify(notificationHistory));
+        localStorage.setItem('unreadNotifications', unreadCount.toString());
+        
+        updateNotificationBadge();
+      }
+
+      function updateNotificationBadge() {
+        const badge = document.getElementById('notification-badge');
+        const bell = document.getElementById('notification-bell');
+        
+        if (unreadCount > 0) {
+          if (badge) {
+            badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            badge.classList.remove('hidden');
+          }
+        } else {
+          if (badge) badge.classList.add('hidden');
+        }
+      }
+
+      function toggleNotificationDropdown() {
+        const dropdown = document.getElementById('notification-dropdown');
+        dropdown.classList.toggle('show');
+        
+        if (dropdown.classList.contains('show')) {
+          markAllNotificationsAsRead();
+        }
+      }
+
+      function markAllNotificationsAsRead() {
+        notificationHistory.forEach(n => n.read = true);
+        unreadCount = 0;
+        localStorage.setItem('notificationHistory', JSON.stringify(notificationHistory));
+        localStorage.setItem('unreadNotifications', '0');
+        updateNotificationBadge();
+        renderNotificationHistory();
+      }
+
+      function clearNotificationHistory() {
+        notificationHistory = [];
+        unreadCount = 0;
+        localStorage.setItem('notificationHistory', '[]');
+        localStorage.setItem('unreadNotifications', '0');
+        updateNotificationBadge();
+        renderNotificationHistory();
+      }
+
+      function renderNotificationHistory() {
+        const container = document.getElementById('notification-history');
+        if (!container) return;
+        
+        if (notificationHistory.length === 0) {
+          container.innerHTML = `<div class="p-4 text-center text-gray-500 dark:text-gray-400" data-i18n="no_notifications">Nenhuma notificação</div>`;
+          return;
+        }
+        
+        container.innerHTML = notificationHistory.map(n => {
+          const typeIcons = {
+            success: 'fa-check-circle text-green-500',
+            error: 'fa-times-circle text-red-500',
+            warning: 'fa-exclamation-circle text-yellow-500',
+            info: 'fa-info-circle text-blue-500'
+          };
+          
+          return `
+            <div class="notification-item ${!n.read ? 'unread' : ''}">
+              <div class="flex items-start gap-3">
+                <i class="fas ${typeIcons[n.type] || typeIcons.info} mt-1"></i>
+                <div class="flex-1">
+                  <p class="text-gray-900 dark:text-white text-sm">${n.message}</p>
+                  <p class="notification-item-time">${n.timestamp}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Inicializar histórico na página
+      window.addEventListener('DOMContentLoaded', () => {
+        setLang(currentLang);
+        updateNotificationBadge();
+        renderNotificationHistory();
+        
+        // Fechar dropdown quando clicar fora
+        document.addEventListener('click', (e) => {
+          const dropdown = document.getElementById('notification-dropdown');
+          const notifContainer = document.querySelector('[onclick*="toggleNotificationDropdown"]').parentElement;
+          if (!notifContainer.contains(e.target) && dropdown) {
+            dropdown.classList.remove('show');
+          }
+        });
+      });
+    </script>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
+    <!-- Navbar -->
+    <nav class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-20">
+          <!-- Logo/Title -->
+          <div class="flex items-center gap-3">
+            <img src="/static/brand/logo-mark.svg" alt="FlowWorklist" class="w-8 h-8">
+            <div>
+              <h1 class="text-white font-bold text-xl">FlowWorklist</h1>
+              <p class="text-blue-100 text-xs">DICOM Worklist Server</p>
+            </div>
+          </div>
+
+          <!-- Navigation Links -->
+          <div class="hidden md:flex items-center gap-8">
+            <a href="/" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2" title="Home">
+              <i class="fas fa-home"></i>
+              <span data-i18n="home">Home</span>
+            </a>
+            <a href="/config" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fas fa-cog"></i>
+              <span data-i18n="config">Config</span>
+            </a>
+            <a href="/logs" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fas fa-file-alt"></i>
+              <span data-i18n="logs">Logs</span>
+            </a>
+            <a href="/tests" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fas fa-flask"></i>
+              <span data-i18n="tests">Tests</span>
+            </a>
+            <a href="/plugins" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fas fa-plug"></i>
+              <span data-i18n="plugins">Plugins</span>
+            </a>
+          </div>
+
+          <!-- Right Controls -->
+          <div class="flex items-center gap-4">
+            <!-- Notification Bell -->
+            <div class="relative">
+              <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" title="Notificações">
+                <i class="fas fa-bell text-lg"></i>
+                <span id="notification-badge" class="notification-badge hidden">0</span>
+              </button>
+              <div id="notification-dropdown" class="notification-dropdown bg-white dark:bg-gray-800">
+                <div class="bg-blue-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                  <h3 class="font-bold text-gray-900 dark:text-white" data-i18n="notifications">Notificações</h3>
+                  <button onclick="clearNotificationHistory()" class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Limpar histórico">
+                    <i class="fas fa-trash-alt"></i> <span data-i18n="clear">Limpar</span>
+                  </button>
+                </div>
+                <div id="notification-history" class="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto" style="max-height: 400px;"></div>
+              </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition" data-i18n-title="theme">
+              <i class="fas fa-sun text-lg block dark:hidden"></i>
+              <i class="fas fa-moon text-lg hidden dark:block"></i>
+            </button>
+
+            <!-- Language Selector -->
+            <div class="relative group">
+              <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2" data-i18n-title="language">
+                <i class="fas fa-globe"></i>
+                <span id="langCode">PT</span>
+              </button>
+              <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto">
+                <button onclick="setLang('pt');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-brazil"></i> Português
+                </button>
+                <button onclick="setLang('en');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-usa"></i> English
+                </button>
+                <button onclick="setLang('fr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-france"></i> Français
+                </button>
+                <button onclick="setLang('es');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-spain"></i> Español
+                </button>
+                <button onclick="setLang('zh');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-china"></i> 中文
+                </button>
+                <button onclick="setLang('ru');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-russia"></i> Русский
+                </button>
+                <button onclick="setLang('ja');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-japan"></i> 日本語
+                </button>
+                <button onclick="setLang('it');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-italy"></i> Italiano
+                </button>
+                <button onclick="setLang('tr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-turkey"></i> Türkçe
+                </button>
+                <button onclick="setLang('fil');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                  <i class="fas fa-flag-philippines"></i> Filipino
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script>
+      // Atualizar status com menor atraso
+      setInterval(() => {
+        if (document.location.pathname === '/') {
+          fetch('/status')
+            .then(r => r.json())
+            .then(data => {
+              const statusEl = document.getElementById('service-status');
+              if (statusEl) {
+                // Atualiza apenas o texto mantendo o ícone e classes
+                const txt = data.running ? t('running') : t('stopped');
+                const icon = data.running ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+                statusEl.innerHTML = `${icon} ${txt}`;
+                statusEl.className = data.running ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+              }
+            });
+        }
+      }, 1500);
+    </script>
+  </body>
+</html>
