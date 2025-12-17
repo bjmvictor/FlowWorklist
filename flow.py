@@ -53,6 +53,21 @@ def startapp():
         print(f"App started with PID {proc.pid}. PID saved to app.pid.")
     except Exception:
         print("App started, but could not write app.pid.")
+    
+    # Wait for app to be ready
+    print("Waiting for app to start...")
+    time.sleep(3)
+    
+    # Open browser
+    import webbrowser
+    url = "http://127.0.0.1:5000"
+    try:
+        webbrowser.open(url)
+        print(f"Browser opened at {url}")
+    except Exception:
+        print(f"Could not open browser automatically. Please visit: {url}")
+    
+    print("App is running in background. Use 'flow stopapp' to stop.")
 
 
 def stopapp():
