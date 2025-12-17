@@ -52,16 +52,28 @@ clinics, and imaging centers.
 
 ### Installation
 
-**Windows (Terminal):**
+**Windows PowerShell:**
 ```powershell
 git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
 python -m venv .
 .\Scripts\Activate.ps1
 pip install -r requirements.txt
-python .\flow.py install    # one-time; creates .\flow wrappers
+python .\flow.py install    # one-time; creates flow.bat and flow.ps1 wrappers
 .\flow startapp             # start management App
 .\flow startservice         # start MWL service
+```
+
+**Windows CMD:**
+```cmd
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python -m venv .
+.\Scripts\activate.bat
+pip install -r requirements.txt
+python flow.py install      # one-time; creates flow.bat and flow.ps1 wrappers
+flow startapp               # start management App
+flow startservice           # start MWL service
 ```
 
 **Linux/macOS:**
@@ -192,46 +204,77 @@ Edit `config.json` with your database credentials:
 
 To run `flow` commands from any directory without activation:
 
+**Windows PowerShell:**
 ```powershell
-# Windows PowerShell - adds FlowWorklist directory to system PATH
 python .\flow.py install --add-to-path
+# After running, restart terminal, then: flow startall (from anywhere!)
+```
 
-# After running, restart your PowerShell terminal, then you can use:
-flow startall          # from any directory!
+**Windows CMD:**
+```cmd
+python flow.py install --add-to-path
+# After running, restart terminal, then: flow startall (from anywhere!)
+```
 
-# Linux/macOS
+**Linux/macOS:**
+```bash
 # Edit ~/.bashrc and add: export PATH="/path/to/FlowWorklist:$PATH"
 ```
 
 #### 5b. Start Services
 
+**Windows PowerShell:**
 ```powershell
-# Windows (PowerShell) - Start both App and Service together
-python .\flow.py startall
+python .\flow.py startall         # Start both (recommended)
+# OR with wrapper after 'flow install':
+.\flow startall
+.\flow startapp                   # Port 5000 (Management UI)
+.\flow startservice               # Port 11112 (DICOM Server)
+```
 
-# OR start individually
-python .\flow.py startapp          # Port 5000 (Management UI)
-python .\flow.py startservice      # Port 11112 (DICOM Server)
+**Windows CMD:**
+```cmd
+python flow.py startall           # Start both (recommended)
+REM OR with wrapper after 'flow install':
+flow startall
+flow startapp                     REM Port 5000 (Management UI)
+flow startservice                 REM Port 11112 (DICOM Server)
+```
 
-# Linux/macOS
-python flow.py startall
-# OR
+**Linux/macOS:**
+```bash
+python flow.py startall           # Start both
+# OR individually:
 python flow.py startapp
 python flow.py startservice
 ```
 
 #### 5c. Stop Services
 
+**Windows PowerShell:**
 ```powershell
-# Windows (PowerShell) - Stop both gracefully
-python .\flow.py stopall
+python .\flow.py stopall          # Stop both gracefully
+# OR with wrapper:
+.\flow stopall
+.\flow stopapp                    # Graceful Flask shutdown
+.\flow stopservice                # Stop DICOM server
+.\flow status                     # Check status
+```
 
-# OR stop individually
-python .\flow.py stopapp           # Graceful Flask shutdown
-python .\flow.py stopservice       # Stop DICOM server
+**Windows CMD:**
+```cmd
+python flow.py stopall            REM Stop both gracefully
+REM OR with wrapper:
+flow stopall
+flow stopapp                      REM Graceful Flask shutdown
+flow stopservice                  REM Stop DICOM server
+flow status                       REM Check status
+```
 
-# Check status anytime
-python .\flow.py status
+**Linux/macOS:**
+```bash
+python flow.py stopall
+python flow.py status
 ```
 
 ### Available Flow Commands

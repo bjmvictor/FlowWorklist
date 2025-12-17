@@ -66,34 +66,35 @@ Edit `config.json`:
 }
 ```
 
-### Step 4: Use Flow CLI (Windows PowerShell)
+### Step 4: Use Flow CLI
 
 **One-time setup** (adds `flow` to system PATH):
 ```powershell
+# PowerShell:
 python flow.py install --add-to-path
-# After running, restart your PowerShell terminal
-# Then you can use `flow` from any directory
+# Then restart terminal and use: .\flow startall
+
+# CMD:
+python flow.py install --add-to-path
+# Then restart terminal and use: flow startall
 ```
 
 **Start services**:
 ```powershell
-flow startall          # start both App and Service
-# OR start individually:
-flow startapp          # start management App (port 5000)
-flow startservice      # start MWL DICOM server (port 11112)
+# PowerShell: .\flow startall  |  CMD: flow startall
+# OR individually:
+# PowerShell: .\flow startapp / .\flow startservice
+# CMD: flow startapp / flow startservice
 ```
 
 **Stop services**:
 ```powershell
-flow stopall           # stop both Service and App gracefully
-# OR stop individually:
-flow stopapp           # stop management App
-flow stopservice       # stop MWL service
+# PowerShell: .\flow stopall  |  CMD: flow stopall
 ```
 
 **Check status**:
 ```powershell
-flow status            # show App + Service status
+# PowerShell: .\flow status  |  CMD: flow status
 ```
 
 ### Step 5: Open Browser
