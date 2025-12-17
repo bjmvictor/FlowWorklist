@@ -5,8 +5,8 @@
 A lightweight, vendor-neutral DICOM Modality Worklist (MWL) server with a simple web dashboard.
 
 - 🏥 Connects to hospital DB (Oracle, PostgreSQL, MySQL)
-- 🧾 Serves C-FIND worklists to modalities
-- 🌐 Dashboard to configure, test and monitor
+- 🧾 Serves pending exams as C-FIND worklists to modalities
+- 🌐 Dashboard to manage, configure, test and monitoring
 
 ---
 
@@ -81,10 +81,10 @@ Optional (Windows, System PATH): run terminal as Administrator then `python flow
 
 ## 📚 Docs
 
-- Column mapping reference → `COLUMN_MAPPING_GUIDE.md`
-- Deployment guide → `DEPLOYMENT.md`
-- Quick reference card → `QUICK_REFERENCE.md`
-- Build executable (Windows) → `BUILD_GUIDE.md`
+- Column mapping reference → [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md)
+- Deployment guide → [DEPLOYMENT.md](DEPLOYMENT.md)
+- Quick reference card → [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+- Build executable (Windows) → [BUILD_GUIDE.md](BUILD_GUIDE.md)
 
 ---
 
@@ -100,7 +100,6 @@ Optional (Windows, System PATH): run terminal as Administrator then `python flow
 ## 🔒 Notes
 
 - Do not commit real credentials; use placeholders in `config.json`
-- Use firewall rules to restrict port 11112
 - Keep dependencies updated (`pip install -r requirements.txt`)
 
 ## 🚀 Quick Start (5 minutes)
