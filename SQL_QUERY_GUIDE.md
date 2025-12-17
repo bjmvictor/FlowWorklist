@@ -10,7 +10,7 @@ A query SQL **DEVE** retornar exatamente **17 colunas** na seguinte ordem:
 
 | Posição | Nome Coluna | DICOM Field | Tipo | Exemplo |
 |---------|-------------|-------------|------|---------|
-| 1 | Patient Name | PatientName | VARCHAR2 | SILVA^BENJAMIN |
+| 1 | Patient Name | PatientName | VARCHAR2 | BENJAMIN SILVA (será convertido para SILVA^BENJAMIN) |
 | 2 | Patient ID | PatientID | VARCHAR2 | 12345678 |
 | 3 | Birth Date | PatientBirthDate | CHAR(8) YYYYMMDD | 20030201 |
 | 4 | Sex | PatientSex | CHAR(1) M/F/O | M |
@@ -18,7 +18,7 @@ A query SQL **DEVE** retornar exatamente **17 colunas** na seguinte ordem:
 | 6 | Accession Number | AccessionNumber | VARCHAR2 | P102025 |
 | 7 | Exam Date | ScheduledProcedureStepStartDate | CHAR(8) YYYYMMDD | 20251216 |
 | 8 | Exam Time | ScheduledProcedureStepStartTime | CHAR(6) HH24MISS | 143000 |
-| 9 | Physician Name | ScheduledPerformingPhysicianName | VARCHAR2 | JONES^MARY |
+| 9 | Physician Name | ScheduledPerformingPhysicianName | VARCHAR2 | MARY JONES (será convertido para JONES^MARY) |
 | 10 | Modality | Modality | CHAR(2) | CR |
 | 11 | Priority | Priority Flag | VARCHAR2 | HIGH |
 | 12 | Encounter Type | Patient Type | VARCHAR2 | URGENCIA |
@@ -28,12 +28,21 @@ A query SQL **DEVE** retornar exatamente **17 colunas** na seguinte ordem:
 | 16 | Code Meaning | Code Meaning | VARCHAR2 | CHEST X-RAY |
 | 17 | Code Scheme | Code Scheme Designator | VARCHAR2 | CBR |
 
+## ⚠️ Importante: Formatação de Nomes
+
+**O serviço MWL faz a conversão automática dos nomes para o formato DICOM (Sobrenome^Nome)**
+
+- ✅ **Envie**: `BENJAMIN SILVA` ou `MARY JONES`
+- ❌ **NÃO envie**: `SILVA^BENJAMIN` (a conversão é automática)
+
+O serviço detecta automaticamente o último nome como sobrenome e converte para o padrão DICOM.
+
 ## Exemplos de Queries Válidas
 
 ### Exemplo 1: Query Simples (Teste com dados dummy)
 ```sql
 SELECT 
-  'SILVA^BENJAMIN' AS col_patient_name,
+  'BENJAMIN SILVA' AS col_patient_name,
   '12345678' AS col_patient_id,
   '20030201' AS col_birth_date,
   'M' AS col_patient_sex,
@@ -41,7 +50,7 @@ SELECT
   'P102025' AS col_accession_number,
   '20251216' AS col_exam_date,
   '143000' AS col_exam_time,
-  'JONES^MARY' AS col_physician_name,
+  'MARY JONES' AS col_physician_name,
   'CR' AS col_modality,
   'HIGH' AS col_priority,
   'URGENCIA' AS col_encounter_type,
@@ -56,7 +65,7 @@ FROM DUAL
 ### Exemplo 2: Query Real com Tabela de Pacientes
 ```sql
 SELECT 
-  CONCAT(p.last_name, '^', p.first_name) AS col_patient_name,
+  p.full_name AS col_patient_name,
   p.patient_id AS col_patient_id,
   TO_CHAR(p.birth_date, 'YYYYMMDD') AS col_birth_date,
   p.sex AS col_patient_sex,
@@ -64,7 +73,7 @@ SELECT
   w.accession_number AS col_accession_number,
   TO_CHAR(w.scheduled_date, 'YYYYMMDD') AS col_exam_date,
   TO_CHAR(w.scheduled_time, 'HH24MISS') AS col_exam_time,
-  CONCAT(d.last_name, '^', d.first_name) AS col_physician_name,
+  d.full_name AS col_physician_name,
   w.modality AS col_modality,
   DECODE(w.priority, 'U', 'LOW', 'R', 'MEDIUM', 'H', 'HIGH', 'LOW') AS col_priority,
   w.encounter_type AS col_encounter_type,

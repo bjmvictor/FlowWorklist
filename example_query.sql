@@ -2,7 +2,7 @@
 -- Use esta query como base para seus testes
 
 SELECT 
-  'SILVA^BENJAMIN^VICTOR' AS col_patient_name,        -- 1. Nome (formato: SOBRENOME^NOME^MEIO)
+  'BENJAMIN VICTOR SILVA' AS col_patient_name,        -- 1. Nome completo do paciente (conversão automática para DICOM)
   '1234' AS col_patient_id,                           -- 2. ID do Paciente
   '20030201' AS col_birth_date,                       -- 3. Data Nascimento (YYYYMMDD)
   'M' AS col_patient_sex,                             -- 4. Sexo (M/F/O)
@@ -10,7 +10,7 @@ SELECT
   '123456' AS col_accession_number,                   -- 6. Número de Acesso/Pedido
   '20251216' AS col_exam_date,                        -- 7. Data do Exame (YYYYMMDD)
   '203205' AS col_exam_time,                          -- 8. Hora do Exame (HHMMSS)
-  'MAYERS^MICHAEL' AS col_physician_name,             -- 9. Nome do Médico (formato: SOBRENOME^NOME)
+  'MICHAEL MAYERS' AS col_physician_name,             -- 9. Nome completo do médico (conversão automática para DICOM)
   'CR' AS col_modality,                               -- 10. Modalidade (CR/CT/MR/US/...)
   'HIGH' AS col_priority,                             -- 11. Prioridade (HIGH/MEDIUM/LOW)
   'URGENCIA' AS col_encounter_type,                   -- 12. Tipo Atendimento
@@ -27,7 +27,8 @@ FROM DUAL;
 -- ✅ Nomes das colunas são ignorados (apenas a POSIÇÃO importa)
 -- ✅ Use TO_CHAR() para formatar datas: TO_CHAR(data_coluna, 'YYYYMMDD')
 -- ✅ Use TO_CHAR() para formatar horas: TO_CHAR(hora_coluna, 'HH24MISS')
--- ✅ Use CONCAT() ou || para juntar nomes: CONCAT(sobrenome, '^', nome)
+-- ⚠️ NOMES: Envie como "NOME SOBRENOME" - o serviço converte para formato DICOM "SOBRENOME^NOME" automaticamente
+-- ❌ NÃO use CONCAT(sobrenome, '^', nome) - o serviço faz isso automaticamente!
 
 -- Exemplo com tabela real:
 /*

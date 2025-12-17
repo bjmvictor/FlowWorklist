@@ -171,26 +171,26 @@
           <div class="mt-4 bg-blue-50 dark:bg-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg p-4">
             <p class="font-semibold mb-2 text-blue-800 dark:text-blue-200" data-i18n="sql_guide_title">Guia de colunas esperadas pela Worklist</p>
             <div class="text-xs text-gray-700 dark:text-gray-300 space-y-1 max-h-64 overflow-y-auto">
-              <p class="font-bold text-blue-600 dark:text-blue-300">⚠️ Query deve retornar EXATAMENTE 17 colunas nesta ordem:</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">1.</code> <strong>PatientName</strong> (Nome^Sobrenome) - Ex: SILVA^JOAO</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">2.</code> <strong>PatientID</strong> - Ex: 12345678</p>
+              <p class="font-bold text-blue-600 dark:text-blue-300" data-i18n="sql_guide_warning">⚠️ Query deve retornar EXATAMENTE 17 colunas nesta ordem:</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">1.</code> <strong>PatientName</strong> <span data-i18n="sql_col1_hint">(Nome completo do paciente)</span> - Ex: JOAO DA SILVA</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">2.</code> <strong>PatientID</strong> <span data-i18n="sql_col2_hint">(Identificador único)</span> - Ex: 12345678</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">3.</code> <strong>PatientBirthDate</strong> (YYYYMMDD) - Ex: 19751025</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">4.</code> <strong>PatientSex</strong> (M/F/O) - Ex: M</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">5.</code> <strong>RequestedProcedureDescription</strong> - Ex: RX TORAX PA</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">6.</code> <strong>AccessionNumber</strong> - Ex: P102025</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">5.</code> <strong>RequestedProcedureDescription</strong> <span data-i18n="sql_col5_hint">(Descrição do exame)</span> - Ex: RX TORAX PA</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">6.</code> <strong>AccessionNumber</strong> <span data-i18n="sql_col6_hint">(Número do pedido)</span> - Ex: P102025</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">7.</code> <strong>ScheduledProcedureStepStartDate</strong> (YYYYMMDD) - Ex: 20251216</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">8.</code> <strong>ScheduledProcedureStepStartTime</strong> (HHMMSS) - Ex: 143000</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">9.</code> <strong>ScheduledPerformingPhysicianName</strong> - Ex: JONES^MARY</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">9.</code> <strong>ScheduledPerformingPhysicianName</strong> <span data-i18n="sql_col9_hint">(Nome completo do médico)</span> - Ex: MARY JONES</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">10.</code> <strong>Modality</strong> (CR/CT/MR/US) - Ex: CR</p>
               <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">11.</code> <strong>Priority</strong> - Ex: HIGH, MEDIUM, LOW</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">12.</code> <strong>Encounter Type</strong> - Ex: URGENCY, INTERNAL</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">13.</code> <strong>Encounter ID</strong> - Ex: 456789</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">14.</code> <strong>Location</strong> - Ex: EMERGENCY ROOM</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">15.</code> <strong>Procedure Code</strong> - Ex: FCR0101-0000</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">16.</code> <strong>Code Meaning</strong> - Ex: CHEST X-RAY</p>
-              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">17.</code> <strong>Code Scheme</strong> - Ex: 99UNIT, CBR, SNOMED</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">12.</code> <strong>Encounter Type</strong> <span data-i18n="sql_col12_hint">(Tipo de atendimento)</span> - Ex: URGENCY, INTERNAL</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">13.</code> <strong>Encounter ID</strong> <span data-i18n="sql_col13_hint">(ID do atendimento)</span> - Ex: 456789</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">14.</code> <strong>Location</strong> <span data-i18n="sql_col14_hint">(Local do exame)</span> - Ex: EMERGENCY ROOM</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">15.</code> <strong>Procedure Code</strong> <span data-i18n="sql_col15_hint">(Código do procedimento)</span> - Ex: FCR0101-0000</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">16.</code> <strong>Code Meaning</strong> <span data-i18n="sql_col16_hint">(Significado do código)</span> - Ex: CHEST X-RAY</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">17.</code> <strong>Code Scheme</strong> <span data-i18n="sql_col17_hint">(Esquema de codificação)</span> - Ex: 99UNIT, CBR, SNOMED</p>
               <p class="mt-3 pt-2 border-t border-blue-300 dark:border-gray-500 text-blue-700 dark:text-blue-300">
-                📖 <a href="https://github.com/bjmvictor/FlowWorklist/blob/main/SQL_QUERY_GUIDE.md" target="_blank" class="underline hover:text-blue-900 dark:hover:text-blue-100">Ver guia completo com exemplos SQL</a>
+                📖 <a href="https://github.com/bjmvictor/FlowWorklist/blob/main/SQL_QUERY_GUIDE.md" target="_blank" class="underline hover:text-blue-900 dark:hover:text-blue-100" data-i18n="sql_guide_link">Ver guia completo com exemplos SQL</a>
               </p>
             </div>
           </div>

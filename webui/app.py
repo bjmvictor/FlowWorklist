@@ -337,6 +337,7 @@ def test_db():
                     })
 
                 conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn)
+                driver_name = 'cx_Oracle'
                 test_sql = "SELECT 1 FROM dual"
 
             elif db_type == 'postgres':
