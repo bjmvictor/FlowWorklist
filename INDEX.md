@@ -193,7 +193,7 @@ Complete guide to FlowWorklist documentation and setup.
 - **History** → [CHANGELOG.md](CHANGELOG.md)
 
 ### File Locations
-- Source code: `MWLSCP.py`, `webui/`, `launch_flask.py`
+- Source code: `mwl_service.py`, `webui/`, `flow.py`
 - Configuration: `config.json`
 - Logs: `logs/`, `service_logs/`
 

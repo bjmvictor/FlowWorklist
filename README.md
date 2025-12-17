@@ -57,9 +57,11 @@ clinics, and imaging centers.
 git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
 python -m venv .
-.\Scripts\Activate.ps1
+\.\Scripts\Activate.ps1
 pip install -r requirements.txt
-python startapp.py
+python .\flow.py install    # one-time; creates .\flow wrappers
+.\flow startapp             # start management App
+.\flow startservice         # start MWL service
 ```
 
 **Linux/macOS:**
@@ -69,7 +71,8 @@ cd FlowWorklist
 python3 -m venv .
 source bin/activate
 pip install -r requirements.txt
-python startapp.py
+python flow.py startapp      # start management App
+python flow.py startservice  # start MWL service
 ```
 
 ### Access the Application
@@ -183,14 +186,17 @@ Edit `config.json` with your database credentials:
 }
 ```
 
-### Step 5: Start Services
+### Step 5: Start Services (Flow CLI)
 
 ```powershell
-# Start Management Dashboard (Port 5000)
-python startapp.py
+# Windows (PowerShell)
+python .\flow.py install
+.\flow startapp          # Port 5000
+.\flow startservice      # Port 11112
 
-# Or in a separate terminal, start MWLSCP directly (Port 11112)
-python mwl_service.py
+# Linux/macOS
+python flow.py startapp
+python flow.py startservice
 ```
 ### Alternative: Windows Executable
 For easier deployment on Windows without Python installation:
@@ -347,12 +353,14 @@ For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPIN
 ### Local Testing (Development)
 
 ```powershell
-# Terminal 1: Start MWLSCP Server
-python mwl_service.py
+# Windows (single terminal, Flow CLI)
+.\flow startservice     # MWL DICOM Server
+.\flow startapp         # Management App (UI)
+# Then open http://127.0.0.1:5000
 
-# Terminal 2: Start Management Dashboard
-python startapp.py
-# Then open http://localhost:5000
+# Linux/macOS
+python flow.py startservice
+python flow.py startapp
 ```
 
 ### Production Deployment
@@ -556,6 +564,8 @@ findscu -aec FlowMWL -aet ConsoleApp 192.168.1.3 11112 \
 FlowWorklist/
 ├── mwl_service.py             # DICOM MWL Server (core application)
 ├── startapp.py                # Entry point for management dashboard
+├── flow.py                    # Flow CLI helper (app/service commands)
+├── flow.bat / flow.ps1        # Windows wrappers for Flow CLI
 ├── config.json                # Database and server configuration
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file

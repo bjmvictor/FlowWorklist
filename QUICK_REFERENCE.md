@@ -66,14 +66,17 @@ Edit `config.json`:
 }
 ```
 
-### Step 4: Start Dashboard
-```bash
-python launch_flask.py
+### Step 4: Use Flow CLI (Windows PowerShell)
+```powershell
+.\u200bflow install    # one-time wrappers
+.\u200bflow startapp   # start the management App
+.\u200bflow startservice  # start MWL service
+.\u200bflow status     # show App + Service status
 ```
 
 ### Step 5: Open Browser
 ```
-http://localhost:5000
+http://127.0.0.1:5000
 ```
 
 ---
@@ -83,7 +86,8 @@ http://localhost:5000
 | File | Purpose | Edit? |
 |------|---------|-------|
 | `MWLSCP.py` | DICOM server | Usually not |
-| `launch_flask.py` | Dashboard launcher | Usually not |
+| `flow.py` | Command line helper | **YES** |
+| `flow.bat` / `flow.ps1` | CLI wrappers | **YES** |
 | `config.json` | Database config | **YES** |
 | `webui/app.py` | Dashboard code | Usually not |
 | `requirements.txt` | Dependencies | If adding packages |

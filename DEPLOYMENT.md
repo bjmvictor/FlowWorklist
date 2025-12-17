@@ -16,9 +16,10 @@ pip install -r requirements.txt
 # 3. Configure database in config.json
 # Edit the file with your database credentials
 
-# 4. Start management dashboard
-python launch_flask.py
-# Open http://localhost:5000
+# 4. Start management App (Flow CLI)
+python .\flow.py install
+.\flow startapp
+# Open http://127.0.0.1:5000
 ```
 
 ### Windows - Service Installation
@@ -30,7 +31,7 @@ python launch_flask.py
 # Extract and add to PATH
 
 # Install service
-nssm install FlowMWL "C:\FlowWorklist\Scripts\python.exe" "C:\FlowWorklist\MWLSCP.py"
+nssm install FlowMWL "C:\FlowWorklist\Scripts\python.exe" "C:\FlowWorklist\mwl_service.py"
 nssm set FlowMWL AppDirectory "C:\FlowWorklist"
 nssm set FlowMWL AppStdout "C:\FlowWorklist\logs\service.log"
 nssm set FlowMWL AppStderr "C:\FlowWorklist\logs\service.log"
@@ -83,7 +84,7 @@ Type=simple
 User=dicom
 Group=dicom
 WorkingDirectory=/opt/FlowWorklist
-ExecStart=/opt/FlowWorklist/venv/bin/python /opt/FlowWorklist/MWLSCP.py
+ExecStart=/opt/FlowWorklist/venv/bin/python /opt/FlowWorklist/mwl_service.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -153,7 +154,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "import socket; s = socket.socket(); s.connect(('localhost', 11112)); s.close()" || exit 1
 
 # Run MWLSCP server
-CMD ["python", "MWLSCP.py"]
+CMD ["python", "mwl_service.py"]
 ```
 
 ### Build and Run

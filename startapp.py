@@ -3,11 +3,12 @@ import time
 import webbrowser
 from pathlib import Path
 
-# Caminho para o diretório e app
+# Paths to workspace and UI app
 work_dir = Path(__file__).parent
 app_script = work_dir / "webui" / "app.py"
+pid_file = work_dir / "app.pid"
 
-# Iniciar Flask como subprocess detachado
+# Launch the App as a detached subprocess
 import os
 import sys
 
@@ -15,7 +16,7 @@ import sys
 env = os.environ.copy()
 env['PYTHONUNBUFFERED'] = '1'
 
-# Iniciar Flask em background sem console visível
+# Start App in background without a visible console
 if sys.platform == 'win32':
     # Windows: use CREATE_NO_WINDOW
     CREATE_NO_WINDOW = 0x08000000
@@ -27,7 +28,7 @@ if sys.platform == 'win32':
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    print(f"Flask iniciado com PID: {process.pid}")
+    print(f"App started with PID: {process.pid}")
 else:
     process = subprocess.Popen(
         [sys.executable, str(app_script)],
@@ -36,18 +37,24 @@ else:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    print(f"Flask iniciado com PID: {process.pid}")
+    print(f"App started with PID: {process.pid}")
 
-# Aguardar Flask ficar pronto
+# Write App PID to file for safe stopping later
+try:
+    pid_file.write_text(str(process.pid))
+except Exception:
+    pass
+
+# Wait a moment for the App to be ready
 time.sleep(3)
 
-# Abrir navegador
+# Open browser
 try:
     webbrowser.open("http://127.0.0.1:5000")
-    print("Navegador aberto em http://127.0.0.1:5000")
+    print("Browser opened at http://127.0.0.1:5000")
 except:
-    print("Não foi possível abrir o navegador automaticamente")
-    print("Acesse http://127.0.0.1:5000 manualmente")
+    print("Could not open the browser automatically")
+    print("Please visit http://127.0.0.1:5000 manually")
 
-print("Flask está rodando em background")
-print("Para parar: taskkill /F /IM python.exe")
+print("App is running in background")
+print("To stop safely: use 'flow stopapp' or kill PID from app.pid")

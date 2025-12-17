@@ -1,5 +1,5 @@
-# MWLSCP Service Manager - Flask Web UI Launcher
-# Executa Flask sem janela de terminal visível
+# MWLSCP Service Manager - App (Web UI) Launcher
+# Launch the App without a visible terminal window
 
 $WorkDir = "C:\Users\benjamin.vieira\Documents\FlowWorklist"
 $PythonExe = "$WorkDir\Scripts\python.exe"
@@ -7,13 +7,13 @@ $AppPath = "$WorkDir\webui\app.py"
 
 Set-Location $WorkDir
 
-# Ativar venv
+# Activate venv
 & "$WorkDir\Scripts\Activate.ps1"
 
-# Iniciar Flask em background sem janela visível
+# Start App in background with no visible window
 $ProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
 $ProcessInfo.FileName = $PythonExe
-$ProcessInfo.Arguments = "-m flask run --host=127.0.0.1 --port=5000"
+$ProcessInfo.Arguments = "\"$WorkDir\webui\app.py\""
 $ProcessInfo.WorkingDirectory = $WorkDir
 $ProcessInfo.UseShellExecute = $false
 $ProcessInfo.CreateNoWindow = $true
@@ -21,18 +21,18 @@ $ProcessInfo.RedirectStandardOutput = $true
 $ProcessInfo.RedirectStandardError = $true
 
 $Process = [System.Diagnostics.Process]::Start($ProcessInfo)
-Write-Host "Flask iniciado com PID: $($Process.Id)"
+Write-Host "App started with PID: $($Process.Id)"
 
-# Aguardar Flask ficar pronto
+# Wait for App to be ready
 Start-Sleep -Seconds 3
 
-# Abrir navegador
+# Open browser
 Start-Process "http://127.0.0.1:5000"
 
-Write-Host "Flask está rodando em background: http://127.0.0.1:5000"
-Write-Host "Pressione CTRL+C para parar"
+Write-Host "App is running in background: http://127.0.0.1:5000"
+Write-Host "Use 'flow stopapp' to stop safely"
 
-# Manter script rodando
+# Keep script running
 while ($Process.HasExited -eq $false) {
     Start-Sleep -Seconds 1
 }
