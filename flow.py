@@ -185,15 +185,30 @@ def tail(log_path: str, lines: int = 200):
 
 
 def _add_to_path_windows():
-    """Add FlowWorklist directory to Windows PATH environment variable."""
+    """Add FlowWorklist directory to Windows System PATH (requires Administrator)."""
     import winreg
+    import ctypes
     flow_dir = str(ROOT)
     
+    # Check if running as administrator
     try:
-        # Open registry key for environment variables
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        is_admin = False
+    
+    if not is_admin:
+        print("⚠️  Administrator privileges required to modify System PATH.")
+        print("   Please run PowerShell or CMD as Administrator and try again.")
+        print()
+        print("   Alternative: Add to User PATH instead (no admin required):")
+        print(f"   Add this to your User PATH manually: {flow_dir}")
+        return False
+    
+    try:
+        # Open registry key for SYSTEM environment variables (requires admin)
         key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r'Environment',
+            winreg.HKEY_LOCAL_MACHINE,
+            r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
             0,
             winreg.KEY_READ | winreg.KEY_WRITE
         )
@@ -209,15 +224,31 @@ def _add_to_path_windows():
             new_path = f"{current_path};{flow_dir}" if current_path else flow_dir
             winreg.SetValueEx(key, 'Path', 0, winreg.REG_EXPAND_SZ, new_path)
             winreg.CloseKey(key)
-            print(f"✓ Added to PATH: {flow_dir}")
+            
+            # Broadcast WM_SETTINGCHANGE to notify system of environment change
+            try:
+                HWND_BROADCAST = 0xFFFF
+                WM_SETTINGCHANGE = 0x1A
+                SMTO_ABORTIFHUNG = 0x0002
+                ctypes.windll.user32.SendMessageTimeoutW(
+                    HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment",
+                    SMTO_ABORTIFHUNG, 5000, None
+                )
+            except:
+                pass  # Non-critical if broadcast fails
+            
+            print(f"✓ Added to System PATH: {flow_dir}")
             print("⚠️  Please restart PowerShell/CMD for PATH changes to take effect.")
             return True
         else:
             winreg.CloseKey(key)
-            print(f"ℹ️  Already in PATH: {flow_dir}")
+            print(f"ℹ️  Already in System PATH: {flow_dir}")
             return False
+    except PermissionError:
+        print("✗ Permission denied. Run PowerShell/CMD as Administrator.")
+        return False
     except Exception as e:
-        print(f"✗ Failed to add to PATH: {e}")
+        print(f"✗ Failed to add to System PATH: {e}")
         print("  Try running PowerShell/CMD as Administrator and retry.")
         return False
 

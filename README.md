@@ -225,17 +225,21 @@ Edit `config.json` with your database credentials:
 
 To run `flow` commands from any directory without activation:
 
-**Windows PowerShell:**
+**Windows PowerShell (Run as Administrator):**
 ```powershell
+# Right-click PowerShell → "Run as Administrator"
 python .\flow.py install --add-to-path
 # After running, restart terminal, then: flow startall (from anywhere!)
 ```
 
-**Windows CMD:**
+**Windows CMD (Run as Administrator):**
 ```cmd
+REM Right-click CMD → "Run as Administrator"
 python flow.py install --add-to-path
-# After running, restart terminal, then: flow startall (from anywhere!)
+REM After running, restart terminal, then: flow startall (from anywhere!)
 ```
+
+> ⚠️ **Note**: Administrator privileges are required to modify System PATH. If you don't have admin access, you can add the FlowWorklist directory to your User PATH manually through System Environment Variables.
 
 **Linux/macOS:**
 ```bash
