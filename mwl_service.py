@@ -294,6 +294,13 @@ class WorklistProvider:
                 if ORACLE_DB_MODULE is None:
                     logging.error(t('db_driver_missing', db='Oracle'))
                     return False
+                
+                # Tentar thick mode primeiro (suporta password verifier antigo)
+                try:
+                    ORACLE_DB_MODULE.init_oracle_client()
+                except Exception:
+                    pass  # Já inicializado ou não disponível
+                
                 self.conn = ORACLE_DB_MODULE.connect(user=DB_USER, password=DB_PASSWORD, dsn=DB_DSN)
                 self.driver = 'oracle'
             # Conexão Oracle estabelecida

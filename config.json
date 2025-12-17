@@ -10,7 +10,7 @@
     "user": "db_weknow",
     "password": "pass_1929",
     "dsn": "192.168.1.3:1521/PRD",
-    "query": "SELECT patient_name, patient_id, birth_date, sex, procedure_desc, accession_num, scheduled_date, scheduled_time, physician_name, modality, priority, encounter_type, encounter_id, location, procedure_code, code_meaning, code_scheme FROM worklist_view ORDER BY scheduled_date DESC, scheduled_time ASC",
+    "query": "SELECT \"Benjamin Victor Vieira da Silva\", \"1234\" AS PatientID, \"20030201\" AS PatientBirthDate, \"M\" AS PatientSex, \"Torax - PA\" AS StudyDescription, \"123456\" AS StudyID, \"20251216\" AS StudyStartDate , \"203205\" AS StudyStartTime, \"Michael Mayers\" AS DoctorName, \"CR\" AS Modality, \"HIGH\" AS Priority, \"U\" AtendimentType, \"123456\" AS AtendimentID, \"Green Room\" AS Location, \"FCR0000-0000\" AS ProcedureCode, \"TORAX - PA\", \"99HOSP\" FROM DUAL",
     "column_mapping": [
       {
         "position": 1,

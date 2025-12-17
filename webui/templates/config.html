@@ -170,18 +170,28 @@
           <!-- Guia de colunas esperadas -->
           <div class="mt-4 bg-blue-50 dark:bg-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg p-4">
             <p class="font-semibold mb-2 text-blue-800 dark:text-blue-200" data-i18n="sql_guide_title">Guia de colunas esperadas pela Worklist</p>
-            <div class="text-xs text-gray-700 dark:text-gray-300 space-y-1">
-              <p><code class="font-mono">cd_paciente</code> → PatientID</p>
-              <p><code class="font-mono">nm_paciente</code> → PatientName</p>
-              <p><code class="font-mono">tp_sexo</code> → PatientSex (M/F)</p>
-              <p><code class="font-mono">nascimento</code> → PatientBirthDate (YYYYMMDD)</p>
-              <p><code class="font-mono">modalidade</code> → Modality (CR/CT/MR/...)</p>
-              <p><code class="font-mono">exame_id</code> → AccessionNumber / RequestedProcedureID</p>
-              <p><code class="font-mono">exame_data</code> → ScheduledProcedureStepStartDate (YYYYMMDD)</p>
-              <p><code class="font-mono">exame_hora</code> → ScheduledProcedureStepStartTime (HHMMSS)</p>
-              <p><code class="font-mono">exame_descricao</code> → RequestedProcedureDescription</p>
-              <p><code class="font-mono">medico_responsavel</code> → ScheduledPerformingPhysicianName</p>
-              <p><code class="font-mono">procedure_code_value</code> / <code class="font-mono">code_scheme_designator</code> / <code class="font-mono">code_meaning</code> → Códigos de protocolo/procedimento</p>
+            <div class="text-xs text-gray-700 dark:text-gray-300 space-y-1 max-h-64 overflow-y-auto">
+              <p class="font-bold text-blue-600 dark:text-blue-300">⚠️ Query deve retornar EXATAMENTE 17 colunas nesta ordem:</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">1.</code> <strong>PatientName</strong> (Nome^Sobrenome) - Ex: SILVA^JOAO</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">2.</code> <strong>PatientID</strong> - Ex: 12345678</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">3.</code> <strong>PatientBirthDate</strong> (YYYYMMDD) - Ex: 19751025</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">4.</code> <strong>PatientSex</strong> (M/F/O) - Ex: M</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">5.</code> <strong>RequestedProcedureDescription</strong> - Ex: RX TORAX PA</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">6.</code> <strong>AccessionNumber</strong> - Ex: P102025</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">7.</code> <strong>ScheduledProcedureStepStartDate</strong> (YYYYMMDD) - Ex: 20251216</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">8.</code> <strong>ScheduledProcedureStepStartTime</strong> (HHMMSS) - Ex: 143000</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">9.</code> <strong>ScheduledPerformingPhysicianName</strong> - Ex: JONES^MARY</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">10.</code> <strong>Modality</strong> (CR/CT/MR/US) - Ex: CR</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">11.</code> <strong>Priority</strong> - Ex: HIGH, MEDIUM, LOW</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">12.</code> <strong>Encounter Type</strong> - Ex: URGENCY, INTERNAL</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">13.</code> <strong>Encounter ID</strong> - Ex: 456789</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">14.</code> <strong>Location</strong> - Ex: EMERGENCY ROOM</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">15.</code> <strong>Procedure Code</strong> - Ex: FCR0101-0000</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">16.</code> <strong>Code Meaning</strong> - Ex: CHEST X-RAY</p>
+              <p><code class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">17.</code> <strong>Code Scheme</strong> - Ex: 99UNIT, CBR, SNOMED</p>
+              <p class="mt-3 pt-2 border-t border-blue-300 dark:border-gray-500 text-blue-700 dark:text-blue-300">
+                📖 <a href="https://github.com/bjmvictor/FlowWorklist/blob/main/SQL_QUERY_GUIDE.md" target="_blank" class="underline hover:text-blue-900 dark:hover:text-blue-100">Ver guia completo com exemplos SQL</a>
+              </p>
             </div>
           </div>
         </div>
