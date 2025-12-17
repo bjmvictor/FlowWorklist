@@ -45,14 +45,37 @@ clinics, and imaging centers.
 
 ## 🚀 Quick Start (5 minutes)
 
-```bash
+### Prerequisites
+- Python 3.8+ installed
+- Git installed
+- Database access (Oracle, PostgreSQL, or MySQL)
+
+### Installation
+
+**Windows:**
+```powershell
 git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
 python -m venv .
-source bin/activate   # Linux/macOS
+.\Scripts\Activate.ps1
 pip install -r requirements.txt
-python mwl_service.py
+python startapp.py
 ```
+
+**Linux/macOS:**
+```bash
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python3 -m venv .
+source bin/activate
+pip install -r requirements.txt
+python startapp.py
+```
+
+### Access the Application
+- **DICOM Server**: `localhost:11112` (or your IP)
+- **Management UI**: `http://localhost:5000`
+- **Default Language**: Portuguese (change in Settings)
 
 ---
 
