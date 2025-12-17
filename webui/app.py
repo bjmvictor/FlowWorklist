@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 import subprocess
 import sys
-import service_manager as manager
 from pathlib import Path
 import subprocess
 import socket
@@ -11,8 +10,18 @@ import sys
 import json
 import importlib.util
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+# Ensure project root on sys.path before importing local modules
 ROOT = Path(__file__).parent.parent  # Parent of webui/
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import flow as manager
+
+app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Ensure project root is on sys.path so service_manager and other modules resolve
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # Ensure venv site-packages is in sys.path for proper module imports
 _lib_path = ROOT / 'Lib' / 'site-packages'
@@ -114,19 +123,19 @@ def plugins_status():
 @app.route('/')
 def index():
     st = manager.status()
-    logs = manager.list_logs(limit=10)
+    logs = manager.logs(limit=10)
     return render_template('index.html', status=st, logs=logs)
 
 
 @app.route('/action/<cmd>', methods=['POST'])
 def action(cmd):
-    cfg = str(manager.CONFIG_FILE)
+    cfg = str(ROOT / "config.json")
     if cmd == 'start':
-        r = manager.start_service(config_path=cfg)
+        r = manager.startservice(config_path=cfg)
     elif cmd == 'stop':
-        r = manager.stop_service()
+        r = manager.stopservice()
     elif cmd == 'restart':
-        r = manager.restart_service(config_path=cfg)
+        r = manager.restartservice(config_path=cfg)
     else:
         r = {"ok": False, "msg": 'unknown command'}
     return jsonify(r)
@@ -139,7 +148,7 @@ def status():
 
 @app.route('/logs')
 def logs():
-    logs = manager.list_logs(limit=50)
+    logs = manager.logs(limit=50)
     notice = request.args.get('notice')
     status = request.args.get('status')
     return render_template('logs.html', logs=logs, notice=notice, status=status)
@@ -151,7 +160,7 @@ def view_log():
     lines = int(request.args.get('lines', 500))
     if not path:
         return 'no log specified', 400
-    content = manager.tail_log(path, lines=lines)
+    content = manager.tail(path, lines=lines)
     return render_template('view_log.html', content=content, path=path)
 
 
@@ -451,7 +460,8 @@ def clear_logs():
 def test_echo():
     """Test DICOM C-ECHO"""
     try:
-        cfg = manager.read_config()
+        cfg_path = ROOT / 'config.json'
+        cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
         host = cfg.get('server', {}).get('host', '127.0.0.1') or '127.0.0.1'
         port = cfg.get('server', {}).get('port', 11112) or 11112
         

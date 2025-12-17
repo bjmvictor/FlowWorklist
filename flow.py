@@ -163,8 +163,9 @@ def startservice(config_path: str | None = None):
     if SERVICE_PID.exists():
         pid = int(SERVICE_PID.read_text().strip())
         if _is_process_running(pid):
-            print(f"Service already running (PID {pid})")
-            return
+            msg = f"Service already running (PID {pid})"
+            print(msg)
+            return {"ok": False, "msg": msg, "pid": pid}
         else:
             SERVICE_PID.unlink(missing_ok=True)
     
@@ -175,8 +176,9 @@ def startservice(config_path: str | None = None):
             with open(lock_file, "r") as f:
                 old_pid = f.read().strip()
             if old_pid and old_pid.isdigit() and _is_process_running(int(old_pid)):
-                print(f"Service already running (lock PID {old_pid})")
-                return
+                msg = f"Service already running (lock PID {old_pid})"
+                print(msg)
+                return {"ok": False, "msg": msg, "pid": int(old_pid)}
             else:
                 lock_file.unlink(missing_ok=True)
         except Exception:
@@ -186,8 +188,9 @@ def startservice(config_path: str | None = None):
     python_path = _venv_python()
     script = ROOT / "mwl_service.py"
     if not script.exists():
-        print("mwl_service.py not found")
-        return
+        msg = "mwl_service.py not found"
+        print(msg)
+        return {"ok": False, "msg": msg}
     
     # Prepare log file
     ts = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -219,22 +222,26 @@ def startservice(config_path: str | None = None):
     SERVICE_PID.write_text(str(proc.pid))
     state = {"pid": proc.pid, "log": str(log_path), "started_at": datetime.datetime.now().isoformat()}
     SERVICE_STATE.write_text(json.dumps(state))
-    print(f"Service started (PID {proc.pid}). Log: {log_path}")
+    msg = f"Service started (PID {proc.pid}). Log: {log_path}"
+    print(msg)
+    return {"ok": True, **state, "msg": msg}
 
 
 def stopservice():
     """Stop MWL service."""
     if not SERVICE_PID.exists():
-        print("No PID file; service not running?")
-        return
+        msg = "No PID file; service not running?"
+        print(msg)
+        return {"ok": False, "msg": msg}
     
     pid = int(SERVICE_PID.read_text().strip())
     if not _is_process_running(pid):
         SERVICE_PID.unlink(missing_ok=True)
         lock_file = ROOT / "mwl_server.lock"
         lock_file.unlink(missing_ok=True) if lock_file.exists() else None
-        print(f"Process {pid} not running")
-        return
+        msg = f"Process {pid} not running"
+        print(msg)
+        return {"ok": False, "msg": msg, "pid": pid}
     
     try:
         if os.name == 'nt':
@@ -245,9 +252,13 @@ def stopservice():
         SERVICE_PID.unlink(missing_ok=True)
         lock_file = ROOT / "mwl_server.lock"
         lock_file.unlink(missing_ok=True) if lock_file.exists() else None
-        print(f"Stopped service (PID {pid})")
+        msg = f"Stopped service (PID {pid})"
+        print(msg)
+        return {"ok": True, "msg": msg, "pid": pid}
     except Exception as e:
-        print(f"Failed to stop service: {e}")
+        msg = f"Failed to stop service: {e}"
+        print(msg)
+        return {"ok": False, "msg": msg}
 
 
 def _is_process_running(pid: int) -> bool:
@@ -265,9 +276,10 @@ def _is_process_running(pid: int) -> bool:
 
 def restartservice(config_path: str | None = None):
     """Restart MWL service."""
-    stopservice()
+    stop_res = stopservice()
     time.sleep(1)
-    startservice(config_path=config_path)
+    start_res = startservice(config_path=config_path)
+    return {"stop": stop_res, "start": start_res}
 
 
 def status():
@@ -302,7 +314,7 @@ def status():
         except Exception:
             pass
     
-    print({"app": app_status, "service": service_status})
+    return {"app": app_status, "service": service_status}
 
 
 def logs(limit: int = 20):
@@ -311,15 +323,14 @@ def logs(limit: int = 20):
     out = []
     for p in files[:limit]:
         out.append({"name": p.name, "path": str(p), "size": p.stat().st_size, "mtime": p.stat().st_mtime})
-    print(out)
+    return out
 
 
 def tail(log_path: str, lines: int = 200):
     """Tail a service log file."""
     p = Path(log_path)
     if not p.exists():
-        print(f"Log file not found: {log_path}")
-        return
+        return f"Log file not found: {log_path}"
     try:
         with p.open('rb') as f:
             f.seek(0, os.SEEK_END)
@@ -332,9 +343,9 @@ def tail(log_path: str, lines: int = 200):
                 data = f.read(read_size) + data
                 end -= read_size
             text = data.decode(errors='replace')
-            print('\n'.join(text.splitlines()[-lines:]))
+            return '\n'.join(text.splitlines()[-lines:])
     except Exception as e:
-        print(f"Error reading log: {e}")
+        return f"Error reading log: {e}"
 
 
 def _add_to_path_windows():
@@ -516,7 +527,31 @@ if __name__ == "__main__":
         status()
     elif args.cmd == "logs":
         logs(limit=args.logs)
-    elif args.cmd == "tail":
-        tail(log_path=args.log, lines=args.lines)
-    elif args.cmd == "install":
-        install(add_to_path=args.add_to_path)
+            if args.cmd == "startapp":
+                startapp()
+            elif args.cmd == "stopapp":
+                stopapp()
+            elif args.cmd == "startall":
+                startall()
+            elif args.cmd == "stopall":
+                stopall()
+            elif args.cmd == "startservice":
+                res = startservice(config_path=args.config)
+                if res is not None:
+                    print(res)
+            elif args.cmd == "stopservice":
+                res = stopservice()
+                if res is not None:
+                    print(res)
+            elif args.cmd == "restartservice":
+                res = restartservice(config_path=args.config)
+                if res is not None:
+                    print(res)
+            elif args.cmd == "status":
+                print(status())
+            elif args.cmd == "logs":
+                print(logs(limit=args.limit))
+            elif args.cmd == "tail":
+                print(tail(args.log, lines=args.lines))
+            elif args.cmd == "install":
+                install(add_to_path=args.add_to_path)
