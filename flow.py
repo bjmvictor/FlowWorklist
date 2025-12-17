@@ -69,14 +69,20 @@ def stopapp():
             pass
         return
     if os.name == 'nt':
+        # Try /T first for graceful shutdown, then /F for force
         try:
-            subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print(f"Stopped App (PID {pid}).")
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to stop App (PID {pid}): {e}")
+            subprocess.run(["taskkill", "/PID", str(pid), "/T"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print(f"Stopped App (PID {pid}) gracefully.")
+        except subprocess.CalledProcessError:
+            # Try force kill as fallback
+            try:
+                subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                print(f"Stopped App (PID {pid}) forcefully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Warning: Failed to stop App (PID {pid}). May require manual intervention: {e}")
     else:
         try:
-            os.kill(pid, 15)
+            os.kill(pid, 15)  # SIGTERM
             print(f"Stopped App (PID {pid}).")
         except Exception as e:
             print(f"Failed to stop App (PID {pid}): {e}")
@@ -84,6 +90,28 @@ def stopapp():
         APP_PID.unlink(missing_ok=True)
     except Exception:
         pass
+
+
+def startall(config_path: str | None = None):
+    """Start both App and Service."""
+    print("Starting App...")
+    startapp()
+    time.sleep(2)
+    # Check if app started
+    if APP_PID.exists():
+        print("App started successfully. Starting Service...")
+        startservice(config_path=config_path)
+    else:
+        print("App failed to start. Skipping Service startup.")
+
+
+def stopall():
+    """Stop both App and Service."""
+    print("Stopping Service...")
+    stopservice()
+    time.sleep(1)
+    print("Stopping App...")
+    stopapp()
 
 
 def startservice(config_path: str | None = None):
@@ -142,8 +170,59 @@ def tail(log_path: str, lines: int = 200):
     print(tail_log(log_path, lines=lines))
 
 
-def install():
-    """Install local wrappers to run 'flow' commands easily."""
+def _add_to_path_windows():
+    """Add FlowWorklist directory to Windows PATH environment variable."""
+    import winreg
+    flow_dir = str(ROOT)
+    
+    try:
+        # Open registry key for environment variables
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r'Environment',
+            0,
+            winreg.KEY_READ | winreg.KEY_WRITE
+        )
+        # Get current PATH
+        try:
+            current_path, _ = winreg.QueryValueEx(key, 'Path')
+        except FileNotFoundError:
+            current_path = ""
+        
+        # Check if already in PATH
+        if flow_dir.lower() not in current_path.lower():
+            # Append to PATH
+            new_path = f"{current_path};{flow_dir}" if current_path else flow_dir
+            winreg.SetValueEx(key, 'Path', 0, winreg.REG_EXPAND_SZ, new_path)
+            winreg.CloseKey(key)
+            print(f"✓ Added to PATH: {flow_dir}")
+            print("⚠️  Please restart PowerShell/CMD for PATH changes to take effect.")
+            return True
+        else:
+            winreg.CloseKey(key)
+            print(f"ℹ️  Already in PATH: {flow_dir}")
+            return False
+    except Exception as e:
+        print(f"✗ Failed to add to PATH: {e}")
+        print("  Try running PowerShell/CMD as Administrator and retry.")
+        return False
+
+
+def _add_to_path_unix():
+    """Provide instructions for adding to PATH on Unix systems."""
+    flow_dir = str(ROOT)
+    shell_rc = os.path.expanduser("~/.bashrc")
+    
+    print(f"To add FlowWorklist to PATH on Linux/macOS, add this line to your shell profile:")
+    print(f'  export PATH="{flow_dir}:$PATH"')
+    print(f"\nOr manually add it to {shell_rc}:")
+    print(f'  echo \'export PATH="{flow_dir}:$PATH"\' >> {shell_rc}')
+    print(f"Then reload: source {shell_rc}")
+    return False
+
+
+def install(add_to_path: bool = False):
+    """Install local wrappers and optionally add to PATH."""
     # Create flow.bat and flow.ps1 in the project root
     bat_path = ROOT / "flow.bat"
     ps1_path = ROOT / "flow.ps1"
@@ -162,8 +241,32 @@ def install():
     )
     bat_path.write_text(bat_content, encoding='utf-8')
     ps1_path.write_text(ps1_content, encoding='utf-8')
-    print("Installed local wrappers: flow.bat and flow.ps1.")
-    print("Usage: .\\flow startapp | stopapp | startservice | stopservice | restartservice | status | logs | tail | install")
+    print("✓ Installed local wrappers: flow.bat and flow.ps1")
+    
+    # Offer to add to PATH
+    if add_to_path:
+        print("\nAdding to PATH...")
+        if os.name == 'nt':
+            _add_to_path_windows()
+        else:
+            _add_to_path_unix()
+    else:
+        print("\nTo use 'flow' from any directory, run:")
+        if os.name == 'nt':
+            print(f"  flow install --add-to-path")
+        else:
+            print(f"  python {ROOT}/flow.py install --add-to-path")
+    
+    print("\nAvailable commands:")
+    print("  flow startapp      - Start management App")
+    print("  flow stopapp       - Stop management App")
+    print("  flow startservice  - Start DICOM MWL service")
+    print("  flow stopservice   - Stop DICOM MWL service")
+    print("  flow startall      - Start App and Service")
+    print("  flow stopall       - Stop App and Service")
+    print("  flow status        - Show status of App and Service")
+    print("  flow logs [--limit N] - List N most recent logs")
+    print("  flow tail <path> [--lines N] - Tail log file")
 
 
 if __name__ == "__main__":
@@ -172,6 +275,8 @@ if __name__ == "__main__":
 
     sub.add_parser("startapp")
     sub.add_parser("stopapp")
+    sub.add_parser("startall")
+    sub.add_parser("stopall")
 
     p_startsvc = sub.add_parser("startservice")
     p_startsvc.add_argument("--config", default=None, help="Path to MWL config file")
@@ -190,7 +295,8 @@ if __name__ == "__main__":
     p_tail.add_argument("log", help="Path to log file to tail")
     p_tail.add_argument("--lines", type=int, default=200)
 
-    sub.add_parser("install")
+    p_install = sub.add_parser("install")
+    p_install.add_argument("--add-to-path", action="store_true", help="Add FlowWorklist to system PATH")
 
     args = parser.parse_args()
 
@@ -198,6 +304,10 @@ if __name__ == "__main__":
         startapp()
     elif args.cmd == "stopapp":
         stopapp()
+    elif args.cmd == "startall":
+        startall()
+    elif args.cmd == "stopall":
+        stopall()
     elif args.cmd == "startservice":
         startservice(config_path=args.config)
     elif args.cmd == "stopservice":
@@ -207,8 +317,8 @@ if __name__ == "__main__":
     elif args.cmd == "status":
         status()
     elif args.cmd == "logs":
-        logs(limit=args.limit)
+        logs(limit=args.logs)
     elif args.cmd == "tail":
         tail(log_path=args.log, lines=args.lines)
     elif args.cmd == "install":
-        install()
+        install(add_to_path=args.add_to_path)
