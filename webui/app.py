@@ -52,7 +52,7 @@ def _venv_python_and_pip():
 
 def install_db_driver(db_type: str):
     pkg_map = {
-        'oracle': ['oracledb'],
+        'oracle': ['cx_Oracle'],
         'postgres': ['psycopg2-binary'],
         'postgresql': ['psycopg2-binary'],
         'mysql': ['PyMySQL'],
@@ -74,7 +74,7 @@ def is_db_plugin_installed(db_type: str) -> bool:
     """Check plugin installed using pip show for reliability (handles loaded modules cache)."""
     dt = (db_type or '').lower()
     pkg_map = {
-        'oracle': 'oracledb',
+        'oracle': 'cx_Oracle',
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -92,7 +92,7 @@ def is_db_plugin_installed(db_type: str) -> bool:
 
 def plugins_status():
     plugins = [
-        {'id': 'oracle', 'label': 'Oracle (oracledb)', 'module': 'oracledb', 'package': 'oracledb'},
+        {'id': 'oracle', 'label': 'Oracle (cx_Oracle)', 'module': 'cx_Oracle', 'package': 'cx_Oracle'},
         {'id': 'postgres', 'label': 'PostgreSQL (psycopg2)', 'module': 'psycopg2', 'package': 'psycopg2-binary'},
         {'id': 'mysql', 'label': 'MySQL (PyMySQL)', 'module': 'pymysql', 'package': 'PyMySQL'},
         {'id': 'pynetdicom', 'label': 'DICOM Worklist Support (pynetdicom)', 'module': 'pynetdicom', 'package': 'pynetdicom'},
@@ -221,7 +221,7 @@ def plugins_page():
 def plugin_install(name):
     name = (name or '').lower()
     mapping = {
-        'oracle': 'oracledb',
+        'oracle': 'cx_Oracle',
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -242,7 +242,7 @@ def plugin_install(name):
 def plugin_uninstall(name):
     name = (name or '').lower()
     mapping = {
-        'oracle': 'oracledb',
+        'oracle': 'cx_Oracle',
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -326,17 +326,17 @@ def test_db():
         # Attempt connection based on database type
         try:
             if db_type == 'oracle':
-                # Use oracledb driver
+                # Use cx_Oracle driver
                 try:
-                    import oracledb
+                    import cx_Oracle
                 except ImportError:
                     return jsonify({
                         'ok': False,
                         'message': 'No Oracle driver available',
-                        'error': 'oracledb is not installed'
+                        'error': 'cx_Oracle is not installed'
                     })
 
-                conn = oracledb.connect(user=user, password=pwd, dsn=dsn)
+                conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn)
                 test_sql = "SELECT 1 FROM dual"
 
             elif db_type == 'postgres':

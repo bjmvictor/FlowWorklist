@@ -2,12 +2,19 @@
 # mwl_server_corrected.py
 import logging
 import logging.handlers
-# Use oracledb (thin mode, no Oracle client required)
+# Prefer cx_Oracle (mais compatível) e fallback para oracledb
 try:
-    import oracledb as _dbmod
+    import cx_Oracle as _dbmod
     ORACLE_DB_MODULE = _dbmod
+    ORACLE_DRIVER_NAME = 'cx_Oracle'
 except Exception:
-    ORACLE_DB_MODULE = None
+    try:
+        import oracledb as _dbmod
+        ORACLE_DB_MODULE = _dbmod
+        ORACLE_DRIVER_NAME = 'oracledb'
+    except Exception:
+        ORACLE_DB_MODULE = None
+        ORACLE_DRIVER_NAME = None
 import os
 import unidecode
 import sys
@@ -47,14 +54,16 @@ if os.path.exists(LOCK_FILE):
             old_pid = f.read().strip()
         
         # Se o arquivo de lock existe, verificar se o processo ainda está rodando
-        if old_pid and is_process_running(int(old_pid)):
-            print("Servidor MWL já está em execução. Abortando nova instância.")
+        if old_pid and old_pid.isdigit() and is_process_running(int(old_pid)):
+            print(f"Servidor MWL já está em execução (PID {old_pid}). Abortando nova instância.")
             sys.exit(1)
         else:
             # Processo não está rodando, remover lock obsoleto
+            print(f"Removendo lock obsoleto (PID {old_pid})...")
             os.remove(LOCK_FILE)
     except Exception as e:
         # Se houver erro ao ler o lock, remover e continuar
+        print(f"Erro ao verificar lock: {e}. Limpando...")
         try:
             os.remove(LOCK_FILE)
         except:
@@ -294,12 +303,6 @@ class WorklistProvider:
                 if ORACLE_DB_MODULE is None:
                     logging.error(t('db_driver_missing', db='Oracle'))
                     return False
-                
-                # Tentar thick mode primeiro (suporta password verifier antigo)
-                try:
-                    ORACLE_DB_MODULE.init_oracle_client()
-                except Exception:
-                    pass  # Já inicializado ou não disponível
                 
                 self.conn = ORACLE_DB_MODULE.connect(user=DB_USER, password=DB_PASSWORD, dsn=DB_DSN)
                 self.driver = 'oracle'
