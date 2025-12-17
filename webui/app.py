@@ -92,7 +92,7 @@ def is_db_plugin_installed(db_type: str) -> bool:
 
 def plugins_status():
     plugins = [
-        {'id': 'oracle', 'label': 'Oracle (oracledb/cx_Oracle)', 'module': 'oracledb', 'package': 'oracledb'},
+        {'id': 'oracle', 'label': 'Oracle (oracledb)', 'module': 'oracledb', 'package': 'oracledb'},
         {'id': 'postgres', 'label': 'PostgreSQL (psycopg2)', 'module': 'psycopg2', 'package': 'psycopg2-binary'},
         {'id': 'mysql', 'label': 'MySQL (PyMySQL)', 'module': 'pymysql', 'package': 'PyMySQL'},
         {'id': 'pynetdicom', 'label': 'DICOM Worklist Support (pynetdicom)', 'module': 'pynetdicom', 'package': 'pynetdicom'},
@@ -326,31 +326,17 @@ def test_db():
         # Attempt connection based on database type
         try:
             if db_type == 'oracle':
-                # Try to import and test connection
+                # Use oracledb driver
                 try:
-                    import cx_Oracle
-                    driver_name = 'cx_Oracle'
-                except ImportError:
-                    try:
-                        import oracledb
-                        driver_name = 'oracledb'
-                    except ImportError:
-                        return jsonify({
-                            'ok': False,
-                            'message': 'No Oracle driver available',
-                            'error': 'Neither cx_Oracle nor oracledb is installed'
-                        })
-
-                if driver_name == 'cx_Oracle':
-                    import cx_Oracle
-                    try:
-                        cx_Oracle.init_oracle_client()
-                    except:
-                        pass
-                    conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn)
-                else:
                     import oracledb
-                    conn = oracledb.connect(user=user, password=pwd, dsn=dsn)
+                except ImportError:
+                    return jsonify({
+                        'ok': False,
+                        'message': 'No Oracle driver available',
+                        'error': 'oracledb is not installed'
+                    })
+
+                conn = oracledb.connect(user=user, password=pwd, dsn=dsn)
                 test_sql = "SELECT 1 FROM dual"
 
             elif db_type == 'postgres':

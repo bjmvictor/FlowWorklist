@@ -558,6 +558,69 @@
     </script>
   </head>
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
+    <!-- Barra de Carregamento Colorida (Progress Bar) -->
+    <div id="global-loading-bar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-[9999] origin-left scale-x-0 transition-all duration-300" style="transform: scaleX(0);"></div>
+    <style>
+      @keyframes loading-bar-animation {
+        0% { left: -100%; width: 100%; }
+        50% { left: 100%; width: 100%; }
+        100% { left: 100%; width: 100%; }
+      }
+      @keyframes color-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      #global-loading-bar.loading {
+        transform: scaleX(1);
+        animation: color-shift 2s ease-in-out infinite;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+        background-size: 200% 100%;
+      }
+    </style>
+    <script>
+      const loadingBar = document.getElementById('global-loading-bar');
+      
+      // Mostrar barra ao iniciar requisição
+      function showLoadingBar() {
+        loadingBar.classList.add('loading');
+      }
+      
+      // Esconder barra ao concluir
+      function hideLoadingBar() {
+        loadingBar.classList.remove('loading');
+      }
+      
+      // Interceptar fetch
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        showLoadingBar();
+        return originalFetch.apply(this, args)
+          .then(response => {
+            hideLoadingBar();
+            return response;
+          })
+          .catch(error => {
+            hideLoadingBar();
+            throw error;
+          });
+      };
+      
+      // Interceptar XMLHttpRequest
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(...args) {
+        showLoadingBar();
+        return originalOpen.apply(this, args);
+      };
+      
+      const originalSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function(...args) {
+        this.addEventListener('load', hideLoadingBar);
+        this.addEventListener('error', hideLoadingBar);
+        this.addEventListener('abort', hideLoadingBar);
+        return originalSend.apply(this, args);
+      };
+    </script>
     <!-- Navbar -->
     <nav class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 shadow-lg">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

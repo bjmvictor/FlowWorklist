@@ -1,6 +1,15 @@
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![DICOM](https://img.shields.io/badge/DICOM-MWL-green)
+
 # FlowWorklist - DICOM Modality Worklist Server with Management UI
 
-A professional-grade **DICOM Modality Worklist (MWL) Server** with an integrated **Flask-based management dashboard**. FlowWorklist bridges your hospital database to DICOM imaging equipment, enabling seamless patient worklist distribution.
+FlowWorklist is a lightweight, vendor-neutral **DICOM Modality Worklist (MWL) Server**
+with an integrated **Web-based management dashboard**.
+
+It connects hospital information systems (HIS/RIS) directly to DICOM imaging modalities,
+providing reliable, standards-compliant worklist distribution with minimal setup
+and full administrative control.
+
 
 ## 📋 Table of Contents
 
@@ -18,10 +27,11 @@ A professional-grade **DICOM Modality Worklist (MWL) Server** with an integrated
 
 ## Overview
 
-FlowWorklist is a complete DICOM Modality Worklist server solution designed for hospitals and imaging centers. It:
+FlowWorklist is a complete on-premise DICOM MWL server designed for hospitals,
+clinics, and imaging centers.
 
 1. **Connects to your hospital database** (Oracle, PostgreSQL, MySQL) to fetch pending imaging orders
-2. **Converts database records into DICOM format** following the DICOM Modality Worklist standard (ISO 12011-1)
+2. **Converts database records into DICOM format** following the DICOM Modality Worklist Information Model (DICOM PS 3)
 3. **Serves worklist data to imaging equipment** via the DICOM C-FIND protocol
 4. **Provides a management dashboard** for monitoring, configuration, and testing
 5. **Supports multiple languages** (10 languages: Portuguese, English, Spanish, French, Chinese, Russian, Japanese, Italian, Turkish, Filipino)
@@ -32,6 +42,17 @@ FlowWorklist is a complete DICOM Modality Worklist server solution designed for 
 - **Imaging Equipment Worklist**: Reduce manual patient entry on CT, MRI, X-ray machines
 - **Multi-facility Deployment**: Centralized worklist distribution across multiple units
 - **Workflow Automation**: Integrate with existing HIS/RIS systems
+
+## 🚀 Quick Start (5 minutes)
+
+```bash
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python -m venv .
+source bin/activate   # Linux/macOS
+pip install -r requirements.txt
+python mwl_service.py
+```
 
 ---
 
@@ -74,42 +95,19 @@ Fully translated into 10 languages with automatic language detection:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│   DICOM Imaging Equipment (CT, MRI, X-Ray)     │
-│   (DICOM Client via C-FIND Protocol)           │
-└────────────────────┬────────────────────────────┘
-                     │
-        DICOM Protocol (Port 11112)
-                     │
-    ┌─────────────────▼─────────────────┐
-    │  mwl_service.py (DICOM Server)   │
-     │   ├─ C-FIND Service Class    │
-     │   ├─ Dataset Builder         │
-     │   └─ Filter Processing       │
-     └────────────┬──────────────────┘
-                  │
-        SQL Query (Database)
-                  │
-     ┌───────────▼─────────────┐
-     │  Hospital Database      │
-     │  (Oracle/PostgreSQL/MySQL)
-     │  ├─ Patients            │
-     │  ├─ Orders              │
-     │  └─ Procedures          │
-     └─────────────────────────┘
+The system is composed of two main components:
 
-┌──────────────────────────────────────────────────────────┐
-│  Flask Management Dashboard (webui/app.py)              │
-│  ├─ Service Control Panel                              │
-│  ├─ Configuration Editor                               │
-│  ├─ Real-time Monitoring                               │
-│  ├─ Log Viewer                                          │
-│  ├─ Plugin Manager                                      │
-│  └─ Worklist Test Interface                             │
-└──────────────────────────────────────────────────────────┘
-   (http://localhost:5000)
-```
+1. **MWLSCP Server**
+   - Implements the DICOM Modality Worklist Information Model
+   - Handles C-FIND requests from imaging modalities
+   - Queries the hospital database in real time
+
+2. **Management Dashboard**
+   - Web-based UI for configuration and monitoring
+   - Controls the lifecycle of the MWL service
+   - Provides built-in testing and diagnostics
+
+Dashboard URL: (http://localhost:5000)
 
 ---
 
@@ -125,7 +123,7 @@ Fully translated into 10 languages with automatic language detection:
 ### Step 1: Clone or Download
 
 ```bash
-git clone https://github.com/yourusername/FlowWorklist.git
+git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
 ```
 
@@ -170,8 +168,8 @@ python startapp.py
 
 # Or in a separate terminal, start MWLSCP directly (Port 11112)
 python mwl_service.py
+```
 ### Alternative: Windows Executable
-
 For easier deployment on Windows without Python installation:
 
 ```powershell
@@ -190,14 +188,14 @@ python build_exe.py
 - ✅ Easy service installation with NSSM
 - ✅ Portable across Windows systems
 
-```
 
 ---
 
 ## Configuration
 
-### config.json Reference
+### config.json Reference (Remove comments to use)
 
+> ⚠️ JSON does not support comments. Remove all comments before using this file in production.
 ```json
 {
   "server": {
@@ -214,7 +212,7 @@ python build_exe.py
     "query": "SELECT ..."          // SQL query returning 17 columns (see Column Mapping)
   },
   "ui": {
-    "language": "pt"               // Default UI language (pt, en, es, fr, zh, ru, ja, it, tr, fil)
+    "language": "en"               // Default UI language (pt, en, es, fr, zh, ru, ja, it, tr, fil)
   }
 }
 ```
@@ -242,12 +240,12 @@ Your SQL query **must return exactly 17 columns** in the following order. Column
 | 9 | `col_physician_name` | **ScheduledPerformingPhysicianName** | Name of physician responsible for ordering/referring exam | Text (use ^ for name parts) | `JONES^MARY` |
 | 10 | `col_modality` | **Modality** | Type of imaging equipment (CR, CT, MR, US, RF, NM, PT) | 2-letter DICOM code | `CR` |
 | 11 | `col_priority` | **Priority Flag** | Priority level based on triage classification | Text | `HIGH`, `MEDIUM`, `LOW` |
-| 12 | `col_encounter_type` | **Encounter Type** | Type of hospital visit or encounter | Text | `URGENCIA`, `INTERNACAO`, `AMBULATORIO` |
-| 13 | `col_encounter_id` | **StudyInstanceUID / Encounter ID** | Unique identifier for the patient encounter/admission | Text or numeric | `456789` |
-| 14 | `col_unit_name` | **Location / Service Area** | Hospital unit or sector where request originated | Text | `EMERGENCY ROOM`, `RAIO-X` |
-| 15 | `col_procedure_code` | **ScheduledProcedureStepID (Procedure Code)** | Coded value identifying the specific procedure | Text (alphanumeric) | `FCR0101` |
+| 12 | `col_encounter_type` | **Encounter Type** | Type of hospital visit or encounter | Text | `URGENCY`, `INTERNAL`, `AMBULATORY` |
+| 13 | `col_encounter_id` | **Encounter ID** | Unique identifier for the patient encounter/admission | Text or numeric | `456789` |
+| 14 | `col_unit_name` | **Location / Service Area** | Hospital unit or sector where request originated | Text | `EMERGENCY ROOM`, `X-RAY` |
+| 15 | `col_procedure_code` | **ScheduledProcedureStepID (Procedure Code)** | Coded value identifying the specific procedure | Text (alphanumeric) | `FCR0101-0000` |
 | 16 | `col_code_meaning` | **Code Meaning / Description** | Descriptive meaning of the procedure code | Text | `CHEST X-RAY` |
-| 17 | `col_code_scheme` | **Code Scheme Designator** | Coding system used (CBR, SNOMED, DCM, etc.) | Text | `CBR` |
+| 17 | `col_code_scheme` | **Code Scheme Designator** | Coding system used (CBR, SNOMED, DCM, etc.) Or Local using 99<UNIT TAG> | Text | `99UNIT` |
 
 ### Example Oracle Query
 
@@ -326,10 +324,10 @@ For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPIN
 
 ```powershell
 # Terminal 1: Start MWLSCP Server
-python MWLSCP.py
+python mwl_service.py
 
 # Terminal 2: Start Management Dashboard
-python launch_flask.py
+python startapp.py
 # Then open http://localhost:5000
 ```
 
@@ -339,7 +337,7 @@ python launch_flask.py
 
 ```powershell
 # Option 1: Using NSSM (Non-Sucking Service Manager)
-nssm install FlowMWL "C:\path\to\FlowWorklist\Scripts\python.exe" "C:\path\to\FlowWorklist\MWLSCP.py"
+nssm install FlowMWL "C:\path\to\FlowWorklist\Scripts\python.exe" "C:\path\to\FlowWorklist\mwl_service.py"
 nssm set FlowMWL AppDirectory "C:\path\to\FlowWorklist"
 nssm start FlowMWL
 ```
@@ -354,7 +352,7 @@ COPY . .
 RUN pip install -r requirements.txt
 
 EXPOSE 11112 5000
-CMD ["python", "MWLSCP.py"]
+CMD ["python", "mwl_service.py"]
 ```
 
 ```bash
@@ -374,7 +372,7 @@ After=network.target
 Type=simple
 User=dicom
 WorkingDirectory=/opt/FlowWorklist
-ExecStart=/opt/FlowWorklist/venv/bin/python MWLSCP.py
+ExecStart=/opt/FlowWorklist/venv/bin/python mwl_service.py
 Restart=always
 RestartSec=10
 
@@ -445,7 +443,7 @@ Response:
 
 ### DICOM C-FIND Service
 
-The MWLSCP server listens on port 11112 and implements the DICOM Modality Worklist Information Model (UID 1.2.840.10008.5.1.4.31).
+The MWLSCP server listens on port 11112 and implements the DICOM Modality Worklist Information Model (DICOM PS 3)
 
 #### Supported Query Tags
 
@@ -489,7 +487,7 @@ findscu -aec FlowMWL -aet ConsoleApp 192.168.1.3 11112 \
 **Problem**: DICOM clients cannot connect to the server
 
 **Solutions**:
-1. Verify MWLSCP.py is running: `tasklist | findstr python`
+1. Verify mwl_service.py is running: `tasklist | findstr python`
 2. Check firewall rules allow port 11112
 3. Verify `host: 0.0.0.0` in config.json
 4. Check server logs: `type logs\mwl_server.log`
@@ -532,30 +530,30 @@ findscu -aec FlowMWL -aet ConsoleApp 192.168.1.3 11112 \
 
 ```
 FlowWorklist/
-├── MWLSCP.py                  # DICOM MWL Server (core application)
-├── launch_flask.py            # Entry point for management dashboard
+├── mwl_service.py             # DICOM MWL Server (core application)
+├── startapp.py                # Entry point for management dashboard
 ├── config.json                # Database and server configuration
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file
-├── COLUMN_MAPPING_GUIDE.md   # Detailed column mapping documentation
+├── COLUMN_MAPPING_GUIDE.md    # Detailed column mapping documentation
 │
 ├── webui/                     # Flask management dashboard
-│   ├── app.py                # Flask application and endpoints
+│   ├── app.py                 # Flask application and endpoints
 │   ├── static/
-│   │   ├── style.css         # Dashboard styling (Tailwind CSS)
-│   │   └── brand/            # Logo and branding assets
+│   │   ├── style.css          # Dashboard styling (Tailwind CSS)
+│   │   └── brand/             # Logo and branding assets
 │   └── templates/
-│       ├── base.html         # Master template with i18n translations
-│       ├── index.html        # Dashboard home
-│       ├── config.html       # Configuration editor
-│       ├── logs.html         # Log viewer
-│       ├── tests.html        # Test interface (C-ECHO, C-FIND, Worklist)
-│       ├── plugins.html      # Plugin manager
-│       └── view_log.html     # Individual log viewer
+│       ├── base.html          # Master template with i18n translations
+│       ├── index.html         # Dashboard home
+│       ├── config.html        # Configuration editor
+│       ├── logs.html          # Log viewer
+│       ├── tests.html         # Test interface (C-ECHO, C-FIND, Worklist)
+│       ├── plugins.html       # Plugin manager
+│       └── view_log.html      # Individual log viewer
 │
 ├── logs/                      # MWLSCP server logs (auto-generated)
-├── service_logs/             # Management dashboard logs (auto-generated)
-└── Include/, Lib/, Scripts/  # Virtual environment (created by venv)
+├── service_logs/              # Management dashboard logs (auto-generated)
+└── Include/, Lib/, Scripts/   # Virtual environment (created by venv)
 ```
 
 ---
@@ -578,7 +576,6 @@ Flask==3.1.2
 pynetdicom==3.0.4
 pydicom==3.0.1
 cx_Oracle==8.3.0
-oracledb==3.4.1
 psycopg2-binary==2.9.9
 PyMySQL==1.1.2
 Werkzeug==3.1.4
@@ -589,7 +586,24 @@ unidecode==1.4.0
 
 ## License
 
-This project is provided as-is for hospital and medical imaging use.
+This project is intended for free use in hospitals and medical institutions.
+Commercial resale or proprietary redistribution is not permitted.
+
+See the LICENSE file for full terms and conditions.
+
+## Regulatory Notice
+
+This software does not replace certified RIS/PACS systems and must be validated
+by the institution before clinical use, according to local regulations.
+
+---
+
+## Security Considerations
+
+- Restrict MWL access by AET Title
+- Deploy behind hospital firewall
+- Do not expose port 11112 to public networks
+- Use read-only database credentials
 
 ---
 

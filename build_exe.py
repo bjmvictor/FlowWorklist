@@ -8,29 +8,35 @@ import shutil
 import subprocess
 from pathlib import Path
 
+# Configurar encoding para Unicode no Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 ROOT = Path(__file__).parent.resolve()
 
 def check_pyinstaller():
     """Verifica se PyInstaller está instalado"""
     try:
         import PyInstaller
-        print(f"✓ PyInstaller {PyInstaller.__version__} encontrado")
+        print("[OK] PyInstaller {} encontrado".format(PyInstaller.__version__))
         return True
     except ImportError:
-        print("✗ PyInstaller não encontrado")
+        print("[ERRO] PyInstaller nao encontrado")
         print("\nInstalando PyInstaller...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-            print("✓ PyInstaller instalado com sucesso")
+            print("[OK] PyInstaller instalado com sucesso")
             return True
         except subprocess.CalledProcessError:
-            print("✗ Falha ao instalar PyInstaller")
+            print("[ERRO] Falha ao instalar PyInstaller")
             return False
 
 def build_executable():
     """Gera o executável do FlowWorklist"""
     print("\n" + "="*60)
-    print("FlowWorklist - Build Executável Windows")
+    print("FlowWorklist - Build Executavel Windows")
     print("="*60 + "\n")
     
     if not check_pyinstaller():
@@ -43,35 +49,40 @@ def build_executable():
     
     # Limpar builds anteriores
     if dist_dir.exists():
-        print(f"Limpando {dist_dir}...")
+        print("Limpando dist/...")
         shutil.rmtree(dist_dir)
     if build_dir.exists():
-        print(f"Limpando {build_dir}...")
+        print("Limpando build/...")
         shutil.rmtree(build_dir)
     if spec_file.exists():
-        print(f"Removendo {spec_file}...")
+        print("Removendo FlowWorklist.spec...")
         spec_file.unlink()
     
-    print("\n📦 Gerando executável...")
+    print("\n[PROCESSANDO] Gerando executavel...")
     print("Isso pode levar alguns minutos...\n")
     
-    # Comando PyInstaller
+    # Comando PyInstaller (versão otimizada sem collect-all que causa problemas)
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--name=FlowWorklist",
         "--onefile",  # Gera um único .exe
-        "--windowed",  # Sem console (apenas GUI)
-        "--icon=webui/static/brand/logo-mark.svg" if (ROOT / "webui/static/brand/logo-mark.svg").exists() else "",
-        f"--add-data=webui{os.pathsep}webui",  # Inclui templates e static
-        f"--add-data=config.json{os.pathsep}.",  # Inclui config padrão
-        "--hidden-import=pynetdicom",
-        "--hidden-import=pydicom",
+        "--console",  # Mantém console para troubleshooting
+        "--add-data={}{}webui".format("webui", os.pathsep),  # Inclui templates e static
+        "--add-data={}{}." .format("config.json", os.pathsep),  # Inclui config padrão
         "--hidden-import=flask",
+        "--hidden-import=pydicom",
+        "--hidden-import=pynetdicom",
         "--hidden-import=oracledb",
         "--hidden-import=pymysql",
-        "--collect-all=pynetdicom",
-        "--collect-all=pydicom",
+        "--hidden-import=unidecode",
+        "--hidden-import=blinker",
+        "--hidden-import=werkzeug",
+        "--hidden-import=jinja2",
+        "--hidden-import=click",
         "--collect-all=flask",
+        "--noupx",  # Desabilita UPX que pode causar problemas
+        "--noconfirm",  # Não pede confirmação
+        "--clean",  # Limpa arquivos temporários
         "startapp.py"
     ]
     
@@ -82,37 +93,40 @@ def build_executable():
         subprocess.check_call(cmd)
         
         print("\n" + "="*60)
-        print("✓ BUILD CONCLUÍDO COM SUCESSO!")
+        print("[OK] BUILD CONCLUIDO COM SUCESSO!")
         print("="*60)
         
         exe_path = dist_dir / "FlowWorklist.exe"
         if exe_path.exists():
             size_mb = exe_path.stat().st_size / (1024 * 1024)
-            print(f"\n📁 Executável gerado: {exe_path}")
-            print(f"📏 Tamanho: {size_mb:.1f} MB")
-            print("\n🚀 COMO USAR:")
+            print("\n[ARQUIVO] Executavel gerado: {}".format(exe_path))
+            print("[TAMANHO] {:.1f} MB".format(size_mb))
+            print("\n[INSTRUCOES] COMO USAR:")
             print("   1. Copie FlowWorklist.exe para o servidor")
             print("   2. Copie config.json e edite com suas credenciais")
             print("   3. Execute FlowWorklist.exe")
             print("   4. Acesse http://localhost:5000")
-            print("\n💡 DICA: Use NSSM para instalar como serviço Windows")
-            print("   nssm install FlowWorklist \"C:\\Path\\To\\FlowWorklist.exe\"")
+            print("\n[DICA] Use NSSM para instalar como servico Windows")
+            print('   nssm install FlowWorklist "C:\\Path\\To\\FlowWorklist.exe"')
             return True
         else:
-            print("\n✗ Executável não foi gerado")
+            print("\n[ERRO] Executavel nao foi gerado")
             return False
             
     except subprocess.CalledProcessError as e:
-        print(f"\n✗ ERRO durante build: {e}")
+        print("\n[ERRO] ERRO durante build: {}".format(e))
+        print("\n[DICA] Tente o build do servico apenas:")
+        print("   python build_exe.py")
+        print("   Opcao 2: Apenas Servico DICOM (CLI)")
         return False
     except Exception as e:
-        print(f"\n✗ ERRO inesperado: {e}")
+        print("\n[ERRO] ERRO inesperado: {}".format(e))
         return False
 
 def build_service_only():
     """Gera executável apenas do serviço DICOM (sem UI)"""
     print("\n" + "="*60)
-    print("FlowWorklist - Build Serviço DICOM (CLI)")
+    print("FlowWorklist - Build Servico DICOM (CLI)")
     print("="*60 + "\n")
     
     if not check_pyinstaller():
@@ -120,20 +134,22 @@ def build_service_only():
     
     dist_dir = ROOT / "dist"
     
-    print("\n📦 Gerando executável do serviço...")
+    print("\n[PROCESSANDO] Gerando executavel do servico...")
     
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--name=FlowWorklist-Service",
         "--onefile",
         "--console",  # Mantém console para logs
-        f"--add-data=config.json{os.pathsep}.",
-        "--hidden-import=pynetdicom",
+        "--add-data={}{}." .format("config.json", os.pathsep),
         "--hidden-import=pydicom",
+        "--hidden-import=pynetdicom",
         "--hidden-import=oracledb",
         "--hidden-import=pymysql",
-        "--collect-all=pynetdicom",
-        "--collect-all=pydicom",
+        "--hidden-import=unidecode",
+        "--noupx",
+        "--noconfirm",
+        "--clean",
         "mwl_service.py"
     ]
     
@@ -142,24 +158,30 @@ def build_service_only():
     try:
         subprocess.check_call(cmd)
         
-        print("\n✓ Serviço DICOM gerado com sucesso!")
+        print("\n[OK] Servico DICOM gerado com sucesso!")
         exe_path = dist_dir / "FlowWorklist-Service.exe"
         if exe_path.exists():
-            print(f"📁 {exe_path}")
-            print("\n🚀 Execute: FlowWorklist-Service.exe")
+            size_mb = exe_path.stat().st_size / (1024 * 1024)
+            print("[ARQUIVO] {}".format(exe_path))
+            print("[TAMANHO] {:.1f} MB".format(size_mb))
+            print("\n[INSTRUCOES] Execute: FlowWorklist-Service.exe")
+            print("   Ou instale como servico: nssm install FlowMWL FlowWorklist-Service.exe")
             return True
             
+    except subprocess.CalledProcessError as e:
+        print("[ERRO] Erro durante build: {}".format(e))
+        return False
     except Exception as e:
-        print(f"✗ Erro: {e}")
+        print("[ERRO] Erro inesperado: {}".format(e))
         return False
 
 if __name__ == "__main__":
     print("\nEscolha o tipo de build:")
-    print("1. Completo (Dashboard + Serviço DICOM)")
-    print("2. Apenas Serviço DICOM (CLI)")
+    print("1. Completo (Dashboard + Servico DICOM)")
+    print("2. Apenas Servico DICOM (CLI)")
     print("3. Ambos")
     
-    choice = input("\nOpção [1-3]: ").strip()
+    choice = input("\nOpcao [1-3]: ").strip()
     
     success = True
     
@@ -170,11 +192,11 @@ if __name__ == "__main__":
     elif choice == "3":
         success = build_executable() and build_service_only()
     else:
-        print("Opção inválida")
+        print("Opcao invalida")
         success = False
     
     if not success:
         sys.exit(1)
     
-    print("\n✓ Processo concluído!")
+    print("\n[OK] Processo concluido!")
     input("\nPressione ENTER para sair...")

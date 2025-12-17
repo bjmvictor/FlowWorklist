@@ -2,16 +2,12 @@
 # mwl_server_corrected.py
 import logging
 import logging.handlers
-# Prefer cx_Oracle (native) and fall back to python-oracledb (thin) if present (for Oracle only)
+# Use oracledb (thin mode, no Oracle client required)
 try:
-    import cx_Oracle as _dbmod
+    import oracledb as _dbmod
     ORACLE_DB_MODULE = _dbmod
 except Exception:
-    try:
-        import oracledb as _dbmod
-        ORACLE_DB_MODULE = _dbmod
-    except Exception:
-        ORACLE_DB_MODULE = None
+    ORACLE_DB_MODULE = None
 import os
 import unidecode
 import sys
@@ -294,17 +290,17 @@ class WorklistProvider:
                 return False
 
             if self.db_type == 'oracle':
-                logging.info(t('db_connecting', db='Oracle'))
+                # Tentando conectar a Oracle
                 if ORACLE_DB_MODULE is None:
                     logging.error(t('db_driver_missing', db='Oracle'))
                     return False
                 self.conn = ORACLE_DB_MODULE.connect(user=DB_USER, password=DB_PASSWORD, dsn=DB_DSN)
                 self.driver = 'oracle'
-                logging.info(t('db_connected', db='Oracle'))
+            # Conexão Oracle estabelecida
                 return True
 
             if self.db_type in ('postgres', 'postgresql'):
-                logging.info(t('db_connecting', db='PostgreSQL'))
+                # Tentando conectar a PostgreSQL
                 try:
                     import psycopg2
                 except Exception as e:
@@ -316,11 +312,11 @@ class WorklistProvider:
                     return False
                 self.conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=DB_USER, password=DB_PASSWORD)
                 self.driver = 'postgres'
-                logging.info(t('db_connected', db='PostgreSQL'))
+            # Conexão PostgreSQL estabelecida
                 return True
 
             if self.db_type == 'mysql':
-                logging.info(t('db_connecting', db='MySQL'))
+                # Tentando conectar a MySQL
                 try:
                     import pymysql
                 except Exception as e:
@@ -332,7 +328,7 @@ class WorklistProvider:
                     return False
                 self.conn = pymysql.connect(host=host, port=port, user=DB_USER, password=DB_PASSWORD, database=dbname)
                 self.driver = 'mysql'
-                logging.info(t('db_connected', db='MySQL'))
+            # Conexão MySQL estabelecida
                 return True
 
             logging.error(t('db_type_not_supported', db=self.db_type))
@@ -388,7 +384,7 @@ class WorklistProvider:
                         row_dict[col_name] = None
                 results.append(row_dict)
             
-            logging.info(f"Consulta executada com sucesso. {len(results)} itens encontrados.")
+                # Consulta executada com sucesso
             return results
         except Exception as e:
             logging.error(t('sql_exec_error', err=e))
@@ -438,11 +434,11 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     scheduled_date_filter = clean_filter(scheduled_date_filter)
     scheduled_time_filter = clean_filter(scheduled_time_filter)
 
-    logging.info("Buscando TODOS os itens na Worklist do Banco de Dados...")
+            # Consultando worklist do banco de dados
     worklist_rows = worklist_provider.get_worklist_items()
 
     if not worklist_rows:
-        logging.warning(t('no_items_found'))
+        # Nenhum item encontrado na worklist
         yield (0x0000, None)
         return
 
@@ -573,10 +569,10 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
 
         # Logging e yield
         response_count += 1
-        logging.info(f"Retornando item MWL (PED_RX={ped_id}) para o Paciente: {ds.PatientName} (ID: {ds.PatientID}) com {len(scheduled_protocol_codes)} protocolos.")
+            # Processando item MWL
         yield (0xFF00, ds)
 
-    logging.info(f"Filtro aplicado. Total de {response_count} itens retornados.")
+            # Retornando itens da worklist
     yield (0x0000, None)
 
 # --- SETUP DO SERVIDOR DICOM AE ---
