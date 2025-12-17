@@ -181,9 +181,16 @@ def config():
         config_data["database"]["dsn"] = request.form.get('database_dsn', '')
         config_data["database"]["query"] = request.form.get('database_query', '')
         
+        # Remove column_mapping if present (moved to code)
+        if "column_mapping" in config_data.get("database", {}):
+            del config_data["database"]["column_mapping"]
+        
         # Save to config.json
-        cfg_path.write_text(json.dumps(config_data, indent=2))
-        return redirect(url_for('config'))
+        try:
+            cfg_path.write_text(json.dumps(config_data, indent=2))
+            return redirect(url_for('config', notice='config_saved', status='success'))
+        except Exception as e:
+            return redirect(url_for('config', notice=f'config_save_error: {str(e)}', status='error'))
     else:
         # Read config.json
         cfg_path = ROOT / "config.json"
@@ -194,7 +201,11 @@ def config():
                 cfg = {"server": {}, "database": {}}
         else:
             cfg = {"server": {}, "database": {}}
-        return render_template('config.html', cfg=cfg)
+        
+        # Get notification parameters
+        notice = request.args.get('notice')
+        status = request.args.get('status')
+        return render_template('config.html', cfg=cfg, notice=notice, status=status)
 
 
 @app.route('/tests')

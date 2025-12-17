@@ -2,6 +2,19 @@
 
 {% block content %}
 <div class="space-y-8">
+  <!-- Notification Alert -->
+  {% if notice %}
+  <div class="notification notification-enter top-20" id="notification">
+    <div class="{% if status == 'success' %}bg-green-100 border-green-500 text-green-900 dark:bg-green-900 dark:text-green-100{% else %}bg-red-100 border-red-500 text-red-900 dark:bg-red-900 dark:text-red-100{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3">
+      <i class="fas {% if status == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} text-2xl"></i>
+      <div class="flex-1">
+        <p class="font-bold" data-i18n="{{ notice }}">{{ notice }}</p>
+      </div>
+      <button onclick="closeNotification()" class="text-2xl opacity-50 hover:opacity-100">&times;</button>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Config Header -->
   <div class="flex items-center gap-3 mb-8">
     <i class="fas fa-cog text-3xl text-blue-500"></i>
@@ -217,4 +230,20 @@
     </form>
   </div>
 </div>
+
+<script>
+  function closeNotification() {
+    const notif = document.getElementById('notification');
+    if (notif) {
+      notif.classList.remove('notification-enter');
+      notif.classList.add('notification-exit');
+      setTimeout(() => notif.remove(), 300);
+    }
+  }
+  
+  // Auto-close notification after 5 seconds
+  {% if notice %}
+  setTimeout(closeNotification, 5000);
+  {% endif %}
+</script>
 {% endblock %}
