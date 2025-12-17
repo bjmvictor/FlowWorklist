@@ -1,5 +1,4 @@
 # Repository Cleanup Summary
-
 ## Changes Made
 
 ### 📚 Documentation Enhancements
@@ -58,7 +57,7 @@
 - `requirements.txt` - Python dependencies
 - `service_config.json` - Service manager configuration
 - `service_manager.py` - Service management utilities
-- `start_ui.bat`, `start_ui.ps1` - Convenient startup scripts
+  
 
 ### 📝 Git Configuration Files
 
@@ -108,9 +107,7 @@ FlowWorklist/
 │   └── service_config.json       ✓ Service config
 │
 ├── Utilities
-│   ├── service_manager.py        ✓ Service tools
-│   ├── start_ui.bat              ✓ Windows starter
-│   └── start_ui.ps1              ✓ PowerShell starter
+│   └── service_manager.py        ✓ Service tools
 │
 ├── Directories (with .gitkeep)
 │   ├── logs/                     ✓ Server logs

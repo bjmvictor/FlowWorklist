@@ -8,7 +8,6 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 APP_PID = ROOT / "app.pid"
 SERVICE_MANAGER = ROOT / "service_manager.py"
-STARTAPP_SCRIPT = ROOT / "startapp.py"
 
 
 def _venv_python():
@@ -20,24 +19,34 @@ def _venv_python():
 
 
 def startapp():
-    """Start the management App (web UI) in background using startapp.py."""
-    # Delegate to startapp.py which writes app.pid
+    """Start the management App (web UI) in background without extra launcher files."""
+    app_script = ROOT / "webui" / "app.py"
+    if not app_script.exists():
+        print("App entrypoint not found: webui/app.py")
+        return
+
     python_path = _venv_python()
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+
+    creationflags = 0
+    if os.name == 'nt' and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        creationflags = subprocess.CREATE_NO_WINDOW
+
     proc = subprocess.Popen(
-        [python_path, str(STARTAPP_SCRIPT)],
+        [python_path, str(app_script)],
         cwd=str(ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=creationflags
     )
-    # Stream initial output for user feedback
-    start = time.time()
-    while time.time() - start < 5:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        print(line.rstrip())
-    print("App start command issued. PID stored in app.pid if successful.")
+
+    try:
+        APP_PID.write_text(str(proc.pid))
+        print(f"App started with PID {proc.pid}. PID saved to app.pid.")
+    except Exception:
+        print("App started, but could not write app.pid.")
 
 
 def stopapp():

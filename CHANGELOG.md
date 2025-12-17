@@ -86,9 +86,7 @@ All notable changes to this project will be documented in this file.
 ```
 FlowWorklist/
 ├── mwl_service.py         # DICOM MWL Server
-├── startapp.py            # Dashboard launcher
-├── flow.py                # Flow CLI helper
-├── flow.bat / flow.ps1    # Windows CLI wrappers
+├── flow.py                # Flow CLI helper (app/service)
 ├── webui/                 # Flask application
 ├── config.json            # Server configuration
 ├── requirements.txt       # Python dependencies
@@ -107,7 +105,7 @@ FlowWorklist/
 
 ### CLI and Messaging Update (2025-12-17)
 - Introduced `flow.py` CLI with commands: `startapp`, `stopapp`, `startservice`, `stopservice`, `restartservice`, `status`, `logs`, `tail`, `install`.
-- Added Windows wrappers `flow.bat` and `flow.ps1` for simpler usage (`.\flow ...`).
+- `flow install` now generates local wrappers (flow.bat/flow.ps1) on-demand instead of tracking them in the repo.
 - Updated startup and console messages to English and standardized on "App" label for the management UI.
 - Documentation updated (README, DEPLOYMENT, QUICK_REFERENCE, INDEX) to use Flow CLI for initialization.
 

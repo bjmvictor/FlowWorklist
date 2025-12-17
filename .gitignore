@@ -42,8 +42,13 @@ logs/
 service_logs/
 *.log
 service.pid
+app.pid
 mwl_server.lock
 service_state.json
+flow.bat
+flow.ps1
+start_ui.bat
+start_ui.ps1
 
 # Database
 *.db

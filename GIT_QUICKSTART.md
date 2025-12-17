@@ -82,9 +82,7 @@ FlowWorklist/                          ~220 KB (without venv)
 ├── 📄 CHANGELOG.md                     4.1 KB
 ├── 📄 CLEANUP_SUMMARY.md               6.9 KB
 ├── 📄 mwl_service.py                   24.2 KB
-├── 📄 startapp.py                      3.8 KB
 ├── 📄 flow.py                          3.5 KB
-├── 📄 flow.bat / flow.ps1               0.2 KB
 ├── 📄 service_manager.py               2.1 KB
 ├── 📄 config.json                      6.5 KB
 ├── 📄 service_config.json              0.3 KB
@@ -92,8 +90,6 @@ FlowWorklist/                          ~220 KB (without venv)
 ├── 📄 pyvenv.cfg                       0.5 KB
 ├── 📄 .gitignore                       1.2 KB
 ├── 📄 .gitattributes                   0.6 KB
-├── 📄 start_ui.bat                     0.2 KB
-├── 📄 start_ui.ps1                     0.2 KB
 ├── 📁 webui/                         137.2 KB
 │   ├── app.py                         58.4 KB
 │   ├── static/

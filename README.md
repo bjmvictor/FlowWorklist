@@ -180,8 +180,11 @@ Dashboard URL: (http://localhost:5000)
 For easier deployment on Windows without Python installation:
 
 ```powershell
-# Build standalone executable
-python build_exe.py
+# Build standalone executable (UI)
+pyinstaller --name=FlowWorklist --onefile --windowed --add-data="webui;webui" --add-data="config.json;." webui/app.py
+
+# Service-only build
+pyinstaller --name=FlowWorklist-Service --onefile --console --add-data="config.json;." mwl_service.py
 
 # Deploy and run
 .\dist\FlowWorklist.exe
@@ -538,9 +541,7 @@ findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client
 ```
 FlowWorklist/
 ├── mwl_service.py             # DICOM MWL Server (core application)
-├── startapp.py                # Entry point for management dashboard
 ├── flow.py                    # Flow CLI helper (app/service commands)
-├── flow.bat / flow.ps1        # Windows wrappers for Flow CLI
 ├── config.json                # Database and server configuration
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file

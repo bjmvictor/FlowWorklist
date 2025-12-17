@@ -93,7 +93,7 @@ flow startservice
 |------|---------|-------|
 | `mwl_service.py` | DICOM server | Usually not |
 | `flow.py` | Command line helper | **YES** |
-| `flow.bat` / `flow.ps1` | CLI wrappers | **YES** |
+| `flow.bat` / `flow.ps1` | CLI wrappers (generated via `flow install`, not in repo) | Generated |
 | `config.json` | Database config | **YES** |
 | `webui/app.py` | Dashboard code | Usually not |
 | `requirements.txt` | Dependencies | If adding packages |

@@ -21,20 +21,7 @@ This guide explains how to create a standalone Windows executable (.exe) of Flow
 
 ## 🚀 Build Process
 
-### Option 1: Automated Build (Recommended)
-
-```powershell
-# Run the build script
-python build_exe.py
-```
-
-The script offers:
-
-1. **Full** – Dashboard + DICOM service (FlowWorklist.exe)
-2. **Service Only** – CLI only (FlowWorklist-Service.exe)
-3. **Both** – Generates both executables
-
-### Option 2: Manual Build
+### Option 1: Manual Build
 
 #### Full Build (Dashboard + DICOM)
 
@@ -56,7 +43,7 @@ pyinstaller --name=FlowWorklist ^
   --collect-all=pynetdicom ^
   --collect-all=pydicom ^
   --collect-all=flask ^
-  startapp.py
+  webui/app.py
 ```
 
 #### DICOM Service Build (CLI)
@@ -223,7 +210,7 @@ Get-Content C:\FlowWorklist\logs\mwl_server.log -Tail 50 -Wait
  # Use UPX to compress (~30-40% reduction)
  # Download: https://upx.github.io/
 
- pyinstaller --onefile --upx-dir=C:\upx startapp.py
+ pyinstaller --onefile --upx-dir=C:\upx webui/app.py
 ```
 
 ### Production-Optimized Build
@@ -235,7 +222,7 @@ Get-Content C:\FlowWorklist\logs\mwl_server.log -Tail 50 -Wait
   --strip ^
   --clean ^
   --noconfirm ^
-  startapp.py
+  webui/app.py
 ```
 
 ## 🐛 Troubleshooting
@@ -249,7 +236,7 @@ Get-Content C:\FlowWorklist\logs\mwl_server.log -Tail 50 -Wait
 ```powershell
 pyinstaller --onefile `
   --hidden-import=MODULO_FALTANTE `
-  startapp.py
+  webui/app.py
 ```
 
 ### Error: "config.json not found"
