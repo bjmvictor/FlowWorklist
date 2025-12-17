@@ -54,7 +54,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
       <div class="flex items-center gap-3 mb-6">
         <i class="fas fa-list text-3xl text-cyan-500"></i>
-        <h3 class="text-2xl font-bold" data-i18n="test_dcm_worklist">Worklist Response Test</h3>
+        <h3 class="text-2xl font-bold" data-i18n="test_dcm_worklist">DICOM Worklist Test</h3>
       </div>
       <p class="text-gray-600 dark:text-gray-400 mb-6" data-i18n="desc_worklist">Test DICOM C-FIND worklist response with actual patient data.</p>
       <button 
@@ -103,7 +103,7 @@
             <button 
               type="submit"
               class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-              title="Install DB driver based on config.json"
+              data-i18n-title="title_install_db_driver"
             >
               <i class="fas fa-download"></i>
               <span data-i18n="install_db_driver">Install DB Driver</span>
@@ -199,7 +199,7 @@
         resultBox.innerHTML = `
           <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-check-circle text-2xl"></i>
-            <span class="font-bold text-lg">SUCCESS</span>
+            <span class="font-bold text-lg" data-i18n="test_success">SUCCESS</span>
           </div>
           <p class="mb-3">${data.message || 'Test passed'}</p>
           ${data.details ? `<pre class="bg-black bg-opacity-30 p-3 rounded text-xs overflow-x-auto">${JSON.stringify(data.details, null, 2)}</pre>` : ''}
@@ -210,11 +210,11 @@
         resultBox.innerHTML = `
           <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-times-circle text-2xl"></i>
-            <span class="font-bold text-lg">FAILED</span>
+            <span class="font-bold text-lg" data-i18n="test_failed">FAILED</span>
           </div>
           <p class="mb-3">${data.message || 'Test failed'}</p>
           ${data.error ? `<pre class="bg-black bg-opacity-30 p-3 rounded text-xs overflow-x-auto">${data.error}</pre>` : ''}
-          ${data.canInstall ? `<div class='mt-3'><form action='/plugin/install/pynetdicom' method='POST'><button type='submit' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2'><i class="fas fa-download"></i><span>Install pynetdicom Plugin</span></button></form></div>` : ''}
+          ${data.canInstall ? `<div class='mt-3'><form action='/plugin/install/pynetdicom' method='POST'><button type='submit' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2'><i class="fas fa-download"></i><span data-i18n="install_pynetdicom_plugin">Install pynetdicom Plugin</span></button></form></div>` : ''}
         `;
         logToConsole(data.message || 'Test failed!', 'error');
       }
@@ -223,7 +223,7 @@
       resultBox.innerHTML = `
         <div class="flex items-center gap-3 mb-2">
           <i class="fas fa-exclamation-circle text-2xl"></i>
-          <span class="font-bold text-lg">ERROR</span>
+          <span class="font-bold text-lg" data-i18n="test_error">ERROR</span>
         </div>
         <p>${err.message}</p>
       `;

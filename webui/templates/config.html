@@ -101,9 +101,9 @@
               name="database_type" 
               class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
             >
-              <option value="oracle" {% if cfg.get('database', {}).get('type', 'oracle') == 'oracle' %}selected{% endif %}>Oracle</option>
-              <option value="postgres" {% if cfg.get('database', {}).get('type', 'oracle') == 'postgres' %}selected{% endif %}>PostgreSQL</option>
-              <option value="mysql" {% if cfg.get('database', {}).get('type', 'oracle') == 'mysql' %}selected{% endif %}>MySQL</option>
+              <option value="oracle" data-i18n="db_type_oracle" {% if cfg.get('database', {}).get('type', 'oracle') == 'oracle' %}selected{% endif %}>Oracle</option>
+              <option value="postgres" data-i18n="db_type_postgresql" {% if cfg.get('database', {}).get('type', 'oracle') == 'postgres' %}selected{% endif %}>PostgreSQL</option>
+              <option value="mysql" data-i18n="db_type_mysql" {% if cfg.get('database', {}).get('type', 'oracle') == 'mysql' %}selected{% endif %}>MySQL</option>
             </select>
           </div>
 

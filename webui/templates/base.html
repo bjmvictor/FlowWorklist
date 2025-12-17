@@ -8,7 +8,7 @@
     <link rel="alternate icon" type="image/png" href="/static/brand/logo-mark.png">
     <meta name="theme-color" content="#1e3a8a">
     <script>
-      // Configure Tailwind dark mode to use the 'class' strategy
+      // Configure Tailwind dark mode to use the 'class' strategy (light theme by default)
       tailwind = window.tailwind || {};
       tailwind.config = { darkMode: 'class' };
     </script>
@@ -21,8 +21,9 @@
       .notification-enter { animation: slideIn 0.3s ease-out; }
       @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(450px); } }
       .notification-exit { animation: slideOut 0.3s ease-out; }
+
       
-      /* Badge de notificação não lida */
+      /* Unread notification badge */
       .notification-badge { 
         position: absolute; 
         top: -5px; 
@@ -39,7 +40,7 @@
         font-weight: bold;
       }
       
-      /* Estilo do dropdown de notificações */
+      /* Notification dropdown styles */
       .notification-dropdown {
         position: absolute;
         top: 100%;
@@ -47,13 +48,16 @@
         width: 380px;
         max-height: 500px;
         background: white;
-        dark:background: #1f2937;
         border-radius: 8px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         z-index: 1000;
         margin-top: 8px;
         display: none;
         overflow-x: hidden;
+      }
+      
+      .dark .notification-dropdown {
+        background: #1f2937;
       }
       
       .notification-dropdown.show {
@@ -89,19 +93,7 @@
       }
     </style>
     <script>
-      // Inicializar tema ANTES de renderizar a página
-      (function() {
-        const isDark = localStorage.getItem('theme') === 'dark' || 
-                      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-          localStorage.setItem('theme', 'dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          localStorage.setItem('theme', 'light');
-        }
-      })();
-      // Sistema de tradução COMPLETO com múltiplos idiomas
+      // Complete translation system with multiple languages
       const translations = {
         pt: {
           'home': 'Início', 'config': 'Configuração', 'logs': 'Logs', 'tests': 'Testes', 'plugins': 'Plugins',
@@ -122,7 +114,15 @@
           'client_aet': 'Client AE', 'client_aet_title_full': 'Título AE do cliente esperado', 'database_settings': 'CONFIGURAÇÕES DO BANCO DE DADOS',
           'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PORTA/DB (ex.: 192.168.1.3:1521/PRD)',
           'database_user': 'Usuário', 'database_password': 'Senha', 'database_query': 'Query', 'sql_hint': 'Consulta SQL que retorna os itens da Worklist',
-          'sql_guide_title': 'Guia de colunas esperadas pela Worklist', 'error_missing_module': 'Erro: Módulo não encontrado',
+          'sql_guide_title': 'Guia de colunas esperadas pela Worklist', 'sql_guide_warning': '⚠️ Query deve retornar EXATAMENTE 17 colunas nesta ordem:',
+          'sql_guide_link': 'Ver guia completo com exemplos SQL',
+          'sql_col1_hint': '(Nome completo do paciente)', 'sql_col2_hint': '(Identificador único)',
+          'sql_col5_hint': '(Descrição do exame)', 'sql_col6_hint': '(Número do pedido)',
+          'sql_col9_hint': '(Nome completo do médico)', 'sql_col12_hint': '(Tipo de atendimento)',
+          'sql_col13_hint': '(ID do atendimento)', 'sql_col14_hint': '(Local do exame)',
+          'sql_col15_hint': '(Código do procedimento)', 'sql_col16_hint': '(Significado do código)',
+          'sql_col17_hint': '(Esquema de codificação)',
+          'error_missing_module': 'Erro: Módulo não encontrado',
           'test_database': 'Teste de Banco de Dados', 'test_status': 'Teste de Status', 'test_console': 'Console de Testes',
           'plugins_desc': 'Instale ou remova plugins opcionais que estendem funcionalidades (ex.: drivers de banco). Tipo de banco atual:',
           'module': 'Módulo', 'package': 'Pacote', 'install': 'Instalar', 'uninstall': 'Desinstalar',
@@ -145,13 +145,25 @@
           'server_settings': 'SERVER SETTINGS', 'aet_title': 'AE Title', 'aet_title_full': 'DICOM Application Entity Title',
           'listen_all_interfaces': 'Listen on all interfaces', 'host': 'Host/IP', 'port': 'Port', 'server_port_full': 'DICOM server port',
           'client_aet': 'Client AE', 'client_aet_title_full': 'Expected client AE Title', 'database_settings': 'DATABASE SETTINGS',
-          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (e.g., 192.168.1.3:1521/PRD)',
+          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (e.g.: 192.168.1.3:1521/PRD)',
           'database_user': 'User', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'SQL query that returns Worklist items',
-          'sql_guide_title': 'Guide to expected Worklist columns', 'error_missing_module': 'Error: Module not found',
+          'sql_guide_title': 'Guide to expected Worklist columns', 'sql_guide_warning': '⚠️ Query must return EXACTLY 17 columns in this order:',
+          'sql_guide_link': 'View complete guide with SQL examples',
+          'sql_col1_hint': '(Full patient name)', 'sql_col2_hint': '(Unique identifier)',
+          'sql_col5_hint': '(Exam description)', 'sql_col6_hint': '(Request number)',
+          'sql_col9_hint': '(Full physician name)', 'sql_col12_hint': '(Encounter type)',
+          'sql_col13_hint': '(Encounter ID)', 'sql_col14_hint': '(Exam location)',
+          'sql_col15_hint': '(Procedure code)', 'sql_col16_hint': '(Code meaning)',
+          'sql_col17_hint': '(Coding scheme)',
+          'error_missing_module': 'Error: Module not found',
           'test_database': 'Database Test', 'test_status': 'Status Test', 'test_console': 'Test Console',
           'plugins_desc': 'Install or remove optional plugins that extend functionality (e.g., database drivers). Current DB type:',
           'module': 'Module', 'package': 'Package', 'install': 'Install', 'uninstall': 'Uninstall',
-          'installed': 'Installed', 'not_installed': 'Not installed', 'current': 'current', 'console_ready': '$ Ready for tests...'
+          'installed': 'Installed', 'not_installed': 'Not installed', 'current': 'current', 'console_ready': '$ Ready for tests...',
+          'test_success': 'SUCCESS', 'test_failed': 'FAILED', 'test_error': 'ERROR',
+          'install_pynetdicom_plugin': 'Install pynetdicom Plugin',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Notifications', 'title_clear_history': 'Clear history', 'title_install_db_driver': 'Install DB driver based on config.json'
         },
         fr: {
           'home': 'Accueil', 'config': 'Configuration', 'logs': 'Journaux', 'tests': 'Tests', 'plugins': 'Plugins',
@@ -170,13 +182,25 @@
           'server_settings': 'PARAMÈTRES DU SERVEUR', 'aet_title': 'Titre AE', 'aet_title_full': 'Titre DICOM Application Entity',
           'listen_all_interfaces': 'Écouter sur toutes les interfaces', 'host': 'Hôte/IP', 'port': 'Port', 'server_port_full': 'Port du serveur DICOM',
           'client_aet': 'AE Client', 'client_aet_title_full': 'Titre AE du client attendu', 'database_settings': 'PARAMÈTRES DE LA BASE DE DONNÉES',
-          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (ex: 192.168.1.3:1521/PRD)',
-          'database_user': 'Utilisateur', 'database_password': 'Mot de passe', 'database_query': 'Requête', 'sql_hint': 'Requête SQL qui retourne les éléments de la liste de travail',
-          'sql_guide_title': 'Guide des colonnes attendues par la liste de travail', 'error_missing_module': 'Erreur: Module introuvable',
+          'database_type': 'Type', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (ex.: 192.168.1.3:1521/PRD)',
+          'database_user': 'Utilisateur', 'database_password': 'Mot de passe', 'database_query': 'Requête', 'sql_hint': 'Requête SQL qui retourne les éléments de Worklist',
+          'sql_guide_title': 'Guide des colonnes attendues par la liste de travail', 'sql_guide_warning': '⚠️ La requête doit retourner EXACTEMENT 17 colonnes dans cet ordre:',
+          'sql_guide_link': 'Voir le guide complet avec des exemples SQL',
+          'sql_col1_hint': '(Nom complet du patient)', 'sql_col2_hint': '(Identifiant unique)',
+          'sql_col5_hint': '(Description de l\'examen)', 'sql_col6_hint': '(Numéro de demande)',
+          'sql_col9_hint': '(Nom complet du médecin)', 'sql_col12_hint': '(Type de consultation)',
+          'sql_col13_hint': '(ID de consultation)', 'sql_col14_hint': '(Lieu de l\'examen)',
+          'sql_col15_hint': '(Code de procédure)', 'sql_col16_hint': '(Signification du code)',
+          'sql_col17_hint': '(Schéma de codage)',
+          'error_missing_module': 'Erreur: Module introuvable',
           'test_database': 'Test de base de données', 'test_status': 'Test de statut', 'test_console': 'Console de test',
           'plugins_desc': 'Installez ou supprimez des plugins optionnels qui étendent les fonctionnalités (ex: drivers de base de données). Type de base de données actuel:',
           'module': 'Module', 'package': 'Paquet', 'install': 'Installer', 'uninstall': 'Désinstaller',
-          'installed': 'Installé', 'not_installed': 'Non installé', 'current': 'actuel', 'console_ready': '$ Prêt pour les tests...'
+          'installed': 'Installé', 'not_installed': 'Non installé', 'current': 'actuel', 'console_ready': '$ Prêt pour les tests...',
+          'test_success': 'SUCCÈS', 'test_failed': 'ÉCHOUÉ', 'test_error': 'ERREUR',
+          'install_pynetdicom_plugin': 'Installer le plugin pynetdicom',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Notifications', 'title_clear_history': 'Effacer l\'historique', 'title_install_db_driver': 'Installer le driver DB en fonction de config.json'
         },
         es: {
           'home': 'Inicio', 'config': 'Configuración', 'logs': 'Registros', 'tests': 'Pruebas', 'plugins': 'Complementos',
@@ -195,14 +219,26 @@
           'server_settings': 'CONFIGURACIÓN DEL SERVIDOR', 'aet_title': 'Título AE', 'aet_title_full': 'Título DICOM Application Entity',
           'listen_all_interfaces': 'Escuchar en todas las interfaces', 'host': 'Host/IP', 'port': 'Puerto', 'server_port_full': 'Puerto del servidor DICOM',
           'client_aet': 'AE del cliente', 'client_aet_title_full': 'Título AE del cliente esperado', 'database_settings': 'CONFIGURACIÓN DE LA BASE DE DATOS',
-          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PUERTO/BD (ej: 192.168.1.3:1521/PRD)',
-          'database_user': 'Usuario', 'database_password': 'Contraseña', 'database_query': 'Consulta', 'sql_hint': 'Consulta SQL que devuelve los elementos de la lista de trabajo',
-          'sql_guide_title': 'Guía de columnas esperadas por la lista de trabajo', 'error_missing_module': 'Error: Módulo no encontrado',
+          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PUERTO/BD (ej.: 192.168.1.3:1521/PRD)',
+          'database_user': 'Usuario', 'database_password': 'Contraseña', 'database_query': 'Consulta', 'sql_hint': 'Consulta SQL que retorna los elementos de Worklist',
+          'sql_guide_title': 'Guía de columnas esperadas por la lista de trabajo', 'sql_guide_warning': '⚠️ La consulta debe retornar EXACTAMENTE 17 columnas en este orden:',
+          'sql_guide_link': 'Ver guía completa con ejemplos SQL',
+          'sql_col1_hint': '(Nombre completo del paciente)', 'sql_col2_hint': '(Identificador único)',
+          'sql_col5_hint': '(Descripción del examen)', 'sql_col6_hint': '(Número de pedido)',
+          'sql_col9_hint': '(Nombre completo del médico)', 'sql_col12_hint': '(Tipo de atención)',
+          'sql_col13_hint': '(ID de atención)', 'sql_col14_hint': '(Lugar del examen)',
+          'sql_col15_hint': '(Código del procedimiento)', 'sql_col16_hint': '(Significado del código)',
+          'sql_col17_hint': '(Esquema de codificación)',
+          'error_missing_module': 'Error: Módulo no encontrado',
           'test_database': 'Prueba de base de datos', 'test_status': 'Prueba de estado', 'test_console': 'Consola de prueba',
           'plugins_desc': 'Instale o elimine complementos opcionales que amplíen la funcionalidad (ej: drivers de base de datos). Tipo de base de datos actual:',
           'module': 'Módulo', 'package': 'Paquete', 'install': 'Instalar', 'uninstall': 'Desinstalar',
           'installed': 'Instalado', 'not_installed': 'No instalado', 'current': 'actual',
-          'console_ready': '$ Listo para pruebas...'
+          'console_ready': '$ Listo para pruebas...',
+          'test_success': 'ÉXITO', 'test_failed': 'FALLÓ', 'test_error': 'ERROR',
+          'install_pynetdicom_plugin': 'Instalar plugin pynetdicom',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Notificaciones', 'title_clear_history': 'Borrar historial', 'title_install_db_driver': 'Instalar controlador de base de datos basado en config.json'
         },
         zh: {
           'home': '主页', 'config': '配置', 'logs': '日志', 'tests': '测试', 'plugins': '插件',
@@ -221,14 +257,26 @@
           'server_settings': '服务器设置', 'aet_title': '应用实体标题', 'aet_title_full': 'DICOM应用实体标题',
           'listen_all_interfaces': '监听所有接口', 'host': '主机/IP', 'port': '端口', 'server_port_full': 'DICOM服务器端口',
           'client_aet': '客户端AE', 'client_aet_title_full': '预期的客户端应用实体标题', 'database_settings': '数据库设置',
-          'database_type': '类型', 'database_dsn': 'DSN', 'dsn_hint': '格式: IP:PORT/DB (例如: 192.168.1.3:1521/PRD)',
+          'database_type': '类型', 'database_dsn': 'DSN', 'dsn_hint': '格式: IP:端口/数据库 (例: 192.168.1.3:1521/PRD)',
           'database_user': '用户', 'database_password': '密码', 'database_query': '查询', 'sql_hint': '返回工作列表项的SQL查询',
-          'sql_guide_title': '工作列表预期列指南', 'error_missing_module': '错误: 找不到模块',
+          'sql_guide_title': '工作列表预期列指南', 'sql_guide_warning': '⚠️ 查询必须按此顺序返回确切的17列：',
+          'sql_guide_link': '查看带有SQL示例的完整指南',
+          'sql_col1_hint': '(患者全名)', 'sql_col2_hint': '(唯一标识符)',
+          'sql_col5_hint': '(检查描述)', 'sql_col6_hint': '(请求编号)',
+          'sql_col9_hint': '(医生全名)', 'sql_col12_hint': '(就诊类型)',
+          'sql_col13_hint': '(就诊编号)', 'sql_col14_hint': '(检查地点)',
+          'sql_col15_hint': '(程序代码)', 'sql_col16_hint': '(代码意义)',
+          'sql_col17_hint': '(编码方案)',
+          'error_missing_module': '错误: 找不到模块',
           'test_database': '数据库测试', 'test_status': '状态测试', 'test_console': '测试控制台',
           'plugins_desc': '安装或卸载扩展功能的可选插件 (例如: 数据库驱动程序)。 当前数据库类型:',
           'module': '模块', 'package': '包', 'install': '安装', 'uninstall': '卸载',
           'installed': '已安装', 'not_installed': '未安装', 'current': '当前',
-          'console_ready': '$ 准备测试...'
+          'console_ready': '$ 准备测试...',
+          'test_success': '成功', 'test_failed': '失败', 'test_error': '错误',
+          'install_pynetdicom_plugin': '安装pynetdicom插件',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': '通知', 'title_clear_history': '清除历史', 'title_install_db_driver': '根据 config.json 安装 DB 驱动程序'
         },
         ru: {
           'home': 'Главная', 'config': 'Конфигурация', 'logs': 'Логи', 'tests': 'Тесты', 'plugins': 'Плагины',
@@ -249,12 +297,19 @@
           'client_aet': 'AE Клиента', 'client_aet_title_full': 'Ожидаемое название AE клиента', 'database_settings': 'ПАРАМЕТРЫ БАЗЫ ДАННЫХ',
           'database_type': 'Тип', 'database_dsn': 'DSN', 'dsn_hint': 'Формат: IP:PORT/DB (напр: 192.168.1.3:1521/PRD)',
           'database_user': 'Пользователь', 'database_password': 'Пароль', 'database_query': 'Запрос', 'sql_hint': 'SQL запрос, который возвращает элементы рабочего списка',
-          'sql_guide_title': 'Руководство по ожидаемым столбцам рабочего списка', 'error_missing_module': 'Ошибка: Модуль не найден',
+          'sql_guide_title': 'Руководство по ожидаемым столбцам рабочего списка', 'sql_guide_warning': '⚠️ Запрос должен вернуть РОВНО 17 столбцов в этом порядке:', 'sql_guide_link': 'Полное руководство с примерами SQL',
+          'sql_col1_hint': '(Полное имя пациента)', 'sql_col2_hint': '(Уникальный идентификатор)', 'sql_col5_hint': '(Описание исследования)', 'sql_col6_hint': '(Номер заказа)', 'sql_col9_hint': '(Полное имя врача)',
+          'sql_col12_hint': '(Тип приема)', 'sql_col13_hint': '(ID приема)', 'sql_col14_hint': '(Место исследования)', 'sql_col15_hint': '(Код процедуры)', 'sql_col16_hint': '(Значение кода)', 'sql_col17_hint': '(Схема кодирования)',
+          'error_missing_module': 'Ошибка: Модуль не найден',
           'test_database': 'Тест БД', 'test_status': 'Тест статуса', 'test_console': 'Консоль тестирования',
           'plugins_desc': 'Установите или удалите дополнительные плагины, расширяющие функциональность (напр: драйверы БД). Текущий тип БД:',
           'module': 'Модуль', 'package': 'Пакет', 'install': 'Установить', 'uninstall': 'Удалить',
           'installed': 'Установлено', 'not_installed': 'Не установлено', 'current': 'текущий',
-          'console_ready': '$ Готов к тестам...'
+          'console_ready': '$ Готов к тестам...',
+          'test_success': 'УСПЕХ', 'test_failed': 'ОШИБКА', 'test_error': 'ОШИБКА',
+          'install_pynetdicom_plugin': 'Установить плагин pynetdicom',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Уведомления', 'title_clear_history': 'Очистить историю', 'title_install_db_driver': 'Установить драйвер базы данных на основе config.json'
         },
         ja: {
           'home': 'ホーム', 'config': '設定', 'logs': 'ログ', 'tests': 'テスト', 'plugins': 'プラグイン',
@@ -273,14 +328,26 @@
           'server_settings': 'サーバー設定', 'aet_title': 'AEタイトル', 'aet_title_full': 'DICOMアプリケーションエンティティタイトル',
           'listen_all_interfaces': 'すべてのインターフェースをリッスン', 'host': 'ホスト/IP', 'port': 'ポート', 'server_port_full': 'DICOMサーバーポート',
           'client_aet': 'クライアントAE', 'client_aet_title_full': '予想されるクライアントAEタイトル', 'database_settings': 'データベース設定',
-          'database_type': 'タイプ', 'database_dsn': 'DSN', 'dsn_hint': '形式: IP:PORT/DB (例: 192.168.1.3:1521/PRD)',
-          'database_user': 'ユーザー', 'database_password': 'パスワード', 'database_query': 'クエリ', 'sql_hint': 'ワークリストアイテムを返すSQLクエリ',
-          'sql_guide_title': 'ワークリストで予想される列のガイド', 'error_missing_module': 'エラー: モジュールが見つかりません',
+          'database_type': 'タイプ', 'database_dsn': 'DSN', 'dsn_hint': '形式: IP:ポート/DB (例: 192.168.1.3:1521/PRD)',
+          'database_user': 'ユーザー', 'database_password': 'パスワード', 'database_query': 'クエリ', 'sql_hint': 'ワークリスト項目を返すSQLクエリ',
+          'sql_guide_title': 'ワークリストで予想される列のガイド', 'sql_guide_warning': '⚠️ クエリはこの順序で正確に17列を返す必要があります：',
+          'sql_guide_link': 'SQL例を含む完全なガイドを表示',
+          'sql_col1_hint': '(患者のフルネーム)', 'sql_col2_hint': '(一意識別子)',
+          'sql_col5_hint': '(検査説明)', 'sql_col6_hint': '(リクエスト番号)',
+          'sql_col9_hint': '(医師のフルネーム)', 'sql_col12_hint': '(受診タイプ)',
+          'sql_col13_hint': '(受診ID)', 'sql_col14_hint': '(検査場所)',
+          'sql_col15_hint': '(手順コード)', 'sql_col16_hint': '(コードの意味)',
+          'sql_col17_hint': '(コーディングスキーム)',
+          'error_missing_module': 'エラー: モジュールが見つかりません',
           'test_database': 'データベーステスト', 'test_status': 'ステータステスト', 'test_console': 'テストコンソール',
           'plugins_desc': '機能を拡張するオプションプラグインをインストールまたはアンインストールします (例: DBドライバ)。 現在のDBタイプ:',
           'module': 'モジュール', 'package': 'パッケージ', 'install': 'インストール', 'uninstall': 'アンインストール',
           'installed': 'インストール済み', 'not_installed': 'インストールされていません', 'current': '現在',
-          'console_ready': '$ テストの準備完了...'
+          'console_ready': '$ テストの準備完了...',
+          'test_success': '成功', 'test_failed': '失敗', 'test_error': 'エラー',
+          'install_pynetdicom_plugin': 'pynetdicomプラグインをインストール',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': '通知', 'title_clear_history': '履歴を消去', 'title_install_db_driver': 'config.json に基づいて DB ドライバーをインストール'
         },
         it: {
           'home': 'Home', 'config': 'Configurazione', 'logs': 'Log', 'tests': 'Test', 'plugins': 'Plugin',
@@ -301,12 +368,20 @@
           'client_aet': 'AE Client', 'client_aet_title_full': 'Titolo AE client previsto', 'database_settings': 'IMPOSTAZIONI DATABASE',
           'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PORT/DB (es: 192.168.1.3:1521/PRD)',
           'database_user': 'Utente', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'Query SQL che restituisce gli elementi dell\'elenco di lavoro',
-          'sql_guide_title': 'Guida alle colonne previste dell\'elenco di lavoro', 'error_missing_module': 'Errore: Modulo non trovato',
+          'sql_guide_title': 'Guida alle colonne previste dell\'elenco di lavoro', 'sql_guide_warning': '⚠️ La query deve restituire ESATTAMENTE 17 colonne in questo ordine:', 'sql_guide_link': 'Guida completa con esempi SQL',
+          'sql_col1_hint': '(Nome completo del paziente)', 'sql_col2_hint': '(Identificatore unico)', 'sql_col5_hint': '(Descrizione dell\'esame)', 'sql_col6_hint': '(Numero ordine)', 'sql_col9_hint': '(Nome completo del medico)',
+          'sql_col12_hint': '(Tipo di ammissione)', 'sql_col13_hint': '(ID ammissione)', 'sql_col14_hint': '(Luogo dell\'esame)', 'sql_col15_hint': '(Codice procedura)', 'sql_col16_hint': '(Significato del codice)', 'sql_col17_hint': '(Schema di codifica)',
+          'error_missing_module': 'Errore: Modulo non trovato',
           'test_database': 'Test Database', 'test_status': 'Test di stato', 'test_console': 'Console di test',
           'plugins_desc': 'Installa o disinstalla plugin opzionali che estendono la funzionalità (es: driver database). Tipo DB attuale:',
           'module': 'Modulo', 'package': 'Pacchetto', 'install': 'Installa', 'uninstall': 'Disinstalla',
           'installed': 'Installato', 'not_installed': 'Non installato', 'current': 'attuale',
-          'console_ready': '$ Pronto per i test...'
+          'console_ready': '$ Pronto para testes...',
+          'test_success': 'SUCCESSO', 'test_failed': 'FALLITO', 'test_error': 'ERRORE',
+          'install_pynetdicom_plugin': 'Installa plugin pynetdicom',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Notifiche', 'title_clear_history': 'Cancella cronologia', 'title_install_db_driver': 'Installa driver database basato su config.json',
+          'title_notifications': 'Notificações', 'title_clear_history': 'Limpar histórico', 'title_install_db_driver': 'Instalar driver de banco baseado em config.json'
         },
         tr: {
           'home': 'Anasayfa', 'config': 'Yapılandırma', 'logs': 'Günlükler', 'tests': 'Testler', 'plugins': 'Eklentiler',
@@ -327,12 +402,19 @@
           'client_aet': 'İstemci AE', 'client_aet_title_full': 'Beklenen istemci AE başlığı', 'database_settings': 'VERİTABANI AYARLARI',
           'database_type': 'Tür', 'database_dsn': 'DSN', 'dsn_hint': 'Biçim: IP:PORT/DB (örn: 192.168.1.3:1521/PRD)',
           'database_user': 'Kullanıcı', 'database_password': 'Şifre', 'database_query': 'Sorgu', 'sql_hint': 'Çalışma listesi öğelerini döndüren SQL sorgusu',
-          'sql_guide_title': 'Çalışma listesi tarafından beklenen sütunlara kılavuz', 'error_missing_module': 'Hata: Modül bulunamadı',
+          'sql_guide_title': 'Çalışma listesi tarafından beklenen sütunlara kılavuz', 'sql_guide_warning': '⚠️ Sorgu bu sırada TAM OLARAK 17 sütun döndürmelidir:', 'sql_guide_link': 'SQL örnekleri ile tam kılavuz',
+          'sql_col1_hint': '(Hastanın tam adı)', 'sql_col2_hint': '(Benzersiz tanımlayıcı)', 'sql_col5_hint': '(İnceleme açıklaması)', 'sql_col6_hint': '(Sipariş numarası)', 'sql_col9_hint': '(Doktorun tam adı)',
+          'sql_col12_hint': '(Kabul türü)', 'sql_col13_hint': '(Kabul kimliği)', 'sql_col14_hint': '(İnceleme yeri)', 'sql_col15_hint': '(İşlem kodu)', 'sql_col16_hint': '(Kod anlamı)', 'sql_col17_hint': '(Kodlama şeması)',
+          'error_missing_module': 'Hata: Modül bulunamadı',
           'test_database': 'Veritabanı Testi', 'test_status': 'Durum Testi', 'test_console': 'Test Konsolu',
           'plugins_desc': 'İşlevsellieği genişleten isteğe bağlı eklentileri yükleyin veya kaldırın (örn: veritabanı sürücüleri). Güncel DB türü:',
           'module': 'Modül', 'package': 'Paket', 'install': 'Yükle', 'uninstall': 'Kaldır',
           'installed': 'Yüklü', 'not_installed': 'Yüklü değil', 'current': 'mevcut',
-          'console_ready': '$ Testler için hazır...'
+          'console_ready': '$ Testler için hazır...',
+          'test_success': 'BAŞARILI', 'test_failed': 'BAŞARISIZ', 'test_error': 'HATA',
+          'install_pynetdicom_plugin': 'pynetdicom Eklentisini Yükle',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Bildirimler', 'title_clear_history': 'Geçmişi Temizle', 'title_install_db_driver': 'config.json ̓e Göre Veritabanı Sürücsünü Yükle'
         },
         fil: {
           'home': 'Tahanan', 'config': 'Pagsasaayos', 'logs': 'Mga Log', 'tests': 'Mga Pagsubok', 'plugins': 'Mga Plugin',
@@ -353,12 +435,19 @@
           'client_aet': 'Client AE', 'client_aet_title_full': 'Inaasahang client AE Title', 'database_settings': 'MGA SETTING NG DATABASE',
           'database_type': 'Uri', 'database_dsn': 'DSN', 'dsn_hint': 'Format: IP:PORT/DB (hal: 192.168.1.3:1521/PRD)',
           'database_user': 'User', 'database_password': 'Password', 'database_query': 'Query', 'sql_hint': 'SQL query na nagbabalik ng worklist items',
-          'sql_guide_title': 'Gabay sa inaasahang column ng worklist', 'error_missing_module': 'Error: Module not found',
+          'sql_guide_title': 'Gabay sa inaasahang column ng worklist', 'sql_guide_warning': '⚠️ Ang query ay dapat magbalik ng EKSAKTO 17 kolum sa pagkakasunod-sunod na ito:', 'sql_guide_link': 'Kumpleto gabay na may mga SQL halimbawa',
+          'sql_col1_hint': '(Buong pangalan ng pasyente)', 'sql_col2_hint': '(Kakaibang pagkakakilanlan)', 'sql_col5_hint': '(Paglalarawan ng eksaminasyon)', 'sql_col6_hint': '(Numero ng order)', 'sql_col9_hint': '(Buong pangalan ng doktor)',
+          'sql_col12_hint': '(Uri ng admission)', 'sql_col13_hint': '(ID ng admission)', 'sql_col14_hint': '(Lokasyon ng eksaminasyon)', 'sql_col15_hint': '(Code ng pamamaraan)', 'sql_col16_hint': '(Kahulugan ng code)', 'sql_col17_hint': '(Coding scheme)',
+          'error_missing_module': 'Error: Module not found',
           'test_database': 'Database Test', 'test_status': 'Status Test', 'test_console': 'Test Console',
           'plugins_desc': 'I-install o alisin ang optional plugins na nagpapalakas ng functionality (hal: database drivers). Kasalukuyang DB type:',
           'module': 'Module', 'package': 'Package', 'install': 'I-install', 'uninstall': 'I-uninstall',
           'installed': 'Naka-install', 'not_installed': 'Hindi naka-install', 'current': 'kasalukuyan',
-          'console_ready': '$ Handa para sa mga pagsubok...'
+          'console_ready': '$ Handa para sa mga pagsubok...',
+          'test_success': 'TAGUMPAY', 'test_failed': 'NABIGO', 'test_error': 'KAMALIAN',
+          'install_pynetdicom_plugin': 'I-install ang pynetdicom Plugin',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'title_notifications': 'Mga Notipikasyon', 'title_clear_history': 'Burahin ang kasaysayan', 'title_install_db_driver': 'I-install ang DB Driver base sa config.json'
         }
       };
 
@@ -393,26 +482,7 @@
         }).catch(() => {});
       }
 
-      function toggleTheme() {
-        const html = document.documentElement;
-        const isDark = html.classList.contains('dark');
-        
-        if (isDark) {
-          html.classList.remove('dark');
-          localStorage.setItem('theme', 'light');
-        } else {
-          html.classList.add('dark');
-          localStorage.setItem('theme', 'dark');
-        }
-        
-        // Force update the icons
-        const sunIcon = document.querySelector('.fa-sun');
-        const moonIcon = document.querySelector('.fa-moon');
-        if (sunIcon && moonIcon) {
-          sunIcon.classList.toggle('hidden');
-          moonIcon.classList.toggle('hidden');
-        }
-      }
+      // Fixed theme: keep light theme by default
 
       function showNotification(message, type = 'info', duration = 4000) {
         const notification = document.createElement('div');
@@ -434,17 +504,17 @@
           </div>
         `;
         
-        // Calcular posição baseado nas notificações existentes
+        // Calculate position based on existing notifications
         const existingNotifications = document.querySelectorAll('.notification');
-        let topPosition = 80; // Posição inicial
+        let topPosition = 80; // Initial position
         existingNotifications.forEach(notif => {
-          topPosition += notif.offsetHeight + 10; // Adicionar altura + espaçamento
+          topPosition += notif.offsetHeight + 10; // Add height + spacing
         });
         notification.style.top = `${topPosition}px`;
         
         document.body.appendChild(notification);
         
-        // Adicionar ao histórico
+        // Add to notification history
         addNotificationToHistory(message, type);
         
         setTimeout(() => {
@@ -452,7 +522,7 @@
           notification.classList.add('notification-exit');
           setTimeout(() => {
             notification.remove();
-            // Reposicionar notificações restantes
+            // Reposition remaining notifications
             repositionNotifications();
           }, 300);
         }, duration);
@@ -467,7 +537,7 @@
         });
       }
 
-      // Sistema de histórico de notificações
+      // Notification history system
       let notificationHistory = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
       let unreadCount = parseInt(localStorage.getItem('unreadNotifications') || '0');
 
@@ -562,7 +632,7 @@
         }).join('');
       }
 
-      // Inicializar histórico na página
+      // Initialize history on page load
       window.addEventListener('DOMContentLoaded', () => {
         setLang(currentLang);
         updateNotificationBadge();
@@ -603,7 +673,7 @@
     <script>
       const loadingBar = document.getElementById('global-loading-bar');
       
-      // Mostrar barra ao iniciar requisição
+      // Show loading bar on request start
       function showLoadingBar() {
         loadingBar.classList.add('loading');
       }
@@ -684,26 +754,20 @@
           <div class="flex items-center gap-4">
             <!-- Notification Bell -->
             <div class="relative">
-              <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" title="Notificações">
+              <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" data-i18n-title="title_notifications">
                 <i class="fas fa-bell text-lg"></i>
                 <span id="notification-badge" class="notification-badge hidden">0</span>
               </button>
               <div id="notification-dropdown" class="notification-dropdown bg-white dark:bg-gray-800">
                 <div class="bg-blue-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
                   <h3 class="font-bold text-gray-900 dark:text-white" data-i18n="notifications">Notificações</h3>
-                  <button onclick="clearNotificationHistory()" class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Limpar histórico">
+                  <button onclick="clearNotificationHistory()" class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" data-i18n-title="title_clear_history">
                     <i class="fas fa-trash-alt"></i> <span data-i18n="clear">Limpar</span>
                   </button>
                 </div>
                 <div id="notification-history" class="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto" style="max-height: 400px;"></div>
               </div>
             </div>
-
-            <!-- Theme Toggle -->
-            <button onclick="toggleTheme()" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition" data-i18n-title="theme">
-              <i class="fas fa-sun text-lg block dark:hidden"></i>
-              <i class="fas fa-moon text-lg hidden dark:block"></i>
-            </button>
 
             <!-- Language Selector -->
             <div class="relative group">
@@ -763,11 +827,11 @@
             .then(data => {
               const statusEl = document.getElementById('service-status');
               if (statusEl) {
-                // Atualiza apenas o texto mantendo o ícone e classes
+                // Update text only, keeping icon and classes consistent with server
                 const txt = data.running ? t('running') : t('stopped');
                 const icon = data.running ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
-                statusEl.innerHTML = `${icon} ${txt}`;
-                statusEl.className = data.running ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                statusEl.innerHTML = `${icon} <span data-i18n="${data.running ? 'running' : 'stopped'}">${txt}</span>`;
+                statusEl.className = data.running ? 'text-green-300' : 'text-red-300';
               }
             });
         }
