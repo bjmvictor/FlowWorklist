@@ -2,15 +2,20 @@
 
 # FlowWorklist
 
-A lightweight, vendor-neutral DICOM Modality Worklist (MWL) server with a simple web dashboard.
+A lightweight, vendor-neutral **DICOM Modality Worklist (MWL)** server with a user-friendly web interface for management.
 
-- 🏥 Connects to hospital DB (Oracle, PostgreSQL, MySQL)
-- 🧾 Serves pending exams as C-FIND worklists to modalities
-- 🌐 Dashboard to manage, configure, test and monitoring
+- 🏥 Connects to hospital databases (Oracle, PostgreSQL, MySQL)
+- 🧾 Serves pending exams as C-FIND worklists to imaging modalities
+- 🌐 Web dashboard to manage, configure, test, and monitor the system
 
 ---
 
 ## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.8+ installed
+- Git installed
+- Database access (Oracle, PostgreSQL, or MySQL)
 
 Pick your platform and run the commands:
 
@@ -46,23 +51,23 @@ pip install -r requirements.txt
 python flow.py startapp
 ```
 
-Open the dashboard: http://localhost:5000
-
----
-
 ## ⚙️ Configure Before Starting the Service
 
-- Go to the dashboard → Configuration
-- Set database connection (type, host, user, password, DSN)
-- Paste your SQL query returning 17 columns (see Column Mapping Guide)
-- Run “Test Database Connection” and “Test Worklist”
+1. Open your browser: **`http://localhost:5000`** → Go to **Configuration**
+2. **⚠️ IMPORTANT**: Before starting the DICOM service, go to the **Configuration** tab and:
+   - Configure the database connection (Oracle / PostgreSQL / MySQL)
+   - Set the DICOM server parameters (AET, port)
+   - Paste your SQL query returning **17 columns** (see Column Mapping Guide)  
+     *Or use a dummy query for testing*
+3. Go to **Tests** and click **“Test Database Connection”** and **“Test Worklist”**
 
-Only after the configuration is valid, start the DICOM service:
+Only after the configuration is valid, start the DICOM service.
 
 ### Start the Service
-- PowerShell: `./flow startservice`
-- CMD: `flow startservice`
-- Linux/macOS: `python flow.py startservice`
+- **Web UI**: Click **Start Service**
+- **PowerShell**: `./flow startservice`
+- **CMD**: `flow startservice`
+- **Linux/macOS**: `python flow.py startservice`
 
 ---
 
@@ -76,6 +81,7 @@ Only after the configuration is valid, start the DICOM service:
 - `flow status` → Show App + Service status
 
 Optional (Windows, System PATH): run terminal as Administrator then `python flow.py install --add-to-path` to use `flow` from any directory.
+> ⚠️ **Note**: Administrator privileges are required to modify System PATH. If you don't have admin access, you can add the FlowWorklist directory to your User PATH manually through System Environment Variables.
 
 ---
 
@@ -102,78 +108,6 @@ Optional (Windows, System PATH): run terminal as Administrator then `python flow
 - Do not commit real credentials; use placeholders in `config.json`
 - Keep dependencies updated (`pip install -r requirements.txt`)
 
-## 🚀 Quick Start (5 minutes)
-
-### Prerequisites
-- Python 3.8+ installed
-- Git installed
-- Database access (Oracle, PostgreSQL, or MySQL)
-
-### Installation
-
-**Windows PowerShell:**
-```powershell
-git clone https://github.com/bjmvictor/FlowWorklist.git
-cd FlowWorklist
-python -m venv .
-.\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# One-time setup: creates flow.bat and flow.ps1 wrappers
-python .\flow.py install
-
-# Start management App
-.\flow startapp
-```
-
-**Windows CMD:**
-```cmd
-git clone https://github.com/bjmvictor/FlowWorklist.git
-cd FlowWorklist
-python -m venv .
-.\Scripts\activate.bat
-pip install -r requirements.txt
-
-REM One-time setup: creates flow.bat and flow.ps1 wrappers
-python flow.py install
-
-REM Start management App
-flow startapp
-```
-
-**Linux/macOS:**
-```bash
-git clone https://github.com/bjmvictor/FlowWorklist.git
-cd FlowWorklist
-python3 -m venv .
-source bin/activate
-pip install -r requirements.txt
-
-# Start management App
-python flow.py startapp
-```
-
-### Access the Application
-
-1. Open browser: **`http://localhost:5000`**
-2. **⚠️ IMPORTANT**: Before starting the DICOM service, go to **Configuration** tab and:
-   - Configure database connection (Oracle/PostgreSQL/MySQL)
-   - Set DICOM server parameters (AET, port)
-   - Test database connection
-3. After configuration, start the DICOM service:
-   ```powershell
-   # PowerShell
-   .\flow startservice
-   
-   # CMD
-   flow startservice
-   
-   # Linux/macOS
-   python flow.py startservice
-   ```
-
----
-
 ## Features
 
 ### 🎯 Core DICOM Features
@@ -191,7 +125,7 @@ python flow.py startapp
 - **Real-time Monitoring** - View service status, PID, memory usage
 - **Configuration UI** - Edit database connections and server settings
 - **Log Viewer** - Browse application and service logs in real-time
-- **Plugin System** - Install/uninstall optional database drivers (Oracle, PostgreSQL, MySQL, pynetdicom)
+- **Plugin System** - Install/uninstall optional database drivers and tools (Oracle, PostgreSQL, MySQL, pynetdicom)
 - **Worklist Testing** - Built-in C-FIND test endpoint for validation
 - **Database Connection Test** - Verify database connectivity before deployment
 
@@ -199,7 +133,7 @@ python flow.py startapp
 
 Fully translated into 10 languages with automatic language detection:
 - Portuguese (Português) 🇧🇷
-- English 🇬🇧
+- English en
 - Spanish (Español) 🇪🇸
 - French (Français) 🇫🇷
 - Chinese (中文) 🇨🇳
@@ -228,146 +162,6 @@ The system is composed of two main components:
 Dashboard URL: (http://localhost:5000)
 
 ---
-
-## Installation
-
-### Prerequisites
-
-- **Python 3.8+** (3.10+ recommended)
-- **Virtual Environment** (venv recommended)
-- **Database Client Library** (cx_Oracle for Oracle, psycopg2 for PostgreSQL, PyMySQL for MySQL)
-- **Windows PowerShell 5.1+** or **Linux/Mac shell**
-
-### Step 1: Clone or Download
-
-```bash
-git clone https://github.com/bjmvictor/FlowWorklist.git
-cd FlowWorklist
-```
-
-### Step 2: Create Virtual Environment
-
-```powershell
-# Windows PowerShell
-python -m venv .
-& .\Scripts\Activate.ps1
-
-# Linux / macOS
-python3 -m venv .
-source bin/activate
-```
-
-### Step 3: Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4: Configure Database Connection
-
-Edit `config.json` with your database credentials:
-
-```json
-{
-  "database": {
-    "type": "oracle",
-    "user": "your_db_user",
-    "password": "your_db_password",
-    "dsn": "your_host:1521/your_database"
-  }
-}
-```
-
-### Step 5: Start Services (Flow CLI)
-
-#### 5a. One-time Setup (Optional: Add to System PATH)
-
-To run `flow` commands from any directory without activation:
-
-**Windows PowerShell (Run as Administrator):**
-```powershell
-# Right-click PowerShell → "Run as Administrator"
-python .\flow.py install --add-to-path
-# After running, restart terminal, then: flow startall (from anywhere!)
-```
-
-**Windows CMD (Run as Administrator):**
-```cmd
-REM Right-click CMD → "Run as Administrator"
-python flow.py install --add-to-path
-REM After running, restart terminal, then: flow startall (from anywhere!)
-```
-
-> ⚠️ **Note**: Administrator privileges are required to modify System PATH. If you don't have admin access, you can add the FlowWorklist directory to your User PATH manually through System Environment Variables.
-
-**Linux/macOS:**
-```bash
-# Edit ~/.bashrc and add: export PATH="/path/to/FlowWorklist:$PATH"
-```
-
-#### 5b. Start Services
-
-**Windows PowerShell:**
-```powershell
-# Start both (recommended)
-python .\flow.py startall
-
-# OR with wrapper after 'flow install':
-.\flow startall
-.\flow startapp                   # Port 5000 (Management UI)
-.\flow startservice               # Port 11112 (DICOM Server)
-```
-
-**Windows CMD:**
-```cmd
-REM Start both (recommended)
-python flow.py startall
-
-REM OR with wrapper after 'flow install':
-flow startall
-flow startapp
-flow startservice
-```
-
-**Linux/macOS:**
-```bash
-python flow.py startall           # Start both
-# OR individually:
-python flow.py startapp
-python flow.py startservice
-```
-
-#### 5c. Stop Services
-
-**Windows PowerShell:**
-```powershell
-# Stop both gracefully
-python .\flow.py stopall
-
-# OR with wrapper:
-.\flow stopall
-.\flow stopapp                    # Graceful Flask shutdown
-.\flow stopservice                # Stop DICOM server
-.\flow status                     # Check status
-```
-
-**Windows CMD:**
-```cmd
-REM Stop both gracefully
-python flow.py stopall
-
-REM OR with wrapper:
-flow stopall
-flow stopapp
-flow stopservice
-flow status
-```
-
-**Linux/macOS:**
-```bash
-python flow.py stopall
-python flow.py status
-```
 
 ### Available Flow Commands
 
@@ -400,7 +194,6 @@ python build_exe.py
 - ✅ Single .exe file (~80-120 MB)
 - ✅ Easy service installation with NSSM
 - ✅ Portable across Windows systems
-
 
 ---
 
@@ -606,7 +399,7 @@ sudo systemctl start flowmwl
 
 ## API Reference
 
-### Management Dashboard (Flask)
+### Management Dashboard
 
 #### Endpoints
 
@@ -672,16 +465,14 @@ The MWLSCP server listens on port 11112 and implements the DICOM Modality Workli
 - **ScheduledProcedureStepStartTime** - Exact match (HHMMSS)
 - **AccessionNumber** - Exact match or wildcard
 
-#### Example: findscu Query
+#### Example using DCMTK: findscu Query
 
 ```bash
 # Query all pending orders
-findscu -aec FlowMWL -aet ConsoleApp 192.168.1.3 11112
+findscu -aec FlowMWL -aet Client <IP/HOST> 11112
 
 # Query specific patient
-findscu -aec FlowMWL -aet ConsoleApp 192.168.1.3 11112 \
-  -k PatientName="SMITH*" \
-  -k PatientID="12345678"
+findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client <IP/HOST> 11112
 ```
 
 ---
