@@ -1,47 +1,107 @@
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![DICOM](https://img.shields.io/badge/DICOM-MWL-green)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue) ![DICOM](https://img.shields.io/badge/DICOM-MWL-green)
 
-# FlowWorklist - DICOM Modality Worklist Server with Management UI
+# FlowWorklist
 
-FlowWorklist is a lightweight, vendor-neutral **DICOM Modality Worklist (MWL) Server**
-with an integrated **Web-based management dashboard**.
+A lightweight, vendor-neutral DICOM Modality Worklist (MWL) server with a simple web dashboard.
 
-It connects hospital information systems (HIS/RIS) directly to DICOM imaging modalities,
-providing reliable, standards-compliant worklist distribution with minimal setup
-and full administrative control.
-
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Database Integration](#database-integration)
-- [Deployment](#deployment)
-- [API Reference](#api-reference)
-- [Troubleshooting](#troubleshooting)
+- 🏥 Connects to hospital DB (Oracle, PostgreSQL, MySQL)
+- 🧾 Serves C-FIND worklists to modalities
+- 🌐 Dashboard to configure, test and monitor
 
 ---
 
-## Overview
+## 🚀 Quick Start
 
-FlowWorklist is a complete on-premise DICOM MWL server designed for hospitals,
-clinics, and imaging centers.
+Pick your platform and run the commands:
 
-1. **Connects to your hospital database** (Oracle, PostgreSQL, MySQL) to fetch pending imaging orders
-2. **Converts database records into DICOM format** following the DICOM Modality Worklist Information Model (DICOM PS 3)
-3. **Serves worklist data to imaging equipment** via the DICOM C-FIND protocol
-4. **Provides a management dashboard** for monitoring, configuration, and testing
-5. **Supports multiple languages** (10 languages: Portuguese, English, Spanish, French, Chinese, Russian, Japanese, Italian, Turkish, Filipino)
+### Windows (PowerShell)
+```
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python -m venv .
+.\Scripts\Activate.ps1
+pip install -r requirements.txt
+python .\flow.py install
+.\flow startapp
+```
 
-### Use Cases
+### Windows (CMD)
+```
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python -m venv .
+.\Scripts\activate.bat
+pip install -r requirements.txt
+python flow.py install
+flow startapp
+```
 
-- **Hospital PACS Integration**: Automatically populate imaging modalities with pending orders
-- **Imaging Equipment Worklist**: Reduce manual patient entry on CT, MRI, X-ray machines
-- **Multi-facility Deployment**: Centralized worklist distribution across multiple units
-- **Workflow Automation**: Integrate with existing HIS/RIS systems
+### Linux/macOS
+```
+git clone https://github.com/bjmvictor/FlowWorklist.git
+cd FlowWorklist
+python3 -m venv .
+source bin/activate
+pip install -r requirements.txt
+python flow.py startapp
+```
+
+Open the dashboard: http://localhost:5000
+
+---
+
+## ⚙️ Configure Before Starting the Service
+
+- Go to the dashboard → Configuration
+- Set database connection (type, host, user, password, DSN)
+- Paste your SQL query returning 17 columns (see Column Mapping Guide)
+- Run “Test Database Connection” and “Test Worklist”
+
+Only after the configuration is valid, start the DICOM service:
+
+### Start the Service
+- PowerShell: `./flow startservice`
+- CMD: `flow startservice`
+- Linux/macOS: `python flow.py startservice`
+
+---
+
+## 🧰 Useful Commands
+
+- `flow startapp` → Start the dashboard (port 5000)
+- `flow stopapp` → Stop the dashboard
+- `flow startservice` → Start MWL DICOM server (port 11112)
+- `flow stopservice` → Stop DICOM server
+- `flow startall` / `flow stopall` → Start/stop both
+- `flow status` → Show App + Service status
+
+Optional (Windows, System PATH): run terminal as Administrator then `python flow.py install --add-to-path` to use `flow` from any directory.
+
+---
+
+## 📚 Docs
+
+- Column mapping reference → `COLUMN_MAPPING_GUIDE.md`
+- Deployment guide → `DEPLOYMENT.md`
+- Quick reference card → `QUICK_REFERENCE.md`
+- Build executable (Windows) → `BUILD_GUIDE.md`
+
+---
+
+## ✅ What “Works” Looks Like
+
+- Dashboard loads at http://localhost:5000
+- Database tests pass
+- DICOM service responds to C-FIND on port 11112
+- Worklist items show expected patient data
+
+---
+
+## 🔒 Notes
+
+- Do not commit real credentials; use placeholders in `config.json`
+- Use firewall rules to restrict port 11112
+- Keep dependencies updated (`pip install -r requirements.txt`)
 
 ## 🚀 Quick Start (5 minutes)
 
