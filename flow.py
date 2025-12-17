@@ -518,40 +518,22 @@ if __name__ == "__main__":
     elif args.cmd == "stopall":
         stopall()
     elif args.cmd == "startservice":
-        startservice(config_path=args.config)
+        res = startservice(config_path=args.config)
+        if res is not None:
+            print(res)
     elif args.cmd == "stopservice":
-        stopservice()
+        res = stopservice()
+        if res is not None:
+            print(res)
     elif args.cmd == "restartservice":
-        restartservice(config_path=args.config)
+        res = restartservice(config_path=args.config)
+        if res is not None:
+            print(res)
     elif args.cmd == "status":
-        status()
+        print(status())
     elif args.cmd == "logs":
-        logs(limit=args.logs)
-            if args.cmd == "startapp":
-                startapp()
-            elif args.cmd == "stopapp":
-                stopapp()
-            elif args.cmd == "startall":
-                startall()
-            elif args.cmd == "stopall":
-                stopall()
-            elif args.cmd == "startservice":
-                res = startservice(config_path=args.config)
-                if res is not None:
-                    print(res)
-            elif args.cmd == "stopservice":
-                res = stopservice()
-                if res is not None:
-                    print(res)
-            elif args.cmd == "restartservice":
-                res = restartservice(config_path=args.config)
-                if res is not None:
-                    print(res)
-            elif args.cmd == "status":
-                print(status())
-            elif args.cmd == "logs":
-                print(logs(limit=args.limit))
-            elif args.cmd == "tail":
-                print(tail(args.log, lines=args.lines))
-            elif args.cmd == "install":
-                install(add_to_path=args.add_to_path)
+        print(logs(limit=args.limit))
+    elif args.cmd == "tail":
+        print(tail(args.log, lines=args.lines))
+    elif args.cmd == "install":
+        install(add_to_path=args.add_to_path)
