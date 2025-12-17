@@ -188,16 +188,65 @@ Edit `config.json` with your database credentials:
 
 ### Step 5: Start Services (Flow CLI)
 
+#### 5a. One-time Setup (Optional: Add to System PATH)
+
+To run `flow` commands from any directory without activation:
+
 ```powershell
-# Windows (PowerShell)
-python .\flow.py install
-.\flow startapp          # Port 5000
-.\flow startservice      # Port 11112
+# Windows PowerShell - adds FlowWorklist directory to system PATH
+python .\flow.py install --add-to-path
+
+# After running, restart your PowerShell terminal, then you can use:
+flow startall          # from any directory!
 
 # Linux/macOS
+# Edit ~/.bashrc and add: export PATH="/path/to/FlowWorklist:$PATH"
+```
+
+#### 5b. Start Services
+
+```powershell
+# Windows (PowerShell) - Start both App and Service together
+python .\flow.py startall
+
+# OR start individually
+python .\flow.py startapp          # Port 5000 (Management UI)
+python .\flow.py startservice      # Port 11112 (DICOM Server)
+
+# Linux/macOS
+python flow.py startall
+# OR
 python flow.py startapp
 python flow.py startservice
 ```
+
+#### 5c. Stop Services
+
+```powershell
+# Windows (PowerShell) - Stop both gracefully
+python .\flow.py stopall
+
+# OR stop individually
+python .\flow.py stopapp           # Graceful Flask shutdown
+python .\flow.py stopservice       # Stop DICOM server
+
+# Check status anytime
+python .\flow.py status
+```
+
+### Available Flow Commands
+
+| Command | Purpose |
+|---------|---------|
+| `flow install [--add-to-path]` | Initialize CLI wrappers; optionally add to system PATH |
+| `flow startapp` | Start management dashboard (port 5000) |
+| `flow startservice` | Start DICOM MWL server (port 11112) |
+| `flow startall` | Start both App and Service together (recommended) |
+| `flow stopapp` | Stop management dashboard gracefully |
+| `flow stopservice` | Stop DICOM MWL server |
+| `flow stopall` | Stop both Service and App gracefully (recommended) |
+| `flow status` | Show App and Service status |
+
 ### Alternative: Windows Executable
 For easier deployment on Windows without Python installation:
 

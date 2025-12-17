@@ -67,11 +67,33 @@ Edit `config.json`:
 ```
 
 ### Step 4: Use Flow CLI (Windows PowerShell)
+
+**One-time setup** (adds `flow` to system PATH):
 ```powershell
-.\u200bflow install    # one-time wrappers
-.\u200bflow startapp   # start the management App
-.\u200bflow startservice  # start MWL service
-.\u200bflow status     # show App + Service status
+python flow.py install --add-to-path
+# After running, restart your PowerShell terminal
+# Then you can use `flow` from any directory
+```
+
+**Start services**:
+```powershell
+flow startall          # start both App and Service
+# OR start individually:
+flow startapp          # start management App (port 5000)
+flow startservice      # start MWL DICOM server (port 11112)
+```
+
+**Stop services**:
+```powershell
+flow stopall           # stop both Service and App gracefully
+# OR stop individually:
+flow stopapp           # stop management App
+flow stopservice       # stop MWL service
+```
+
+**Check status**:
+```powershell
+flow status            # show App + Service status
 ```
 
 ### Step 5: Open Browser
