@@ -508,7 +508,7 @@ findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client
 2. Verify credentials in `config.json`
 3. Check network connectivity to database server
 4. Use `/test/database` endpoint in dashboard to diagnose
-5. Ensure all required database client libraries are installed (`pip install cx_Oracle`)
+5. Ensure all required database client libraries are installed in `/plugins`
 
 ### DICOM Client Receives Empty Worklist
 
@@ -519,14 +519,13 @@ findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client
 2. Check query WHERE conditions are not too restrictive
 3. Verify column order matches documentation (17 columns exactly)
 4. Check data formatting (dates, times, modality codes)
-5. Review column mapping in config.json
 
 ### Plugin Installation Fails
 
 **Problem**: Cannot install Oracle, PostgreSQL, or MySQL drivers
 
 **Solutions**:
-1. Install pip update: `pip install --upgrade pip`
+1. Install pip update (On venv): `pip install --upgrade pip`
 2. Check internet connectivity
 3. Verify Python version (3.8+)
 4. Try manual installation: `pip install cx_Oracle psycopg2-binary PyMySQL`
@@ -612,7 +611,7 @@ by the institution before clinical use, according to local regulations.
 - Restrict MWL access by AET Title
 - Deploy behind hospital firewall
 - Do not expose port 11112 to public networks
-- Use read-only database credentials
+- Use **read-only** database credentials
 
 ---
 
@@ -637,4 +636,4 @@ by the institution before clinical use, according to local regulations.
 ---
 
 **Last Updated**: December 2025  
-**Version**: 1.0.0
+**Version**: 1.1.0
