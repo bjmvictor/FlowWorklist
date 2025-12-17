@@ -431,6 +431,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     identifier = event.identifier
 
     # --- Extração de filtros simples ---
+    patient_name_filter = identifier.get('PatientName', None)
     patient_id_filter = identifier.get('PatientID', None)
     sex_filter = identifier.get('PatientSex', None)
     birth_date_filter = identifier.get('PatientBirthDate', None)
@@ -445,6 +446,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         v = str(value).strip()
         return None if not v or v == '*' else v
 
+    patient_name_filter = clean_filter(patient_name_filter)
     patient_id_filter = clean_filter(patient_id_filter)
     sex_filter = clean_filter(sex_filter)
     birth_date_filter = clean_filter(birth_date_filter)
@@ -452,6 +454,28 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     accession_number_filter = clean_filter(accession_number_filter)
     scheduled_date_filter = clean_filter(scheduled_date_filter)
     scheduled_time_filter = clean_filter(scheduled_time_filter)
+
+    def matches_filter(value, filter_pattern):
+        """Matches DICOM wildcard patterns: * (any), ? (single char), or exact match."""
+        if filter_pattern is None:
+            return True
+        value = str(value).strip().upper()
+        filter_pattern = str(filter_pattern).strip().upper()
+        
+        # Exact match or wildcard '*' matches all
+        if filter_pattern == '*':
+            return True
+        
+        # Convert DICOM wildcard pattern to regex
+        import re
+        # Escape special regex chars except * and ?
+        pattern = re.escape(filter_pattern).replace(r'\*', '.*').replace(r'\?', '.')
+        pattern = f'^{pattern}$'
+        
+        try:
+            return bool(re.match(pattern, value))
+        except:
+            return False
 
             # Consultando worklist do banco de dados
     worklist_rows = worklist_provider.get_worklist_items()
@@ -478,6 +502,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         primeira = itens[0]
 
         # Aplicar filtros recebidos pelo client (todos os filtros têm que casar para enviar o pedido)
+        db_patient_name = str(primeira.get('nm_paciente', '')).strip()
         db_patient_id = str(primeira.get('cd_paciente', '')).strip()
         db_sex = str(primeira.get('tp_sexo', '')).strip()
         db_birth_date = str(primeira.get('nascimento', '')).strip()
@@ -486,15 +511,18 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         db_scheduled_date = str(primeira.get('exame_data', '')).strip()
         db_scheduled_time = str(primeira.get('exame_hora', '')).strip()
 
-        if patient_id_filter and db_patient_id != patient_id_filter:
+        # Apply filters with wildcard support
+        if not matches_filter(db_patient_name, patient_name_filter):
+            continue
+        if not matches_filter(db_patient_id, patient_id_filter):
             continue
         if sex_filter and db_sex.upper() != sex_filter.upper():
             continue
         if birth_date_filter and db_birth_date != birth_date_filter:
             continue
-        if modality_filter and db_modality.upper() != modality_filter.upper():
+        if not matches_filter(db_modality, modality_filter):
             continue
-        if accession_number_filter and db_accession_number != accession_number_filter:
+        if not matches_filter(db_accession_number, accession_number_filter):
             continue
         if scheduled_date_filter and db_scheduled_date != scheduled_date_filter:
             continue
