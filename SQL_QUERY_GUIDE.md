@@ -140,11 +140,11 @@ Ou execute a query e verifique no terminal quantas colunas aparecem.
 ## Dicas Importantes
 
 - ✅ Use **exatamente 17 colunas** - nem mais, nem menos
-- ✅ Respeite a **ordem** das colunas
+- ✅ Respeite a **ordem** das colunas (veja [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md))
 - ✅ Use **TO_CHAR()** para formatar datas e horas
 - ✅ Use **CONCAT()** ou **||** para separar nomes com `^`
 - ❌ Não use `FROM DUAL` com dados dummy em produção
-- ❌ Não adicione ou remova colunas sem atualizar `column_mapping`
+- ❌ Não adicione ou remova colunas - a ordem das 17 colunas é fixa no código
 
 ## Teste Local
 

@@ -517,9 +517,9 @@ findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client
 **Solutions**:
 1. Verify SQL query returns results: `select count(*) from (...)`
 2. Check query WHERE conditions are not too restrictive
-3. Verify column order matches documentation (17 columns exactly)
+3. Verify column order matches documentation (17 columns exactly - see [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md))
 4. Check data formatting (dates, times, modality codes)
-5. Review column mapping in config.json
+5. Review SQL query in config.json or via web interface
 
 ### Plugin Installation Fails
 
