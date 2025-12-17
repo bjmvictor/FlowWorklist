@@ -59,9 +59,13 @@ cd FlowWorklist
 python -m venv .
 .\Scripts\Activate.ps1
 pip install -r requirements.txt
-python .\flow.py install    # one-time; creates flow.bat and flow.ps1 wrappers
-.\flow startapp             # start management App
-.\flow startservice         # start MWL service
+
+# One-time setup: creates flow.bat and flow.ps1 wrappers
+python .\flow.py install
+
+# Start services
+.\flow startapp             # management App (port 5000)
+.\flow startservice         # MWL DICOM server (port 11112)
 ```
 
 **Windows CMD:**
@@ -71,9 +75,13 @@ cd FlowWorklist
 python -m venv .
 .\Scripts\activate.bat
 pip install -r requirements.txt
-python flow.py install      # one-time; creates flow.bat and flow.ps1 wrappers
-flow startapp               # start management App
-flow startservice           # start MWL service
+
+REM One-time setup: creates flow.bat and flow.ps1 wrappers
+python flow.py install
+
+REM Start services
+flow startapp
+flow startservice
 ```
 
 **Linux/macOS:**
@@ -225,7 +233,9 @@ python flow.py install --add-to-path
 
 **Windows PowerShell:**
 ```powershell
-python .\flow.py startall         # Start both (recommended)
+# Start both (recommended)
+python .\flow.py startall
+
 # OR with wrapper after 'flow install':
 .\flow startall
 .\flow startapp                   # Port 5000 (Management UI)
@@ -234,11 +244,13 @@ python .\flow.py startall         # Start both (recommended)
 
 **Windows CMD:**
 ```cmd
-python flow.py startall           # Start both (recommended)
+REM Start both (recommended)
+python flow.py startall
+
 REM OR with wrapper after 'flow install':
 flow startall
-flow startapp                     REM Port 5000 (Management UI)
-flow startservice                 REM Port 11112 (DICOM Server)
+flow startapp
+flow startservice
 ```
 
 **Linux/macOS:**
@@ -253,7 +265,9 @@ python flow.py startservice
 
 **Windows PowerShell:**
 ```powershell
-python .\flow.py stopall          # Stop both gracefully
+# Stop both gracefully
+python .\flow.py stopall
+
 # OR with wrapper:
 .\flow stopall
 .\flow stopapp                    # Graceful Flask shutdown
@@ -263,12 +277,14 @@ python .\flow.py stopall          # Stop both gracefully
 
 **Windows CMD:**
 ```cmd
-python flow.py stopall            REM Stop both gracefully
+REM Stop both gracefully
+python flow.py stopall
+
 REM OR with wrapper:
 flow stopall
-flow stopapp                      REM Graceful Flask shutdown
-flow stopservice                  REM Stop DICOM server
-flow status                       REM Check status
+flow stopapp
+flow stopservice
+flow status
 ```
 
 **Linux/macOS:**
