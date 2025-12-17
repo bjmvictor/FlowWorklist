@@ -205,7 +205,7 @@ def startservice(config_path: str | None = None):
         creationflags = 0
         startupinfo = None
         if os.name == 'nt':
-            creationflags = 0x08000000 | 0x00000008 | 0x00000200
+            creationflags = 0x08000000  # CREATE_NO_WINDOW: hides the console window
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = 0
