@@ -57,7 +57,7 @@ clinics, and imaging centers.
 git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
 python -m venv .
-\.\Scripts\Activate.ps1
+.\Scripts\Activate.ps1
 pip install -r requirements.txt
 python .\flow.py install    # one-time; creates .\flow wrappers
 .\flow startapp             # start management App
