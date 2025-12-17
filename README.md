@@ -307,7 +307,7 @@ WHERE ped_rx.cd_ped_rx IN (SELECT cd_ped_rx FROM dbamv.itped_rx WHERE sn_realiza
   AND ped_rx.cd_set_exa IN ('4','39');
 ```
 
-The auxiliary de/para table (de_para_worklist_rx) acts as a semantic bridge between internal hospital exam identifiers and DICOM-compliant procedure codes and meanings, ensuring that the exam requested in the HIS is correctly mapped to the modality’s exposure menu on the workstation.
+ℹ️The auxiliary de/para table (de_para_worklist_rx) acts as a semantic bridge between internal hospital exam identifiers and DICOM-compliant procedure codes and meanings, ensuring that the exam requested in the HIS is correctly mapped to the modality’s exposure menu on the workstation.
 
 ### Quick Reference: Key Field Mappings
 
@@ -334,7 +334,6 @@ code_meaning         → Code Meaning / Description
 - ✅ **Always return 17 columns** in the specified order
 - ✅ **Format dates as YYYYMMDD** (8 digits)
 - ✅ **Format times as HH24MISS** (6 digits in 24-hour format)
-- ✅ **Use ^ separator** in names (e.g., `SMITH^JOHN^M`)
 - ✅ **Use standard DICOM modality codes** (CR, CT, MR, US, RF, etc.)
 - ❌ **Don't reorder columns** - position is what matters, not names
 - ❌ **Don't skip columns** - always return exactly 17
