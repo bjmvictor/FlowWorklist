@@ -35,12 +35,14 @@ def start_service(config_path: str = None):
         try:
             with open(lock_file, "r") as f:
                 old_pid = f.read().strip()
-            if old_pid and is_running(int(old_pid)):
+            if old_pid and old_pid.isdigit() and is_running(int(old_pid)):
                 return {"ok": False, "msg": f"Service already running (lock pid={old_pid})"}
             else:
                 # Lock file obsoleto, remover
+                print(f"Removing obsolete lock file (PID {old_pid})")
                 lock_file.unlink(missing_ok=True)
-        except Exception:
+        except Exception as e:
+            print(f"Error checking lock file: {e}. Cleaning...")
             try:
                 lock_file.unlink(missing_ok=True)
             except:

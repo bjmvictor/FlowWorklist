@@ -384,7 +384,15 @@ class WorklistProvider:
             ]
             
             results = []
+            row_count = 0
             for row in cursor:
+                row_count += 1
+                
+                # Validate column count
+                if len(row) != 17:
+                    logging.error(f"Query returned {len(row)} columns, expected 17. Row {row_count} skipped. Check SQL_QUERY_GUIDE.md")
+                    continue
+                
                 # Map positional values to column names
                 row_dict = {}
                 for i, col_name in enumerate(col_names):
@@ -394,7 +402,8 @@ class WorklistProvider:
                         row_dict[col_name] = None
                 results.append(row_dict)
             
-                # Consulta executada com sucesso
+            if row_count > 0:
+                logging.info(f"Query executed successfully. {len(results)} valid items found ({row_count} rows fetched).")
             return results
         except Exception as e:
             logging.error(t('sql_exec_error', err=e))
