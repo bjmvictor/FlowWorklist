@@ -52,7 +52,7 @@ clinics, and imaging centers.
 
 ### Installation
 
-**Windows:**
+**Windows (Terminal):**
 ```powershell
 git clone https://github.com/bjmvictor/FlowWorklist.git
 cd FlowWorklist
