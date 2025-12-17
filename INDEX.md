@@ -39,6 +39,13 @@ Complete guide to FlowWorklist documentation and setup.
    - Network configuration
    - Security best practices
    - Monitoring and troubleshooting
+5. **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Windows Executable Build
+    - Creating standalone .exe files
+    - Build automation script
+    - Deployment with executables
+    - Service installation (NSSM)
+    - Troubleshooting build issues
+    - Size optimization
 
 ### 📦 Version Control
 

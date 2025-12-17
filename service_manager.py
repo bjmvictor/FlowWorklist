@@ -61,9 +61,9 @@ def start_service(config_path: str = None):
         venv_python = ROOT / "Scripts" / "python"
         python_path = str(venv_python) if venv_python.exists() else sys.executable
     
-    script = ROOT / "MWLSCP.py"
+    script = ROOT / "mwl_service.py"
     if not script.exists():
-        return {"ok": False, "msg": "MWLSCP.py not found in project root"}
+        return {"ok": False, "msg": "mwl_service.py not found in project root"}
 
     logp = _log_path()
     # Open log file for append and start process

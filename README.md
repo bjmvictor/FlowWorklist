@@ -82,8 +82,8 @@ Fully translated into 10 languages with automatic language detection:
                      │
         DICOM Protocol (Port 11112)
                      │
-     ┌───────────────▼───────────────┐
-     │   MWLSCP.py (DICOM Server)   │
+    ┌─────────────────▼─────────────────┐
+    │  mwl_service.py (DICOM Server)   │
      │   ├─ C-FIND Service Class    │
      │   ├─ Dataset Builder         │
      │   └─ Filter Processing       │
@@ -166,10 +166,30 @@ Edit `config.json` with your database credentials:
 
 ```powershell
 # Start Management Dashboard (Port 5000)
-python launch_flask.py
+python startapp.py
 
 # Or in a separate terminal, start MWLSCP directly (Port 11112)
-python MWLSCP.py
+python mwl_service.py
+### Alternative: Windows Executable
+
+For easier deployment on Windows without Python installation:
+
+```powershell
+# Build standalone executable
+python build_exe.py
+
+# Deploy and run
+.\dist\FlowWorklist.exe
+```
+
+📖 **Complete guide**: [BUILD_GUIDE.md](BUILD_GUIDE.md)
+
+**Benefits**:
+- ✅ No Python installation required
+- ✅ Single .exe file (~80-120 MB)
+- ✅ Easy service installation with NSSM
+- ✅ Portable across Windows systems
+
 ```
 
 ---
