@@ -1,6 +1,0 @@
-{
-  "oracle_dsn": "",
-  "oracle_user": "",
-  "oracle_password": "",
-  "poll_interval_seconds": 30
-}

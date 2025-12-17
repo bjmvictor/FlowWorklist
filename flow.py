@@ -3,11 +3,17 @@ import os
 import sys
 import subprocess
 import time
+import json
+import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 APP_PID = ROOT / "app.pid"
-SERVICE_MANAGER = ROOT / "service_manager.py"
+SERVICE_PID = ROOT / "service.pid"
+SERVICE_STATE = ROOT / "service_state.json"
+SERVICE_LOG_DIR = ROOT / "service_logs"
+
+SERVICE_LOG_DIR.mkdir(exist_ok=True)
 
 
 def _venv_python():
@@ -138,22 +144,115 @@ def stopall():
 
 
 def startservice(config_path: str | None = None):
-    """Start MWL service via service_manager.start_service."""
-    from service_manager import start_service
-    result = start_service(config_path=config_path)
-    print(result)
+    """Start MWL service in background."""
+    if SERVICE_PID.exists():
+        pid = int(SERVICE_PID.read_text().strip())
+        if _is_process_running(pid):
+            print(f"Service already running (PID {pid})")
+            return
+        else:
+            SERVICE_PID.unlink(missing_ok=True)
+    
+    # Clean obsolete lock file
+    lock_file = ROOT / "mwl_server.lock"
+    if lock_file.exists():
+        try:
+            with open(lock_file, "r") as f:
+                old_pid = f.read().strip()
+            if old_pid and old_pid.isdigit() and _is_process_running(int(old_pid)):
+                print(f"Service already running (lock PID {old_pid})")
+                return
+            else:
+                lock_file.unlink(missing_ok=True)
+        except Exception:
+            lock_file.unlink(missing_ok=True)
+    
+    # Determine Python executable
+    python_path = _venv_python()
+    script = ROOT / "mwl_service.py"
+    if not script.exists():
+        print("mwl_service.py not found")
+        return
+    
+    # Prepare log file
+    ts = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    log_path = SERVICE_LOG_DIR / f"mwls_{ts}.log"
+    
+    # Start detached process
+    with open(log_path, "ab") as out:
+        args = [python_path, str(script)]
+        if config_path:
+            args += ["--config", config_path]
+        
+        creationflags = 0
+        startupinfo = None
+        if os.name == 'nt':
+            creationflags = 0x08000000 | 0x00000008 | 0x00000200
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0
+        
+        proc = subprocess.Popen(
+            args,
+            stdout=out,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            creationflags=creationflags,
+            startupinfo=startupinfo
+        )
+    
+    SERVICE_PID.write_text(str(proc.pid))
+    state = {"pid": proc.pid, "log": str(log_path), "started_at": datetime.datetime.now().isoformat()}
+    SERVICE_STATE.write_text(json.dumps(state))
+    print(f"Service started (PID {proc.pid}). Log: {log_path}")
 
 
 def stopservice():
-    from service_manager import stop_service
-    result = stop_service()
-    print(result)
+    """Stop MWL service."""
+    if not SERVICE_PID.exists():
+        print("No PID file; service not running?")
+        return
+    
+    pid = int(SERVICE_PID.read_text().strip())
+    if not _is_process_running(pid):
+        SERVICE_PID.unlink(missing_ok=True)
+        lock_file = ROOT / "mwl_server.lock"
+        lock_file.unlink(missing_ok=True) if lock_file.exists() else None
+        print(f"Process {pid} not running")
+        return
+    
+    try:
+        if os.name == 'nt':
+            subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            os.kill(pid, 15)
+        time.sleep(0.5)
+        SERVICE_PID.unlink(missing_ok=True)
+        lock_file = ROOT / "mwl_server.lock"
+        lock_file.unlink(missing_ok=True) if lock_file.exists() else None
+        print(f"Stopped service (PID {pid})")
+    except Exception as e:
+        print(f"Failed to stop service: {e}")
+
+
+def _is_process_running(pid: int) -> bool:
+    """Check if process with given PID is running."""
+    try:
+        if os.name == 'nt':
+            out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            return str(pid) in out.stdout
+        else:
+            os.kill(pid, 0)
+            return True
+    except Exception:
+        return False
 
 
 def restartservice(config_path: str | None = None):
-    from service_manager import restart_service
-    result = restart_service(config_path=config_path)
-    print(result)
+    """Restart MWL service."""
+    stopservice()
+    time.sleep(1)
+    startservice(config_path=config_path)
 
 
 def status():
@@ -166,31 +265,61 @@ def status():
         try:
             pid = int(APP_PID.read_text().strip())
             app_status["pid"] = pid
-            if os.name == 'nt':
-                # Check if PID exists in tasklist
-                out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                app_status["running"] = str(pid) in out.stdout
-            else:
-                try:
-                    os.kill(pid, 0)
-                    app_status["running"] = True
-                except Exception:
-                    app_status["running"] = False
+            app_status["running"] = _is_process_running(pid)
         except Exception:
             pass
-    from service_manager import status as svc_status
-    service_status = svc_status()
+    
+    service_status = {
+        "running": False,
+        "pid": None
+    }
+    if SERVICE_PID.exists():
+        try:
+            pid = int(SERVICE_PID.read_text().strip())
+            service_status["pid"] = pid
+            service_status["running"] = _is_process_running(pid)
+            if SERVICE_STATE.exists():
+                try:
+                    data = json.loads(SERVICE_STATE.read_text())
+                    service_status.update(data)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    
     print({"app": app_status, "service": service_status})
 
 
 def logs(limit: int = 20):
-    from service_manager import list_logs
-    print(list_logs(limit=limit))
+    """List recent service log files."""
+    files = sorted(SERVICE_LOG_DIR.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
+    out = []
+    for p in files[:limit]:
+        out.append({"name": p.name, "path": str(p), "size": p.stat().st_size, "mtime": p.stat().st_mtime})
+    print(out)
 
 
 def tail(log_path: str, lines: int = 200):
-    from service_manager import tail_log
-    print(tail_log(log_path, lines=lines))
+    """Tail a service log file."""
+    p = Path(log_path)
+    if not p.exists():
+        print(f"Log file not found: {log_path}")
+        return
+    try:
+        with p.open('rb') as f:
+            f.seek(0, os.SEEK_END)
+            end = f.tell()
+            block_size = 1024
+            data = b''
+            while end > 0 and data.count(b'\n') <= lines:
+                read_size = min(block_size, end)
+                f.seek(end - read_size)
+                data = f.read(read_size) + data
+                end -= read_size
+            text = data.decode(errors='replace')
+            print('\n'.join(text.splitlines()[-lines:]))
+    except Exception as e:
+        print(f"Error reading log: {e}")
 
 
 def _add_to_path_windows():

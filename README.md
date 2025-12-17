@@ -87,10 +87,10 @@ Optional (Windows, System PATH): run terminal as Administrator then `python flow
 
 ## 📚 Docs
 
-- Column mapping reference → [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md)
-- Deployment guide → [DEPLOYMENT.md](DEPLOYMENT.md)
-- Quick reference card → [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
-- Build executable (Windows) → [BUILD_GUIDE.md](BUILD_GUIDE.md)
+- Column mapping reference → [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_MAPPING_GUIDE.md)
+- Deployment guide → [DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Quick reference card → [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)
+- Build executable (Windows) → [BUILD_GUIDE.md](docs/BUILD_GUIDE.md)
 
 ---
 
@@ -190,7 +190,7 @@ pyinstaller --name=FlowWorklist-Service --onefile --console --add-data="config.j
 .\dist\FlowWorklist.exe
 ```
 
-📖 **Complete guide**: [BUILD_GUIDE.md](BUILD_GUIDE.md)
+📖 **Complete guide**: [BUILD_GUIDE.md](docs/BUILD_GUIDE.md)
 
 **Benefits**:
 - ✅ No Python installation required
@@ -324,7 +324,7 @@ code_meaning         → Code Meaning / Description
 - ❌ **Don't reorder columns** - position is what matters, not names
 - ❌ **Don't skip columns** - always return exactly 17
 
-For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md)
+For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_MAPPING_GUIDE.md)
 
 ---
 
@@ -520,7 +520,7 @@ findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client
 **Solutions**:
 1. Verify SQL query returns results: `select count(*) from (...)`
 2. Check query WHERE conditions are not too restrictive
-3. Verify column order matches documentation (17 columns exactly - see [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md))
+3. Verify column order matches documentation (17 columns exactly - see [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_MAPPING_GUIDE.md))
 4. Check data formatting (dates, times, modality codes)
 5. Review SQL query in config.json or via web interface
 
@@ -619,7 +619,7 @@ by the institution before clinical use, according to local regulations.
 
 ## Support & Documentation
 
-- **Column Mapping**: See [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md)
+- **Column Mapping**: See [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_MAPPING_GUIDE.md)
 - **Logs**: Check `logs/mwl_server.log` for detailed diagnostics
 - **Dashboard**: Access http://localhost:5000 for real-time monitoring
 - **Test Tools**: Use the built-in `/test/worklist` and `/test/database` endpoints
