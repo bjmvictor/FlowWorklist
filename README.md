@@ -63,9 +63,8 @@ pip install -r requirements.txt
 # One-time setup: creates flow.bat and flow.ps1 wrappers
 python .\flow.py install
 
-# Start services
-.\flow startapp             # management App (port 5000)
-.\flow startservice         # MWL DICOM server (port 11112)
+# Start management App
+.\flow startapp
 ```
 
 **Windows CMD:**
@@ -79,9 +78,8 @@ pip install -r requirements.txt
 REM One-time setup: creates flow.bat and flow.ps1 wrappers
 python flow.py install
 
-REM Start services
+REM Start management App
 flow startapp
-flow startservice
 ```
 
 **Linux/macOS:**
@@ -91,14 +89,29 @@ cd FlowWorklist
 python3 -m venv .
 source bin/activate
 pip install -r requirements.txt
-python flow.py startapp      # start management App
-python flow.py startservice  # start MWL service
+
+# Start management App
+python flow.py startapp
 ```
 
 ### Access the Application
-- **DICOM Server**: `localhost:11112` (or your IP)
-- **Management UI**: `http://localhost:5000`
-- **Default Language**: English (change in Settings)
+
+1. Open browser: **`http://localhost:5000`**
+2. **⚠️ IMPORTANT**: Before starting the DICOM service, go to **Configuration** tab and:
+   - Configure database connection (Oracle/PostgreSQL/MySQL)
+   - Set DICOM server parameters (AET, port)
+   - Test database connection
+3. After configuration, start the DICOM service:
+   ```powershell
+   # PowerShell
+   .\flow startservice
+   
+   # CMD
+   flow startservice
+   
+   # Linux/macOS
+   python flow.py startservice
+   ```
 
 ---
 

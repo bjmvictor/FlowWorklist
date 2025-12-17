@@ -52,54 +52,37 @@ Required SQL query must return exactly 17 columns in this order:
 pip install -r requirements.txt
 ```
 
-### Step 3: Configure Database
-Edit `config.json`:
-```json
-{
-  "database": {
-    "type": "oracle",
-    "user": "your_user",
-    "password": "your_password",
-    "dsn": "host:1521/database",
-    "query": "SELECT ... (17 columns)"
-  }
-}
-```
-
-### Step 4: Use Flow CLI
-
-**One-time setup** (adds `flow` to system PATH):
+### Step 3: Start Management App
 ```powershell
 # PowerShell:
-python flow.py install --add-to-path
-# Then restart terminal and use: .\flow startall
+python flow.py install
+.\flow startapp
 
 # CMD:
-python flow.py install --add-to-path
-# Then restart terminal and use: flow startall
+python flow.py install
+flow startapp
 ```
 
-**Start services**:
+### Step 4: Configure Database
+
+1. Open browser: **`http://127.0.0.1:5000`**
+2. Go to **Configuration** tab
+3. Set up database connection:
+   - Type: oracle, postgresql, or mysql
+   - Credentials and connection string
+   - SQL query (must return 17 columns)
+4. Click **Test Database Connection**
+
+### Step 5: Start DICOM Service
+
+⚠️ **Only after configuring database in Step 4!**
+
 ```powershell
-# PowerShell: .\flow startall  |  CMD: flow startall
-# OR individually:
-# PowerShell: .\flow startapp / .\flow startservice
-# CMD: flow startapp / flow startservice
-```
+# PowerShell:
+.\flow startservice
 
-**Stop services**:
-```powershell
-# PowerShell: .\flow stopall  |  CMD: flow stopall
-```
-
-**Check status**:
-```powershell
-# PowerShell: .\flow status  |  CMD: flow status
-```
-
-### Step 5: Open Browser
-```
-http://127.0.0.1:5000
+# CMD:
+flow startservice
 ```
 
 ---
