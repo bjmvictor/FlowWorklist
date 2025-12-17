@@ -75,7 +75,7 @@ python startapp.py
 ### Access the Application
 - **DICOM Server**: `localhost:11112` (or your IP)
 - **Management UI**: `http://localhost:5000`
-- **Default Language**: Portuguese (change in Settings)
+- **Default Language**: English (change in Settings)
 
 ---
 
