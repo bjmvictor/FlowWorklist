@@ -50,6 +50,24 @@ def stopapp():
     except Exception:
         print("Invalid app.pid. Unable to stop.")
         return
+    # If process is already not running, clean up stale PID file
+    already_stopped = False
+    if os.name == 'nt':
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if str(pid) not in out.stdout:
+            already_stopped = True
+    else:
+        try:
+            os.kill(pid, 0)
+        except Exception:
+            already_stopped = True
+    if already_stopped:
+        print(f"App not running (stale PID {pid}); cleaning up app.pid.")
+        try:
+            APP_PID.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return
     if os.name == 'nt':
         try:
             subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
