@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-      .notification { position: fixed; top: 80px; right: 20px; z-index: 1000; max-width: 400px; }
+      .notification { position: fixed; right: 20px; z-index: 1000; max-width: 400px; transition: top 0.3s ease-out; }
       @keyframes slideIn { from { transform: translateX(450px); } to { transform: translateX(0); } }
       .notification-enter { animation: slideIn 0.3s ease-out; }
       @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(450px); } }
@@ -433,6 +433,15 @@
             <span>${message}</span>
           </div>
         `;
+        
+        // Calcular posição baseado nas notificações existentes
+        const existingNotifications = document.querySelectorAll('.notification');
+        let topPosition = 80; // Posição inicial
+        existingNotifications.forEach(notif => {
+          topPosition += notif.offsetHeight + 10; // Adicionar altura + espaçamento
+        });
+        notification.style.top = `${topPosition}px`;
+        
         document.body.appendChild(notification);
         
         // Adicionar ao histórico
@@ -441,8 +450,21 @@
         setTimeout(() => {
           notification.classList.remove('notification-enter');
           notification.classList.add('notification-exit');
-          setTimeout(() => notification.remove(), 300);
+          setTimeout(() => {
+            notification.remove();
+            // Reposicionar notificações restantes
+            repositionNotifications();
+          }, 300);
         }, duration);
+      }
+      
+      function repositionNotifications() {
+        const notifications = document.querySelectorAll('.notification');
+        let topPosition = 80;
+        notifications.forEach(notif => {
+          notif.style.top = `${topPosition}px`;
+          topPosition += notif.offsetHeight + 10;
+        });
       }
 
       // Sistema de histórico de notificações

@@ -6,11 +6,11 @@
     "client_aet": "Console"
   },
   "database": {
-    "type": "oracle",
+    "type": "mysql",
     "user": "db_weknow",
     "password": "pass_1929",
     "dsn": "192.168.1.3:1521/PRD",
-    "query": "SELECT paciente.nm_paciente, paciente.cd_paciente, TO_CHAR(paciente.dt_nascimento, 'YYYYMMDD') as nascimento, paciente.tp_sexo, exa_rx.ds_exa_rx AS exame_descricao, ped_rx.cd_ped_rx exame_id, TO_CHAR(ped_rx.dt_pedido, 'YYYYMMDD') as exame_data, TO_CHAR(ped_rx.hr_pedido, 'HH24MISS') as exame_hora, prestador.nm_prestador as medico_responsavel, CASE WHEN exa_rx.ds_exa_rx LIKE '%RX%' THEN 'CR' ELSE 'CT' END AS modalidade, CASE WHEN sacr_classificacao.ds_sigla = 'PI' THEN 'HIGH' WHEN sacr_classificacao.ds_sigla = 'PII' THEN 'MEDIUM' ELSE 'LOW' END AS prioridade, decode(atendime.tp_atendimento,'U', 'URGENCIA', 'I', 'INTERNACAO', 'A', 'AMBULATORIO') as tp_atendimento, atendime.cd_atendimento, setor.nm_setor AS unidade, 'FCR'||wk.procedure_code_value as procedure_code_value , wk.code_meaning, wk.code_scheme_designator FROM dbamv.ped_rx JOIN dbamv.atendime ON ped_rx.cd_atendimento = atendime.cd_atendimento JOIN dbamv.paciente ON atendime.cd_paciente = paciente.cd_paciente JOIN dbamv.itped_rx itped ON itped.cd_ped_rx = ped_rx.cd_ped_rx JOIN dbamv.exa_rx ON itped.cd_exa_rx = exa_rx.cd_exa_rx LEFT JOIN dbamv.de_para_worklist_rx wk ON to_char(wk.cd_exa_rx) = to_char(itped.cd_exa_rx) LEFT JOIN dbamv.setor ON ped_rx.cd_setor = setor.cd_setor LEFT JOIN dbamv.prestador ON prestador.cd_prestador = ped_rx.cd_prestador LEFT JOIN dbamv.triagem_atendimento triagem ON atendime.cd_atendimento = triagem.cd_atendimento LEFT JOIN dbamv.sacr_classificacao ON triagem.cd_cor_referencia = sacr_classificacao.cd_cor_referencia WHERE ped_rx.cd_ped_rx IN (SELECT cd_ped_rx FROM dbamv.itped_rx WHERE sn_realizado = 'N') AND ped_rx.cd_set_exa IN ('4','39')",
+    "query": "SELECT \r\n  'BENJAMIN SILVA' AS col_patient_name,\r\n  '12345678' AS col_patient_id,\r\n  '20030201' AS col_birth_date,\r\n  'M' AS col_patient_sex,\r\n  'TORAX - PA' AS col_exam_description,\r\n  'P102025' AS col_accession_number,\r\n  '20251216' AS col_exam_date,\r\n  '143000' AS col_exam_time,\r\n  'MARY JONES' AS col_physician_name,\r\n  'CR' AS col_modality,\r\n  'HIGH' AS col_priority,\r\n  'URGENCIA' AS col_encounter_type,\r\n  '456789' AS col_encounter_id,\r\n  'EMERGENCY ROOM' AS col_unit_name,\r\n  'FCR0101' AS col_procedure_code,\r\n  'CHEST X-RAY' AS col_code_meaning,\r\n  'CBR' AS col_code_scheme\r\nFROM DUAL",
     "column_mapping": [
       {
         "position": 1,

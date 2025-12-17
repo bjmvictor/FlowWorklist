@@ -117,11 +117,6 @@
         };
         showNotification(successMsg[action], 'success', 5000);
         
-        // Mostrar detalhes do log se disponível
-        if (data.log) {
-          showNotification(`📋 Log: ${data.log.split('\\').pop()}`, 'info', 3000);
-        }
-        
         // Recarregar status
         setTimeout(() => location.reload(), 1500);
       } else {
