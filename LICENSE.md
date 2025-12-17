@@ -1,8 +1,8 @@
 Healthcare Non-Commercial Open License (HNCL)
 
-Version 1.0 – 2025
+Version 1.1 – 2025
 
-Copyright (c) 2025 [SEU NOME / ORGANIZAÇÃO]
+Copyright (c) 2025 Benjamin Victor Vieira da Silva
 
 Permission is hereby granted to any individual or legal entity to use,
 copy, study, modify, and distribute this software and its documentation,
