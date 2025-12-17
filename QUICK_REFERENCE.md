@@ -85,7 +85,7 @@ http://127.0.0.1:5000
 
 | File | Purpose | Edit? |
 |------|---------|-------|
-| `MWLSCP.py` | DICOM server | Usually not |
+| `mwl_service.py` | DICOM server | Usually not |
 | `flow.py` | Command line helper | **YES** |
 | `flow.bat` / `flow.ps1` | CLI wrappers | **YES** |
 | `config.json` | Database config | **YES** |

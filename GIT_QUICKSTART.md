@@ -81,8 +81,10 @@ FlowWorklist/                          ~220 KB (without venv)
 ├── 📄 COLUMN_MAPPING_GUIDE.md          8.1 KB
 ├── 📄 CHANGELOG.md                     4.1 KB
 ├── 📄 CLEANUP_SUMMARY.md               6.9 KB
-├── 📄 MWLSCP.py                       24.2 KB
-├── 📄 launch_flask.py                  3.8 KB
+├── 📄 mwl_service.py                   24.2 KB
+├── 📄 startapp.py                      3.8 KB
+├── 📄 flow.py                          3.5 KB
+├── 📄 flow.bat / flow.ps1               0.2 KB
 ├── 📄 service_manager.py               2.1 KB
 ├── 📄 config.json                      6.5 KB
 ├── 📄 service_config.json              0.3 KB
@@ -163,7 +165,7 @@ git tag -l
 git log --oneline -10
 
 # View file history
-git log --follow -- MWLSCP.py
+git log --follow -- mwl_service.py
 
 # Check file size in repository
 git ls-tree -r --long HEAD
@@ -209,6 +211,25 @@ git branch -d feature/your-feature-name
 - Track binary files: `git lfs track "*.bin"`
 
 ---
+
+## 🚀 Run Locally (Flow CLI)
+
+```powershell
+# Windows PowerShell (from project root)
+& .\Scripts\Activate.ps1
+pip install -r requirements.txt
+python .\flow.py install
+.\flow startapp
+.\flow startservice
+```
+
+```bash
+# Linux/macOS
+source bin/activate
+pip install -r requirements.txt
+python flow.py startapp
+python flow.py startservice
+```
 
 ## 📚 Documentation Files
 

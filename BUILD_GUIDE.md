@@ -1,72 +1,83 @@
-# FlowWorklist - Guia de Build Executável Windows
+# FlowWorklist - Windows Executable Build Guide
 
-Este guia explica como criar um executável standalone (.exe) do FlowWorklist para facilitar a implantação em ambientes Windows sem necessidade de Python instalado.
+This guide explains how to create a standalone Windows executable (.exe) of FlowWorklist to simplify deployment without requiring a local Python installation.
 
-## 📋 Pré-requisitos
+## 📋 Prerequisites
 
-- Python 3.8 ou superior instalado
-- Virtual environment configurado e ativado
-- Dependências do projeto instaladas (`pip install -r requirements.txt`)
+- Python 3.8 or newer installed
+- Virtual environment created and activated
+- Project dependencies installed (`pip install -r requirements.txt`)
 
-## 🚀 Processo de Build
+> Note (Development): When running from source (no executable), prefer the new Flow CLI for initialization:
+> 
+> ```powershell
+> # Windows PowerShell
+> & .\Scripts\Activate.ps1
+> pip install -r requirements.txt
+> python .\flow.py install
+> .\flow startapp       # UI at http://127.0.0.1:5000
+> .\flow startservice   # DICOM MWL at port 11112
+> ```
 
-### Opção 1: Build Automático (Recomendado)
+## 🚀 Build Process
+
+### Option 1: Automated Build (Recommended)
 
 ```powershell
-# Execute o script de build
+# Run the build script
 python build_exe.py
 ```
 
-O script apresentará as seguintes opções:
+The script offers:
 
-1. **Completo** - Dashboard + Serviço DICOM (FlowWorklist.exe)
-2. **Apenas Serviço DICOM** - CLI apenas (FlowWorklist-Service.exe)
-3. **Ambos** - Gera os dois executáveis
+1. **Full** – Dashboard + DICOM service (FlowWorklist.exe)
+2. **Service Only** – CLI only (FlowWorklist-Service.exe)
+3. **Both** – Generates both executables
 
-### Opção 2: Build Manual
+### Option 2: Manual Build
 
-#### Build Completo (Dashboard + DICOM)
+#### Full Build (Dashboard + DICOM)
 
 ```powershell
-# Instalar PyInstaller
-pip install pyinstaller
+ # Install PyInstaller
+ pip install pyinstaller
 
 # Gerar executável
-pyinstaller --name=FlowWorklist `
-  --onefile `
-  --windowed `
-  --add-data="webui;webui" `
-  --add-data="config.json;." `
-  --hidden-import=pynetdicom `
-  --hidden-import=pydicom `
-  --hidden-import=flask `
-  --hidden-import=oracledb `
-  --hidden-import=pymysql `
-  --collect-all=pynetdicom `
-  --collect-all=pydicom `
-  --collect-all=flask `
+pyinstaller --name=FlowWorklist ^
+  --onefile ^
+  --windowed ^
+  --add-data="webui;webui" ^
+  --add-data="config.json;." ^
+  --hidden-import=pynetdicom ^
+  --hidden-import=pydicom ^
+  --hidden-import=flask ^
+  --hidden-import=oracledb ^
+  --hidden-import=pymysql ^
+  --collect-all=pynetdicom ^
+  --collect-all=pydicom ^
+  --collect-all=flask ^
   startapp.py
 ```
 
-#### Build Serviço DICOM (CLI)
+#### DICOM Service Build (CLI)
 
 ```powershell
-pyinstaller --name=FlowWorklist-Service `
-  --onefile `
-  --console `
-  --add-data="config.json;." `
-  --hidden-import=pynetdicom `
-  --hidden-import=pydicom `
-  --hidden-import=oracledb `
-  --hidden-import=pymysql `
-  --collect-all=pynetdicom `
-  --collect-all=pydicom `
+pyinstaller --name=FlowWorklist-Service ^
+  --onefile ^
+  --console ^
+  --add-data="config.json;." ^
+  --hidden-import=pynetdicom ^
+  --hidden-import=pydicom ^
+  --hidden-import=oracledb ^
+  --hidden-import=pymysql ^
+  --collect-all=pynetdicom ^
+  --collect-all=pydicom ^
   mwl_service.py
 ```
 
-## 📦 Arquivos Gerados
+## 📦 Generated Artifacts
 
-Após o build, você encontrará:
+After building, you'll find:
 
 ```
 FlowWorklist/
@@ -77,11 +88,11 @@ FlowWorklist/
 └── FlowWorklist.spec             # Configuração PyInstaller (pode deletar)
 ```
 
-## 🔧 Implantação do Executável
+## 🔧 Executable Deployment
 
-### Passo 1: Preparar Arquivos
+### Step 1: Prepare Files
 
-Copie para o servidor de produção:
+Copy to the production server:
 
 ```
 C:\FlowWorklist\
@@ -90,9 +101,9 @@ C:\FlowWorklist\
 └── logs\                   # Pasta de logs (será criada automaticamente)
 ```
 
-### Passo 2: Configurar config.json
+### Step 2: Configure config.json
 
-**⚠️ IMPORTANTE**: O `config.json` incluído no executável contém dados de teste. Você DEVE criar um `config.json` real:
+**⚠️ IMPORTANT**: The `config.json` packaged during build may contain sample data. You MUST create a real `config.json` for production:
 
 ```json
 {
@@ -114,26 +125,26 @@ C:\FlowWorklist\
 }
 ```
 
-### Passo 3: Executar
+### Step 3: Run
 
-#### Modo Manual
+#### Manual Mode
 
 ```powershell
-# Execute diretamente
-.\FlowWorklist.exe
+# Run directly
+\.\FlowWorklist.exe
 
-# Acesse o dashboard
-Start-Process "http://localhost:5000"
+# Open the dashboard
+Start-Process "http://127.0.0.1:5000"
 ```
 
-#### Modo Serviço (Recomendado)
+#### Service Mode (Recommended)
 
-##### Usando NSSM (Mais fácil)
+##### Using NSSM (Easiest)
 
 ```powershell
 # Download NSSM: https://nssm.cc/download
 
-# Instalar serviço
+# Install service
 nssm install FlowWorklist "C:\FlowWorklist\FlowWorklist.exe"
 nssm set FlowWorklist AppDirectory "C:\FlowWorklist"
 nssm set FlowWorklist DisplayName "FlowWorklist DICOM MWL Server"
@@ -145,11 +156,11 @@ nssm set FlowWorklist AppThrottle 1500
 nssm set FlowWorklist AppExit Default Restart
 nssm set FlowWorklist AppRestartDelay 5000
 
-# Iniciar serviço
-nssm start FlowWorklist
+ # Start service
+ nssm start FlowWorklist
 
-# Verificar status
-nssm status FlowWorklist
+ # Check status
+ nssm status FlowWorklist
 
 # Gerenciar
 nssm stop FlowWorklist
@@ -157,86 +168,83 @@ nssm restart FlowWorklist
 nssm remove FlowWorklist confirm
 ```
 
-##### Usando sc.exe (Nativo Windows)
+##### Using sc.exe (Windows native)
 
 ```powershell
-# Criar serviço
+# Create service
 sc.exe create FlowWorklist binPath= "C:\FlowWorklist\FlowWorklist.exe" start= auto
 sc.exe description FlowWorklist "DICOM Modality Worklist Service"
 
-# Iniciar
-sc.exe start FlowWorklist
+ # Start
+ sc.exe start FlowWorklist
 
-# Gerenciar
-sc.exe stop FlowWorklist
-sc.exe delete FlowWorklist
+ # Manage
+ sc.exe stop FlowWorklist
+ sc.exe delete FlowWorklist
 ```
 
-## 🔍 Verificação
+## 🔍 Verification
 
-### Testar Dashboard
+### Test the Dashboard
 
 ```powershell
-# Abrir navegador
-Start-Process "http://localhost:5000"
+Start-Process "http://127.0.0.1:5000"
 ```
 
-### Testar Porta DICOM
+### Test the DICOM Port
 
 ```powershell
-# Verificar se porta 11112 está aberta
 Test-NetConnection -ComputerName localhost -Port 11112
 ```
 
-### Verificar Logs
+### Check Logs
 
 ```powershell
-# Ver logs do serviço
 Get-Content C:\FlowWorklist\logs\mwl_server.log -Tail 50 -Wait
 ```
 
-## 📊 Comparação: Executável vs Python
+## 📊 Comparison: Executable vs Python
 
 | Aspecto | Executável (.exe) | Python |
 |---------|-------------------|--------|
-| **Tamanho** | 80-120 MB | ~5 MB |
-| **Dependências** | Nenhuma (tudo incluído) | Python + pip packages |
-| **Instalação** | Copiar e executar | Instalar Python + venv + deps |
-| **Inicialização** | ~5-10 segundos | ~2-3 segundos |
-| **Atualização** | Substituir .exe | `git pull` + `pip install` |
-| **Portabilidade** | ✅ Executar em qualquer Windows | ❌ Requer Python instalado |
-| **Tamanho no disco** | ~120 MB | ~220 MB (com venv) |
+| **Size** | 80-120 MB | ~5 MB |
+| **Dependencies** | None (bundled) | Python + pip packages |
+| **Installation** | Copy and run | Install Python + venv + deps |
+| **Startup** | ~5-10 seconds | ~2-3 seconds |
+| **Updates** | Replace .exe | `git pull` + `pip install` |
+| **Portability** | ✅ Any Windows | ❌ Requires Python |
+| **Disk footprint** | ~120 MB | ~220 MB (with venv) |
 
-## ⚡ Otimizações
+## ⚡ Optimizations
 
-### Reduzir Tamanho do Executável
+### Reduce Executable Size
 
 ```powershell
-# Use UPX para comprimir (reduz ~30-40%)
-# Download: https://upx.github.io/
+ # Use UPX to compress (~30-40% reduction)
+ # Download: https://upx.github.io/
 
-pyinstaller --onefile --upx-dir=C:\upx startapp.py
+ pyinstaller --onefile --upx-dir=C:\upx startapp.py
 ```
 
-### Build Otimizado para Produção
+### Production-Optimized Build
 
 ```powershell
-# Remover debug symbols e otimizar
-pyinstaller --onefile `
-  --optimize=2 `
-  --strip `
-  --clean `
-  --noconfirm `
+ # Remove debug symbols and optimize
+ pyinstaller --onefile ^
+  --optimize=2 ^
+  --strip ^
+  --clean ^
+  --noconfirm ^
   startapp.py
 ```
 
 ## 🐛 Troubleshooting
 
-### Erro: "Failed to execute script"
+### Error: "Failed to execute script"
 
-**Causa**: Falta de dependências ou módulos não encontrados.
+**Cause**: Missing dependencies or modules not found.
 
-**Solução**: Adicione os módulos faltantes:
+**Solution**: Add missing modules:
 
 ```powershell
 pyinstaller --onefile `
@@ -244,51 +252,51 @@ pyinstaller --onefile `
   startapp.py
 ```
 
-### Erro: "config.json not found"
+### Error: "config.json not found"
 
-**Causa**: O executável não encontra o arquivo de configuração.
+**Cause**: Executable cannot find the configuration file.
 
-**Solução**: Coloque `config.json` no mesmo diretório do .exe ou use caminho absoluto.
+**Solution**: Place `config.json` next to the .exe or use an absolute path.
 
-### Executável muito lento para iniciar
+### Executable starts very slowly
 
-**Causa**: PyInstaller extrai arquivos temporários toda vez.
+**Cause**: PyInstaller extracts temp files every run.
 
-**Solução**: Use `--onedir` em vez de `--onefile` (gera pasta em vez de único .exe).
+**Solution**: Use `--onedir` instead of `--onefile`.
 
-### Antivírus bloqueia o executável
+### Antivirus blocks the executable
 
-**Causa**: Falso positivo comum com PyInstaller.
+**Cause**: Common false positive with PyInstaller.
 
-**Solução**: 
-1. Adicione exceção no antivírus
-2. Assine digitalmente o .exe
-3. Use build `--onedir` que é menos suspeito
+**Solution**: 
+1. Add AV exception
+2. Digitally sign the .exe
+3. Use `--onedir` build which is less suspicious
 
-## 📝 Notas Importantes
+## 📝 Important Notes
 
-1. **Segurança**: O `config.json` com credenciais deve ter permissões restritas
-2. **Firewall**: Libere porta 11112 (DICOM) e 5000 (Dashboard)
-3. **Atualizações**: Para atualizar, substitua apenas o .exe (config.json permanece)
-4. **Logs**: Verifique regularmente os logs em `C:\FlowWorklist\logs\`
-5. **Backup**: Faça backup do `config.json` antes de atualizações
+1. **Security**: Keep `config.json` with credentials secured
+2. **Firewall**: Open port 11112 (DICOM) and 5000 (Dashboard)
+3. **Updates**: Replace only the .exe during updates (keep `config.json`)
+4. **Logs**: Review logs at `C:\FlowWorklist\logs\` regularly
+5. **Backup**: Backup `config.json` before updates
 
-## 🔗 Recursos Adicionais
+## 🔗 Additional Resources
 
 - [PyInstaller Documentation](https://pyinstaller.org/en/stable/)
 - [NSSM Documentation](https://nssm.cc/usage)
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Guia completo de implantação
-- [README.md](README.md) - Documentação principal
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
+- [README.md](README.md) - Main documentation
 
-## 📞 Suporte
+## 📞 Support
 
-Para problemas com o build ou executável:
+For build or executable issues:
 
-1. Verifique logs em `logs/`
-2. Execute com `--debug all` para mais informações
-3. Consulte [GitHub Issues](https://github.com/bjmvictor/FlowWorklist/issues)
+1. Check logs in `logs/`
+2. Run with `--debug all` for more info
+3. See [GitHub Issues](https://github.com/bjmvictor/FlowWorklist/issues)
 
 ---
 
-**Última atualização**: Dezembro 2025  
-**Versão**: 1.0.0
+**Last Updated**: December 2025  
+**Version**: 1.0.0
