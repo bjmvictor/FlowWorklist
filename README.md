@@ -270,7 +270,7 @@ Your SQL query **must return exactly 17 columns** in the following order. Column
 | 16 | `col_code_meaning` | **Code Meaning / Description** | Descriptive meaning of the procedure code | Text | `CHEST X-RAY` |
 | 17 | `col_code_scheme` | **Code Scheme Designator** | Coding system used (CBR, SNOMED, DCM, etc.) Or Local using 99<UNIT TAG> | Text | `99UNIT` |
 
-### Example Oracle Query
+### Example of a Real-World Oracle SQL Query Used in Production
 
 ```sql
 SELECT
@@ -284,13 +284,13 @@ SELECT
     TO_CHAR(ped_rx.hr_pedido, 'HH24MISS'),                  -- 8. Exam Time
     prestador.nm_prestador,                                  -- 9. Physician Name
     CASE WHEN exa_rx.ds_exa_rx LIKE '%RX%' THEN 'CR' ELSE 'CT' END,  -- 10. Modality
-    CASE WHEN sacr_classificacao.ds_sigla = 'PI' THEN 'HIGH' 
-         WHEN sacr_classificacao.ds_sigla = 'PII' THEN 'MEDIUM' 
+    CASE WHEN sacr_classificacao.ds_sigla = 'PI' THEN 'HIGH'
+         WHEN sacr_classificacao.ds_sigla = 'PII' THEN 'MEDIUM'
          ELSE 'LOW' END,                                     -- 11. Priority
     decode(atendime.tp_atendimento, 'U', 'URGENCIA', 'I', 'INTERNACAO', 'A', 'AMBULATORIO'),  -- 12. Encounter Type
     atendime.cd_atendimento,                                 -- 13. Encounter ID
     setor.nm_setor,                                          -- 14. Unit Name
-    'FCR'||wk.procedure_code_value,                          -- 15. Procedure Code
+    'FCR'||wk.procedure_code_value,                          -- 15. Procedure Code Like: FCR0000-0000 For FCR Prima Console
     wk.code_meaning,                                         -- 16. Code Meaning
     wk.code_scheme_designator                                -- 17. Code Scheme
 FROM dbamv.ped_rx
@@ -306,6 +306,8 @@ LEFT JOIN dbamv.sacr_classificacao ON triagem.cd_cor_referencia = sacr_classific
 WHERE ped_rx.cd_ped_rx IN (SELECT cd_ped_rx FROM dbamv.itped_rx WHERE sn_realizado = 'N')
   AND ped_rx.cd_set_exa IN ('4','39');
 ```
+
+The auxiliary de/para table (de_para_worklist_rx) acts as a semantic bridge between internal hospital exam identifiers and DICOM-compliant procedure codes and meanings, ensuring that the exam requested in the HIS is correctly mapped to the modality’s exposure menu on the workstation.
 
 ### Quick Reference: Key Field Mappings
 
