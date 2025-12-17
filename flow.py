@@ -69,20 +69,34 @@ def stopapp():
             pass
         return
     if os.name == 'nt':
-        # Try /T first for graceful shutdown, then /F for force
+        # Force kill entire process tree to ensure Flask and all child processes are terminated
         try:
-            subprocess.run(["taskkill", "/PID", str(pid), "/T"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print(f"Stopped App (PID {pid}) gracefully.")
-        except subprocess.CalledProcessError:
-            # Try force kill as fallback
-            try:
-                subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                print(f"Stopped App (PID {pid}) forcefully.")
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Failed to stop App (PID {pid}). May require manual intervention: {e}")
+            # Use /F /T to forcefully kill entire tree (Flask often spawns child processes)
+            result = subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)], 
+                check=False, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            if result.returncode == 0:
+                print(f"Stopped App (PID {pid}) and all child processes.")
+            else:
+                # Process might already be gone
+                print(f"App process (PID {pid}) terminated or not found.")
+        except Exception as e:
+            print(f"Warning: Exception while stopping App (PID {pid}): {e}")
+        
+        # Give processes time to terminate
+        time.sleep(0.5)
+        
+        # Verify process is actually gone
+        verify = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if str(pid) in verify.stdout:
+            print(f"⚠️  Warning: Process {pid} may still be running. Try manually: taskkill /F /PID {pid}")
     else:
         try:
-            os.kill(pid, 15)  # SIGTERM
+            os.kill(pid, 9)  # SIGKILL for immediate termination
             print(f"Stopped App (PID {pid}).")
         except Exception as e:
             print(f"Failed to stop App (PID {pid}): {e}")
