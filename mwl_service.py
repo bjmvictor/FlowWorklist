@@ -440,11 +440,16 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     scheduled_date_filter = identifier.get('ScheduledProcedureStepStartDate', None)
     scheduled_time_filter = identifier.get('ScheduledProcedureStepStartTime', None)
 
+    # Log dos filtros recebidos
+    logging.info(f"Filtros recebidos: PatientName={patient_name_filter}, PatientID={patient_id_filter}, Modality={modality_filter}")
+
     def clean_filter(value):
         if value is None:
             return None
         v = str(value).strip()
-        return None if not v or v == '*' else v
+        # Apenas retorna None se está vazio ou é APENAS '*'
+        # Mas '*' combinado com outros caracteres (como 'BENJAMIN*') é um padrão válido
+        return None if not v else v
 
     patient_name_filter = clean_filter(patient_name_filter)
     patient_id_filter = clean_filter(patient_id_filter)
@@ -462,7 +467,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         value = str(value).strip().upper()
         filter_pattern = str(filter_pattern).strip().upper()
         
-        # Exact match or wildcard '*' matches all
+        # Wildcard '*' alone matches everything
         if filter_pattern == '*':
             return True
         
@@ -473,7 +478,8 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         pattern = f'^{pattern}$'
         
         try:
-            return bool(re.match(pattern, value))
+            result = bool(re.match(pattern, value))
+            return result
         except:
             return False
 
@@ -511,24 +517,37 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         db_scheduled_date = str(primeira.get('exame_data', '')).strip()
         db_scheduled_time = str(primeira.get('exame_hora', '')).strip()
 
+        # Log de debug: mostrar o que está sendo comparado
+        logging.debug(f"Checking item: PatientName={db_patient_name} against filter={patient_name_filter}")
+
         # Apply filters with wildcard support
         if not matches_filter(db_patient_name, patient_name_filter):
+            logging.debug(f"  PatientName filter mismatch: '{db_patient_name}' does not match '{patient_name_filter}'")
             continue
         if not matches_filter(db_patient_id, patient_id_filter):
+            logging.debug(f"  PatientID filter mismatch: '{db_patient_id}' does not match '{patient_id_filter}'")
             continue
         if sex_filter and db_sex.upper() != sex_filter.upper():
+            logging.debug(f"  Sex filter mismatch: '{db_sex}' != '{sex_filter}'")
             continue
         if birth_date_filter and db_birth_date != birth_date_filter:
+            logging.debug(f"  BirthDate filter mismatch: '{db_birth_date}' != '{birth_date_filter}'")
             continue
         if not matches_filter(db_modality, modality_filter):
+            logging.debug(f"  Modality filter mismatch: '{db_modality}' does not match '{modality_filter}'")
             continue
         if not matches_filter(db_accession_number, accession_number_filter):
+            logging.debug(f"  AccessionNumber filter mismatch: '{db_accession_number}' does not match '{accession_number_filter}'")
             continue
         if scheduled_date_filter and db_scheduled_date != scheduled_date_filter:
+            logging.debug(f"  ScheduledDate filter mismatch: '{db_scheduled_date}' != '{scheduled_date_filter}'")
             continue
         if scheduled_time_filter and db_scheduled_time != scheduled_time_filter:
+            logging.debug(f"  ScheduledTime filter mismatch: '{db_scheduled_time}' != '{scheduled_time_filter}'")
             continue
 
+        logging.info(f"Item PASSED all filters. Returning: PatientName={db_patient_name}, PatientID={db_patient_id}")
+        
         # Monta o Dataset MWL (1 item por PED_RX)
         ds = Dataset()
 
