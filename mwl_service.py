@@ -124,11 +124,80 @@ pynetdicom_logger.setLevel(logging.DEBUG)
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 def load_config():
+    """Load and validate configuration from config.json with detailed error messages."""
+    # Determinar idioma antes de qualquer erro (para mensagens localizadas)
+    lang = os.environ.get('MWL_LANG', '').lower()[:2] or 'pt'
+    
+    # Mapa simples de traduções para a fase de carregamento
+    msgs = {
+        'config_file_not_found': {
+            'pt': "❌ Arquivo config.json não encontrado em: {path}\n   📋 Crie o arquivo ou execute: python flow.py config",
+            'en': "❌ config.json file not found at: {path}\n   📋 Create the file or run: python flow.py config",
+            'fr': "❌ Le fichier config.json n'a pas été trouvé à: {path}\n   📋 Créez le fichier ou exécutez: python flow.py config",
+            'es': "❌ El archivo config.json no se encontró en: {path}\n   📋 Cree el archivo o ejecute: python flow.py config",
+            'zh': "❌ config.json 文件未找到: {path}\n   📋 创建文件或执行: python flow.py config",
+            'ru': "❌ Файл config.json не найден по адресу: {path}\n   📋 Создайте файл или выполните: python flow.py config",
+            'ja': "❌ config.json ファイルが見つかりません: {path}\n   📋 ファイルを作成するか実行してください: python flow.py config",
+            'it': "❌ File config.json non trovato in: {path}\n   📋 Creare il file o eseguire: python flow.py config",
+            'tr': "❌ config.json dosyası burada bulunamadı: {path}\n   📋 Dosyayı oluşturun veya çalıştırın: python flow.py config",
+            'fil': "❌ Ang config.json file ay hindi nahanap sa: {path}\n   📋 Lumikha ng file o ilunsad ang: python flow.py config",
+        },
+        'config_empty': {
+            'pt': "❌ Arquivo config.json está vazio!\n   📋 Adicione configurações mínimas",
+            'en': "❌ config.json file is empty!\n   📋 Add minimal configuration",
+            'fr': "❌ Le fichier config.json est vide!\n   📋 Ajoutez une configuration minimale",
+            'es': "❌ ¡El archivo config.json está vacío!\n   📋 Agregue configuración mínima",
+            'zh': "❌ config.json 文件为空!\n   📋 添加最小配置",
+            'ru': "❌ Файл config.json пуст!\n   📋 Добавьте минимальную конфигурацию",
+            'ja': "❌ config.json ファイルが空です!\n   📋 最小限の設定を追加してください",
+            'it': "❌ Il file config.json è vuoto!\n   📋 Aggiungi configurazione minima",
+            'tr': "❌ config.json dosyası boş!\n   📋 Minimum yapılandırma ekleyin",
+            'fil': "❌ Ang config.json file ay walang laman!\n   📋 Magdagdag ng minimal na configuration",
+        },
+        'config_invalid_json': {
+            'pt': "❌ JSON inválido em config.json (linha {line}, coluna {col}):\n   {err}\n   💡 Use https://jsonlint.com para validar",
+            'en': "❌ Invalid JSON in config.json (line {line}, column {col}):\n   {err}\n   💡 Use https://jsonlint.com to validate",
+            'fr': "❌ JSON invalide dans config.json (ligne {line}, colonne {col}):\n   {err}\n   💡 Utilisez https://jsonlint.com pour valider",
+            'es': "❌ JSON inválido en config.json (línea {line}, columna {col}):\n   {err}\n   💡 Usa https://jsonlint.com para validar",
+            'zh': "❌ config.json 中 JSON 无效(第 {line} 行，第 {col} 列):\n   {err}\n   💡 使用 https://jsonlint.com 验证",
+            'ru': "❌ Неверный JSON в config.json (строка {line}, столбец {col}):\n   {err}\n   💡 Используйте https://jsonlint.com для проверки",
+            'ja': "❌ config.json で JSON が無効です(第 {line} 行、第 {col} 列):\n   {err}\n   💡 https://jsonlint.com を使用して検証してください",
+            'it': "❌ JSON non valido in config.json (riga {line}, colonna {col}):\n   {err}\n   💡 Usa https://jsonlint.com per convalidare",
+            'tr': "❌ config.json içinde geçersiz JSON (satır {line}, sütun {col}):\n   {err}\n   💡 Doğrulamak için https://jsonlint.com kullanın",
+            'fil': "❌ Invalid JSON sa config.json (linya {line}, column {col}):\n   {err}\n   💡 Gumamit ng https://jsonlint.com para i-validate",
+        },
+    }
+    
+    def get_msg(key, **kwargs):
+        return msgs.get(key, {}).get(lang) or msgs.get(key, {}).get('pt', key)
+    
     try:
+        if not os.path.exists(CONFIG_FILE):
+            msg = get_msg('config_file_not_found', path=CONFIG_FILE)
+            logging.error(msg)
+            print(msg)
+            sys.exit(1)
+        
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            content = f.read().strip()
+            if not content:
+                msg = get_msg('config_empty')
+                logging.error(msg)
+                print(msg)
+                sys.exit(1)
+            
+            config = json.loads(content)
+            return config
+            
+    except json.JSONDecodeError as e:
+        msg = get_msg('config_invalid_json', line=e.lineno, col=e.colno, err=e.msg)
+        logging.error(msg)
+        print(msg)
+        sys.exit(1)
     except Exception as e:
-        logging.error(f"Erro ao carregar config.json: {e}")
+        msg = f"❌ Erro ao carregar config.json: {type(e).__name__}: {e}"
+        logging.error(msg)
+        print(msg)
         sys.exit(1)
 
 # --- SETUP DE COMNFIGURAÇÔES ---
@@ -209,6 +278,66 @@ TR = {
     'db_type_not_supported': {
         'pt': "Tipo de banco não suportado: {db}",
         'en': "Unsupported database type: {db}",
+    },
+    'config_file_not_found': {
+        'pt': "❌ Arquivo config.json não encontrado!",
+        'en': "❌ config.json file not found!",
+        'fr': "❌ Le fichier config.json est introuvable!",
+        'es': "❌ ¡El archivo config.json no se encontró!",
+        'zh': "❌ 找不到 config.json 文件!",
+        'ru': "❌ Файл config.json не найден!",
+        'ja': "❌ config.json ファイルが見つかりません!",
+        'it': "❌ File config.json non trovato!",
+        'tr': "❌ config.json dosyası bulunamadı!",
+        'fil': "❌ Ang config.json na file ay hindi nahanap!",
+    },
+    'config_empty': {
+        'pt': "❌ Arquivo config.json está vazio!",
+        'en': "❌ config.json file is empty!",
+        'fr': "❌ Le fichier config.json est vide!",
+        'es': "❌ ¡El archivo config.json está vacío!",
+        'zh': "❌ config.json 文件为空!",
+        'ru': "❌ Файл config.json пуст!",
+        'ja': "❌ config.json ファイルが空です!",
+        'it': "❌ Il file config.json è vuoto!",
+        'tr': "❌ config.json dosyası boş!",
+        'fil': "❌ Ang config.json file ay walang laman!",
+    },
+    'config_invalid_json': {
+        'pt': "❌ JSON inválido em config.json! Linha {line}, Coluna {col}: {err}",
+        'en': "❌ Invalid JSON in config.json! Line {line}, Column {col}: {err}",
+        'fr': "❌ JSON invalide dans config.json! Ligne {line}, Colonne {col}: {err}",
+        'es': "❌ ¡JSON inválido en config.json! Línea {line}, Columna {col}: {err}",
+        'zh': "❌ config.json 中 JSON 无效! 第 {line} 行，第 {col} 列: {err}",
+        'ru': "❌ Неверный JSON в config.json! Строка {line}, Колонна {col}: {err}",
+        'ja': "❌ config.json で JSON が無効です! 行 {line}、列 {col}: {err}",
+        'it': "❌ JSON non valido in config.json! Riga {line}, Colonna {col}: {err}",
+        'tr': "❌ config.json içinde geçersiz JSON! Satır {line}, Sütun {col}: {err}",
+        'fil': "❌ Invalid JSON sa config.json! Linya {line}, Column {col}: {err}",
+    },
+    'config_check_syntax': {
+        'pt': "💡 Dica: Use https://jsonlint.com para validar a sintaxe JSON",
+        'en': "💡 Tip: Use https://jsonlint.com to validate JSON syntax",
+        'fr': "💡 Conseil: Utilisez https://jsonlint.com pour valider la syntaxe JSON",
+        'es': "💡 Consejo: Usa https://jsonlint.com para validar la sintaxis JSON",
+        'zh': "💡 提示: 使用 https://jsonlint.com 验证 JSON 语法",
+        'ru': "💡 Совет: Используйте https://jsonlint.com для проверки синтаксиса JSON",
+        'ja': "💡 ヒント: JSON 構文を検証するには https://jsonlint.com を使用してください",
+        'it': "💡 Consiglio: Usa https://jsonlint.com per convalidare la sintassi JSON",
+        'tr': "💡 İpucu: JSON söz dizimini doğrulamak için https://jsonlint.com kullanın",
+        'fil': "💡 Tip: Gumamit ng https://jsonlint.com upang i-validate ang JSON syntax",
+    },
+    'config_fix_and_restart': {
+        'pt': "✏️  Corrija o arquivo config.json e reinicie o serviço",
+        'en': "✏️  Fix the config.json file and restart the service",
+        'fr': "✏️  Corrigez le fichier config.json et redémarrez le service",
+        'es': "✏️  Corrija el archivo config.json y reinicie el servicio",
+        'zh': "✏️  修复 config.json 文件并重启服务",
+        'ru': "✏️  Исправьте файл config.json и перезагрузите сервис",
+        'ja': "✏️  config.json ファイルを修正してサービスを再起動してください",
+        'it': "✏️  Correggere il file config.json e riavviare il servizio",
+        'tr': "✏️  config.json dosyasını düzeltin ve hizmeti yeniden başlatın",
+        'fil': "✏️  I-fix ang config.json file at i-restart ang serbisyo",
     },
 }
 

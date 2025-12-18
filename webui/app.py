@@ -129,9 +129,41 @@ def index():
     return render_template('index.html', status=service_status, logs=logs)
 
 
+def _validate_config():
+    """Validate config.json exists and has basic structure."""
+    cfg_path = ROOT / "config.json"
+    if not cfg_path.exists():
+        return False, "Configuration file (config.json) not found"
+    
+    try:
+        cfg = json.loads(cfg_path.read_text())
+        if not isinstance(cfg, dict):
+            return False, "Configuration must be a JSON object"
+        
+        # Check for critical sections
+        if not cfg.get("server") and not cfg.get("database"):
+            return False, "Configuration is incomplete (missing server and database sections)"
+        
+        return True, "Configuration valid"
+    except json.JSONDecodeError as e:
+        return False, f"Invalid JSON in config.json: {e.msg} (line {e.lineno})"
+    except Exception as e:
+        return False, f"Error reading config: {str(e)}"
+
+
 @app.route('/action/<cmd>', methods=['POST'])
 def action(cmd):
     cfg = str(ROOT / "config.json")
+    
+    # Validate config before attempting to start
+    if cmd in ['start', 'restart']:
+        valid, msg = _validate_config()
+        if not valid:
+            return jsonify({
+                'ok': False,
+                'msg': f"Configuration Error: {msg}. Please check config.json"
+            }), 400
+    
     if cmd == 'start':
         r = manager.startservice(config_path=cfg)
     elif cmd == 'stop':

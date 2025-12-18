@@ -152,8 +152,15 @@
           'stop': t('service_stop_failed'),
           'restart': t('service_restart_failed')
         };
-        const msg = data.msg ? `${errorMsg[action]}: ${data.msg}` : errorMsg[action];
-        showNotification(msg, 'error', 5000);
+        
+        // Check if it's a configuration error
+        if (data.msg && (data.msg.includes('config') || data.msg.includes('Config') || data.msg.includes('configuration') || response.status === 400)) {
+          const configError = `❌ ${t('config_error')}: ${data.msg}\n💡 ${t('config_check_msg')}`;
+          showNotification(configError, 'error', 8000);
+        } else {
+          const msg = data.msg ? `${errorMsg[action]}: ${data.msg}` : errorMsg[action];
+          showNotification(msg, 'error', 5000);
+        }
       }
     } catch (err) {
       showNotification(`⚠️ ${err.message}`, 'error', 5000);
