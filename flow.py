@@ -5,11 +5,16 @@ import subprocess
 import time
 import json
 import datetime
+import psutil
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+# Default paths (will be overridden after instance dir is computed)
 APP_PID = ROOT / "app.pid"
+APP_LOCK = ROOT / "app.lock"
 SERVICE_PID = ROOT / "service.pid"
+SERVICE_LOCK = ROOT / "service.lock"
 SERVICE_STATE = ROOT / "service_state.json"
 SERVICE_LOG_DIR = ROOT / "service_logs"
 
@@ -24,8 +29,167 @@ def _venv_python():
     return str(p) if p.exists() else sys.executable
 
 
+def _read_lock_file(lock_path: Path) -> dict | None:
+    """Read and parse lock file, return None if invalid or missing."""
+    if not lock_path.exists():
+        return None
+    try:
+        data = json.loads(lock_path.read_text())
+        if 'pid' in data and 'timestamp' in data:
+            return data
+    except Exception:
+        pass
+    return None
+
+
+def _write_lock_file(lock_path: Path, pid: int, extra: dict = None):
+    """Write lock file with PID and timestamp."""
+    data = {
+        'pid': pid,
+        'timestamp': datetime.datetime.now().isoformat(),
+        'hostname': os.environ.get('COMPUTERNAME', os.environ.get('HOSTNAME', 'unknown'))
+    }
+    if extra:
+        data.update(extra)
+    lock_path.write_text(json.dumps(data, indent=2))
+
+
+def _instance_id() -> str:
+    """Return a deterministic instance ID for this workspace.
+
+    - Uses FLOWWORKLIST_INSTANCE_ID env var if set
+    - Otherwise derives a short hash from the absolute ROOT path
+    """
+    iid = os.environ.get('FLOWWORKLIST_INSTANCE_ID')
+    if iid and iid.strip():
+        return iid.strip()
+    h = hashlib.sha1(str(ROOT).lower().encode('utf-8')).hexdigest()[:8]
+    return f"FWL-{h}"
+
+
+def _instance_dir(iid: str) -> Path:
+    """Compute storage directory for lock/state files for a given instance id."""
+    # Allow override
+    base_override = os.environ.get('FLOWWORKLIST_LOCK_DIR')
+    if base_override and base_override.strip():
+        p = Path(base_override).expanduser().resolve() / iid
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    if os.name == 'nt':
+        local = os.environ.get('LOCALAPPDATA') or os.environ.get('APPDATA')
+        if local:
+            p = Path(local) / 'FlowWorklist' / 'instances' / iid
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+    # Fallback (Linux/macOS or missing env): use ~/.local/share
+    p = Path.home() / '.local' / 'share' / 'FlowWorklist' / 'instances' / iid
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+# Compute instance paths and override default lock/state files
+INSTANCE_ID = _instance_id()
+INSTANCE_DIR = _instance_dir(INSTANCE_ID)
+
+APP_PID = INSTANCE_DIR / "app.pid"
+APP_LOCK = INSTANCE_DIR / "app.lock"
+SERVICE_PID = INSTANCE_DIR / "service.pid"
+SERVICE_LOCK = INSTANCE_DIR / "service.lock"
+SERVICE_STATE = INSTANCE_DIR / "service_state.json"
+
+
+def _find_pids_by_id(script_name: str, instance_id: str) -> list[int]:
+    """Find PIDs of processes running given script tagged with instance-id.
+
+    We match by presence of script name and the token '--instance-id' and the
+    instance_id anywhere in the command line.
+    """
+    pids: list[int] = []
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline_list = proc.info.get('cmdline') or []
+                cmd = ' '.join(cmdline_list).lower()
+                if script_name.lower() in cmd and 'python' in cmd and '--instance-id' in cmd and instance_id.lower() in cmd:
+                    pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+    return pids
+
+
+def _is_process_alive(pid: int, cmdline_match: str = None) -> bool:
+    """Robust check if process is alive using psutil.
+    
+    Args:
+        pid: Process ID to check
+        cmdline_match: Optional string that should appear in process command line
+    
+    Returns:
+        True if process exists and optionally matches command line
+    """
+    try:
+        proc = psutil.Process(pid)
+        if not proc.is_running():
+            return False
+        
+        # Additional validation: check command line if specified
+        if cmdline_match:
+            try:
+                cmdline = ' '.join(proc.cmdline()).lower()
+                if cmdline_match.lower() not in cmdline:
+                    return False
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                # If we can't access cmdline but process exists, assume it's valid
+                pass
+        
+        return True
+    except (psutil.NoSuchProcess, psutil.AccessDenied, ProcessLookupError):
+        return False
+
+
+def _cleanup_stale_lock(lock_path: Path, pid_path: Path = None, cmdline_match: str = None):
+    """Remove lock file if process is not running."""
+    lock_data = _read_lock_file(lock_path)
+    if lock_data:
+        pid = lock_data.get('pid')
+        if pid and not _is_process_alive(pid, cmdline_match):
+            lock_path.unlink(missing_ok=True)
+            if pid_path:
+                pid_path.unlink(missing_ok=True)
+            return True
+    elif lock_path.exists():
+        # Invalid lock file, remove it
+        lock_path.unlink(missing_ok=True)
+        if pid_path:
+            pid_path.unlink(missing_ok=True)
+        return True
+    return False
+
+
 def startapp():
     """Start the management App (web UI) in background without extra launcher files."""
+    # Check for existing instance
+    _cleanup_stale_lock(APP_LOCK, APP_PID, 'app.py')
+
+    iid = _instance_id()
+    # Prefer instance-id based check to avoid cross-repo conflicts
+    existing_by_id = _find_pids_by_id('app.py', iid)
+    if existing_by_id:
+        pid = existing_by_id[0]
+        print(f"App already running for {iid} (PID {pid})")
+        print(f"Use 'flow stopapp' to stop it first.")
+        return
+    
+    lock_data = _read_lock_file(APP_LOCK)
+    if lock_data:
+        pid = lock_data.get('pid')
+        if pid and _is_process_alive(pid, 'app.py'):
+            print(f"App already running (PID {pid})")
+            print(f"Started at: {lock_data.get('timestamp', 'unknown')}")
+            print(f"Use 'flow stopapp' to stop it first.")
+            return
+    
     app_script = ROOT / "webui" / "app.py"
     if not app_script.exists():
         print("App entrypoint not found: webui/app.py")
@@ -40,7 +204,7 @@ def startapp():
         creationflags = subprocess.CREATE_NO_WINDOW
 
     proc = subprocess.Popen(
-        [python_path, str(app_script)],
+        [python_path, str(app_script), '--instance-id', iid],
         cwd=str(ROOT),
         env=env,
         stdout=subprocess.DEVNULL,
@@ -48,92 +212,143 @@ def startapp():
         creationflags=creationflags
     )
 
+    # Write both PID file and lock file
     try:
         APP_PID.write_text(str(proc.pid))
-        print(f"App started with PID {proc.pid}. PID saved to app.pid.")
-    except Exception:
-        print("App started, but could not write app.pid.")
+        _write_lock_file(APP_LOCK, proc.pid, {'type': 'app', 'url': 'http://127.0.0.1:5000', 'instance_id': iid})
+        print(f"[OK] App started successfully (PID {proc.pid})")
+    except Exception as e:
+        print(f"[WARNING] App started but could not write lock files: {e}")
     
     # Wait for app to be ready
     print("Waiting for app to start...")
     time.sleep(3)
+    
+    # Verify app is actually running
+    if not _is_process_alive(proc.pid, 'app.py'):
+        print("[ERROR] App failed to start (process died immediately)")
+        APP_PID.unlink(missing_ok=True)
+        APP_LOCK.unlink(missing_ok=True)
+        return
     
     # Open browser
     import webbrowser
     url = "http://127.0.0.1:5000"
     try:
         webbrowser.open(url)
-        print(f"Browser opened at {url}")
+        print(f"[OK] Browser opened at {url}")
     except Exception:
-        print(f"Could not open browser automatically. Please visit: {url}")
+        print(f"[INFO] Could not open browser automatically. Please visit: {url}")
     
-    print("App is running in background. Use 'flow stopapp' to stop.")
+    print("[OK] App is running. Use 'flow stopapp' to stop.")
 
 
 def stopapp():
     """Stop the management App using PID from app.pid."""
-    if not APP_PID.exists():
-        print("No app.pid file found. App may not be running.")
-        return
+    iid = _instance_id()
+    # First, try to find any running app.py processes
+    found_pids = []
     try:
-        pid = int(APP_PID.read_text().strip())
-    except Exception:
-        print("Invalid app.pid. Unable to stop.")
-        return
-    # If process is already not running, clean up stale PID file
-    already_stopped = False
-    if os.name == 'nt':
-        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if str(pid) not in out.stdout:
-            already_stopped = True
-    else:
-        try:
-            os.kill(pid, 0)
-        except Exception:
-            already_stopped = True
-    if already_stopped:
-        print(f"App not running (stale PID {pid}); cleaning up app.pid.")
-        try:
-            APP_PID.unlink(missing_ok=True)
-        except Exception:
-            pass
-        return
-    if os.name == 'nt':
-        # Force kill entire process tree to ensure Flask and all child processes are terminated
-        try:
-            # Use /F /T to forcefully kill entire tree (Flask often spawns child processes)
-            result = subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)], 
-                check=False, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            if result.returncode == 0:
-                print(f"Stopped App (PID {pid}) and all child processes.")
-            else:
-                # Process might already be gone
-                print(f"App process (PID {pid}) terminated or not found.")
-        except Exception as e:
-            print(f"Warning: Exception while stopping App (PID {pid}): {e}")
-        
-        # Give processes time to terminate
-        time.sleep(0.5)
-        
-        # Verify process is actually gone
-        verify = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if str(pid) in verify.stdout:
-            print(f"⚠️  Warning: Process {pid} may still be running. Try manually: taskkill /F /PID {pid}")
-    else:
-        try:
-            os.kill(pid, 9)  # SIGKILL for immediate termination
-            print(f"Stopped App (PID {pid}).")
-        except Exception as e:
-            print(f"Failed to stop App (PID {pid}): {e}")
-    try:
-        APP_PID.unlink(missing_ok=True)
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline']).lower() if proc.info['cmdline'] else ''
+                if 'app.py' in cmdline and 'python' in cmdline and '--instance-id' in cmdline and iid.lower() in cmdline:
+                    found_pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
     except Exception:
         pass
+    
+    # Try to get PID from lock file first, fallback to PID file
+    lock_data = _read_lock_file(APP_LOCK)
+    pid = None
+    
+    if lock_data:
+        pid = lock_data.get('pid')
+    elif APP_PID.exists():
+        try:
+            pid = int(APP_PID.read_text().strip())
+        except Exception:
+            pass
+    
+    # If we found running app processes and stored PID doesn't match, use found process
+    if found_pids and (not pid or pid not in found_pids):
+        # Use the found PID
+        pid = found_pids[0]
+        print(f"[INFO] Found running app for {iid} (PID {pid}), stopping it...")
+    
+    if not pid:
+        # No PID found either in files or in running processes
+        if _cleanup_stale_lock(APP_LOCK, APP_PID, 'app.py'):
+            print("[OK] Cleaned up stale app files.")
+        else:
+            print("[INFO] No app running or PID file found.")
+        return
+    
+    # Check if process is actually running before trying to stop it
+    if not _is_process_alive(pid, 'app.py'):
+        # Process not running, just clean up files
+        if found_pids:
+            # But we found other running apps, recursively stop them
+            print(f"[INFO] Stale PID {pid}. Looking for other running instances...")
+            APP_PID.unlink(missing_ok=True)
+            APP_LOCK.unlink(missing_ok=True)
+            if len(found_pids) > 1:
+                # More instances to stop
+                for other_pid in found_pids[1:]:
+                    try:
+                        proc = psutil.Process(other_pid)
+                        proc.terminate()
+                        proc.wait(timeout=5)
+                        print(f"[OK] Stopped app instance (PID {other_pid})")
+                    except Exception as e:
+                        print(f"[WARNING] Could not stop app (PID {other_pid}): {e}")
+        else:
+            print(f"[INFO] App not running (stale PID {pid}). Cleaning up...")
+            APP_PID.unlink(missing_ok=True)
+            APP_LOCK.unlink(missing_ok=True)
+        return
+    
+    # Stop the process
+    try:
+        proc = psutil.Process(pid)
+        
+        # Terminate gracefully first
+        proc.terminate()
+        
+        # Wait up to 5 seconds for graceful shutdown
+        try:
+            proc.wait(timeout=5)
+            print(f"[OK] App stopped gracefully (PID {pid})")
+        except psutil.TimeoutExpired:
+            # Force kill if still running
+            print(f"[WARNING] Forcing App shutdown (PID {pid})...")
+            proc.kill()
+            proc.wait(timeout=3)
+            print(f"[OK] App force-killed (PID {pid})")
+        
+        # Kill all children too
+        for child in proc.children(recursive=True):
+            try:
+                child.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        
+    except psutil.NoSuchProcess:
+        print(f"[INFO] Process {pid} already terminated.")
+    except Exception as e:
+        print(f"[ERROR] Error stopping App (PID {pid}): {e}")
+    
+    # Clean up files
+    APP_PID.unlink(missing_ok=True)
+    APP_LOCK.unlink(missing_ok=True)
+    time.sleep(0.5)
+    
+    # Final verification
+    if _is_process_alive(pid):
+        print(f"[WARNING] Warning: Process {pid} may still be running.")
+    else:
+        print("[OK] App stopped successfully.")
 
 
 def startall(config_path: str | None = None):
@@ -160,210 +375,352 @@ def stopall():
 
 def startservice(config_path: str | None = None):
     """Start MWL service in background."""
-    if SERVICE_PID.exists():
-        pid = int(SERVICE_PID.read_text().strip())
-        if _is_process_running(pid):
-            msg = f"Service already running (PID {pid})"
-            print(msg)
-            return {"ok": False, "msg": msg, "pid": pid}
-        else:
-            SERVICE_PID.unlink(missing_ok=True)
+    # Check for existing instance using new lock system
+    _cleanup_stale_lock(SERVICE_LOCK, SERVICE_PID, 'mwl_service.py')
+    iid = _instance_id()
+    existing_by_id = _find_pids_by_id('mwl_service.py', iid)
+    if existing_by_id:
+        pid = existing_by_id[0]
+        msg = f"Service already running for {iid} (PID {pid})"
+        print(f"[INFO] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "already_running", "pid": pid}
     
-    # Clean obsolete lock file
-    lock_file = ROOT / "mwl_server.lock"
-    if lock_file.exists():
-        try:
-            with open(lock_file, "r") as f:
-                old_pid = f.read().strip()
-            if old_pid and old_pid.isdigit() and _is_process_running(int(old_pid)):
-                msg = f"Service already running (lock PID {old_pid})"
-                print(msg)
-                return {"ok": False, "msg": msg, "pid": int(old_pid)}
-            else:
-                lock_file.unlink(missing_ok=True)
-        except Exception:
-            lock_file.unlink(missing_ok=True)
+    lock_data = _read_lock_file(SERVICE_LOCK)
+    if lock_data:
+        pid = lock_data.get('pid')
+        if pid and _is_process_alive(pid, 'mwl_service.py'):
+            msg = f"Service already running (PID {pid})"
+            print(f"[INFO] {msg}")
+            print(f"Started at: {lock_data.get('timestamp', 'unknown')}")
+            print(f"Use 'flow stopservice' to stop it first.")
+            return {"ok": False, "msg": msg, "error_type": "already_running", "pid": pid}
+    
+    # Clean up old mwl_server.lock if exists
+    old_lock = ROOT / "mwl_server.lock"
+    old_lock.unlink(missing_ok=True)
     
     # Determine Python executable
     python_path = _venv_python()
     script = ROOT / "mwl_service.py"
     if not script.exists():
-        msg = "mwl_service.py not found"
-        print(msg)
-        return {"ok": False, "msg": msg}
+        msg = f"Service script not found: {script}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "script_not_found", "error_detail": msg}
+    
+    # Check if config file exists when provided
+    if config_path and not Path(config_path).exists():
+        msg = f"Configuration file not found: {config_path}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "config_not_found", "error_detail": msg}
     
     # Prepare log file
     ts = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     log_path = SERVICE_LOG_DIR / f"mwls_{ts}.log"
     
     # Start detached process
-    with open(log_path, "ab") as out:
-        args = [python_path, str(script)]
-        if config_path:
-            args += ["--config", config_path]
-        
-        creationflags = 0
-        startupinfo = None
-        if os.name == 'nt':
-            creationflags = 0x08000000  # CREATE_NO_WINDOW: hides the console window
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = 0
-        
-        proc = subprocess.Popen(
-            args,
-            stdout=out,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL,
-            creationflags=creationflags,
-            startupinfo=startupinfo
-        )
+    try:
+        with open(log_path, "ab") as out:
+            args = [python_path, str(script), '--instance-id', iid]
+            if config_path:
+                args += ["--config", config_path]
+            
+            creationflags = 0
+            startupinfo = None
+            if os.name == 'nt':
+                creationflags = 0x08000000  # CREATE_NO_WINDOW: hides the console window
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0
+            
+            proc = subprocess.Popen(
+                args,
+                stdout=out,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=creationflags,
+                startupinfo=startupinfo
+            )
+    except Exception as e:
+        msg = f"Failed to start process: {str(e)}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "process_start_failed", "error_detail": str(e)}
     
+    # Write lock, PID, and state files
     SERVICE_PID.write_text(str(proc.pid))
     state = {"pid": proc.pid, "log": str(log_path), "started_at": datetime.datetime.now().isoformat()}
-    SERVICE_STATE.write_text(json.dumps(state))
-    msg = f"Service started (PID {proc.pid}). Log: {log_path}"
+    SERVICE_STATE.write_text(json.dumps(state, indent=2))
+    _write_lock_file(SERVICE_LOCK, proc.pid, {'type': 'service', 'log': str(log_path), 'instance_id': iid})
+    
+    # Wait a moment and verify process started
+    time.sleep(1)
+    if not _is_process_alive(proc.pid, 'mwl_service.py'):
+        msg = f"Service process died immediately after start (PID {proc.pid})"
+        print(f"[ERROR] {msg}")
+        print(f"Check log file for details: {log_path}")
+        SERVICE_PID.unlink(missing_ok=True)
+        SERVICE_LOCK.unlink(missing_ok=True)
+        SERVICE_STATE.unlink(missing_ok=True)
+        
+        # Try to read log for more info
+        log_content = ""
+        try:
+            log_content = log_path.read_text()[-500:]  # Last 500 chars
+        except:
+            pass
+        
+        return {
+            "ok": False, 
+            "msg": msg, 
+            "error_type": "process_died",
+            "error_detail": f"{msg}. Log: {log_path}. Last output: {log_content}",
+            "log_path": str(log_path)
+        }
+    
+    msg = f"[OK] Service started successfully (PID {proc.pid}). Log: {log_path}"
     print(msg)
     return {"ok": True, **state, "msg": msg}
 
 
 def stopservice():
     """Stop MWL service."""
-    if not SERVICE_PID.exists():
-        msg = "No PID file; service not running?"
-        print(msg)
+    iid = _instance_id()
+    # First, try to find any running mwl_service.py processes
+    found_pids = []
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline']).lower() if proc.info['cmdline'] else ''
+                if 'mwl_service.py' in cmdline and 'python' in cmdline and '--instance-id' in cmdline and iid.lower() in cmdline:
+                    found_pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+    
+    # Try to get PID from lock file first, fallback to PID file
+    lock_data = _read_lock_file(SERVICE_LOCK)
+    pid = None
+    
+    if lock_data:
+        pid = lock_data.get('pid')
+    elif SERVICE_PID.exists():
+        try:
+            pid = int(SERVICE_PID.read_text().strip())
+        except Exception:
+            pass
+    
+    # If we found running service processes and stored PID doesn't match, use found process
+    if found_pids and (not pid or pid not in found_pids):
+        # Use the found PID
+        pid = found_pids[0]
+        print(f"[INFO] Found running service for {iid} (PID {pid}), stopping it...")
+    
+    if not pid:
+        # No PID found either in files or in running processes
+        if _cleanup_stale_lock(SERVICE_LOCK, SERVICE_PID, 'mwl_service.py'):
+            msg = "[OK] Cleaned up stale service files."
+            print(msg)
+        else:
+            msg = "[INFO] No service running or PID file found."
+            print(msg)
         return {"ok": False, "msg": msg}
     
-    pid = int(SERVICE_PID.read_text().strip())
-    if not _is_process_running(pid):
-        SERVICE_PID.unlink(missing_ok=True)
-        lock_file = ROOT / "mwl_server.lock"
-        lock_file.unlink(missing_ok=True) if lock_file.exists() else None
-        msg = f"Process {pid} not running"
-        print(msg)
-        return {"ok": False, "msg": msg, "pid": pid}
-    
-    try:
-        if os.name == 'nt':
-            subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Check if process is actually running before trying to stop it
+    if not _is_process_alive(pid, 'mwl_service.py'):
+        # Process not running, just clean up files
+        if found_pids:
+            # But we found other running services, stop them
+            print(f"[INFO] Stale PID {pid}. Stopping other instances...")
+            SERVICE_PID.unlink(missing_ok=True)
+            SERVICE_LOCK.unlink(missing_ok=True)
+            if len(found_pids) > 1:
+                for other_pid in found_pids[1:]:
+                    try:
+                        proc = psutil.Process(other_pid)
+                        proc.terminate()
+                        proc.wait(timeout=5)
+                        print(f"[OK] Stopped service instance (PID {other_pid})")
+                    except Exception as e:
+                        print(f"[WARNING] Could not stop service (PID {other_pid}): {e}")
         else:
-            os.kill(pid, 15)
-        time.sleep(0.5)
+            msg = f"[INFO] Service not running (stale PID {pid}). Cleaning up..."
+            print(msg)
+            SERVICE_PID.unlink(missing_ok=True)
+            SERVICE_LOCK.unlink(missing_ok=True)
+        SERVICE_STATE.unlink(missing_ok=True)
+        old_lock = ROOT / "mwl_server.lock"
+        old_lock.unlink(missing_ok=True)
+        return {"ok": False, "msg": msg, "pid": pid}
+
+    
+    # Stop the process
+    try:
+        proc = psutil.Process(pid)
+        
+        # Terminate gracefully first
+        proc.terminate()
+        
+        # Wait up to 5 seconds for graceful shutdown
+        try:
+            proc.wait(timeout=5)
+            msg = f"[OK] Service stopped gracefully (PID {pid})"
+            print(msg)
+        except psutil.TimeoutExpired:
+            # Force kill if still running
+            print(f"[WARNING] Forcing service shutdown (PID {pid})...")
+            proc.kill()
+            proc.wait(timeout=3)
+            msg = f"[OK] Service force-killed (PID {pid})"
+            print(msg)
+        
+        # Kill all children too
+        for child in proc.children(recursive=True):
+            try:
+                child.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        
+        # Clean up files
         SERVICE_PID.unlink(missing_ok=True)
-        lock_file = ROOT / "mwl_server.lock"
-        lock_file.unlink(missing_ok=True) if lock_file.exists() else None
-        msg = f"Stopped service (PID {pid})"
+        SERVICE_LOCK.unlink(missing_ok=True)
+        SERVICE_STATE.unlink(missing_ok=True)
+        old_lock = ROOT / "mwl_server.lock"
+        old_lock.unlink(missing_ok=True)
+        
+        time.sleep(0.5)
+        
+        # Final verification
+        if _is_process_alive(pid):
+            msg = f"[WARNING] Warning: Process {pid} may still be running."
+            print(msg)
+            return {"ok": False, "msg": msg, "pid": pid}
+        
+        return {"ok": True, "msg": msg, "pid": pid}
+        
+    except psutil.NoSuchProcess:
+        msg = f"[INFO] Process {pid} already terminated."
         print(msg)
+        SERVICE_PID.unlink(missing_ok=True)
+        SERVICE_LOCK.unlink(missing_ok=True)
+        SERVICE_STATE.unlink(missing_ok=True)
         return {"ok": True, "msg": msg, "pid": pid}
     except Exception as e:
-        msg = f"Failed to stop service: {e}"
+        msg = f"[ERROR] Error stopping service (PID {pid}): {e}"
         print(msg)
         return {"ok": False, "msg": msg}
-
-
-def _is_process_running(pid: int) -> bool:
-    """Check if process with given PID is running.
-    
-    Uses CIM on Windows (more reliable than tasklist for processes with CREATE_NO_WINDOW).
-    Uses kill(pid, 0) on Unix/Linux.
-    """
-    try:
-        if os.name == 'nt':
-            # Prefer CIM (PowerShell) - more reliable for processes with hidden windows
-            try:
-                cmd = [
-                    'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
-                    f'(Get-CimInstance Win32_Process -Filter "ProcessId={pid}") -ne $null'
-                ]
-                out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-                if out.returncode == 0 and out.stdout.strip().lower() == 'true':
-                    return True
-            except Exception:
-                pass
-            
-            # Fallback to tasklist
-            try:
-                out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-                return str(pid) in out.stdout
-            except Exception:
-                pass
-            
-            return False
-        else:
-            # Unix/Linux: use kill(pid, 0) to check without signal
-            os.kill(pid, 0)
-            return True
-    except Exception:
-        return False
 
 
 def restartservice(config_path: str | None = None):
-    """Restart MWL service."""
+    """Restart MWL service with better error reporting."""
     stop_res = stopservice()
     time.sleep(1)
     start_res = startservice(config_path=config_path)
-    return {"stop": stop_res, "start": start_res}
+    
+    # Combine results with better error messages for web UI
+    result = {
+        "ok": start_res.get('ok', False) if isinstance(start_res, dict) else False,
+    }
+    
+    # Generate meaningful message
+    if isinstance(start_res, dict):
+        if start_res.get('ok'):
+            result["msg"] = f"[OK] Service restarted successfully (PID {start_res.get('pid')})"
+            result["pid"] = start_res.get('pid')
+            result["log"] = start_res.get('log')
+            result["started_at"] = start_res.get('started_at')
+        else:
+            # Extract error details from start_res for better web UI error display
+            error_msg = start_res.get('msg', 'Unknown error during start')
+            error_detail = start_res.get('error_detail', error_msg)
+            result["msg"] = error_msg
+            result["error_detail"] = error_detail
+            result["error_type"] = start_res.get('error_type', 'restart_failed')
+            # Include stop result for debugging
+            if not stop_res.get('ok'):
+                result["stop_error"] = stop_res.get('msg', 'Unknown stop error')
+    
+    return result
 
 
 def status():
-    """Show status for both App and Service.
+    """Show status for both App and Service using robust lock-based verification."""
+    # Clean up any stale locks first
+    _cleanup_stale_lock(APP_LOCK, APP_PID, 'app.py')
+    _cleanup_stale_lock(SERVICE_LOCK, SERVICE_PID, 'mwl_service.py')
+    iid = _instance_id()
     
-    Prioritizes SERVICE_STATE.json as source of truth when available,
-    falls back to PID file check.
-    """
+    # Check App status
     app_status = {
         "running": False,
-        "pid": None
+        "pid": None,
+        "timestamp": None,
+        "url": None
     }
-    if APP_PID.exists():
-        try:
-            pid = int(APP_PID.read_text().strip())
-            app_status["pid"] = pid
-            app_status["running"] = _is_process_running(pid)
-        except Exception:
-            pass
     
+    # Prefer id-based detection
+    app_pids = _find_pids_by_id('app.py', iid)
+    if app_pids:
+        pid = app_pids[0]
+        app_status["running"] = True
+        app_status["pid"] = pid
+        app_status["timestamp"] = None
+        app_status["url"] = 'http://127.0.0.1:5000'
+    else:
+        lock_data = _read_lock_file(APP_LOCK)
+        if lock_data:
+            pid = lock_data.get('pid')
+            if pid and _is_process_alive(pid, 'app.py'):
+                app_status["running"] = True
+                app_status["pid"] = pid
+                app_status["timestamp"] = lock_data.get('timestamp')
+                app_status["url"] = lock_data.get('url', 'http://127.0.0.1:5000')
+    
+    # Check Service status
     service_status = {
         "running": False,
-        "pid": None
+        "pid": None,
+        "timestamp": None,
+        "log": None
     }
     
-    # First check SERVICE_STATE.json (source of truth when available)
-    if SERVICE_STATE.exists():
-        try:
-            state = json.loads(SERVICE_STATE.read_text())
-            if state.get("pid"):
-                service_status["pid"] = state["pid"]
-                # Verify PID is still running
-                if _is_process_running(state["pid"]):
-                    service_status["running"] = True
-                    service_status.update(state)
-                else:
-                    # Process died, clean up state
-                    SERVICE_STATE.unlink(missing_ok=True)
-                    SERVICE_PID.unlink(missing_ok=True)
-        except Exception:
-            pass
-    
-    # Fallback to SERVICE_PID file if SERVICE_STATE not available
-    if not service_status["running"] and SERVICE_PID.exists():
-        try:
-            pid = int(SERVICE_PID.read_text().strip())
-            service_status["pid"] = pid
-            if _is_process_running(pid):
+    # Prefer id-based detection
+    svc_pids = _find_pids_by_id('mwl_service.py', iid)
+    if svc_pids:
+        pid = svc_pids[0]
+        service_status["running"] = True
+        service_status["pid"] = pid
+        service_status["timestamp"] = None
+        # Try to read SERVICE_STATE for log
+        if SERVICE_STATE.exists():
+            try:
+                state = json.loads(SERVICE_STATE.read_text())
+                service_status["log"] = state.get('log')
+                service_status["timestamp"] = state.get('started_at')
+            except Exception:
+                pass
+    else:
+        lock_data = _read_lock_file(SERVICE_LOCK)
+        if lock_data:
+            pid = lock_data.get('pid')
+            if pid and _is_process_alive(pid, 'mwl_service.py'):
                 service_status["running"] = True
+                service_status["pid"] = pid
+                service_status["timestamp"] = lock_data.get('timestamp')
+                service_status["log"] = lock_data.get('log')
+                
+                # Also check SERVICE_STATE for additional info
                 if SERVICE_STATE.exists():
                     try:
-                        data = json.loads(SERVICE_STATE.read_text())
-                        service_status.update(data)
+                        state = json.loads(SERVICE_STATE.read_text())
+                        if not service_status["log"]:
+                            service_status["log"] = state.get('log')
+                        if not service_status["timestamp"]:
+                            service_status["timestamp"] = state.get('started_at')
                     except Exception:
                         pass
-            else:
-                # PID is stale, clean up
-                SERVICE_PID.unlink(missing_ok=True)
-        except Exception:
-            pass
     
+    app_status["instance_id"] = iid
+    service_status["instance_id"] = iid
     return {"app": app_status, "service": service_status}
 
 
@@ -420,14 +777,14 @@ def find_service_pids() -> list[int]:
     if SERVICE_PID.exists():
         try:
             pid = int(SERVICE_PID.read_text().strip())
-            if _is_process_running(pid):
+            if _is_process_alive(pid, 'mwl_service.py'):
                 pids.add(pid)
         except Exception:
             pass
     # Add by scanning processes
     scan = _find_service_pids_windows() if os.name == 'nt' else _find_service_pids_unix()
     for pid in scan:
-        if _is_process_running(pid):
+        if _is_process_alive(pid, 'mwl_service.py'):
             pids.add(pid)
     return list(sorted(pids))
 
@@ -462,6 +819,78 @@ def kill_orphan_services():
         pass
     ok = len(errors) == 0
     return {"ok": ok, "killed": killed, "errors": errors}
+
+
+def _collect_other_instance_pids() -> dict:
+    """Collect PIDs for app/service processes that belong to other instances.
+
+    Returns a dict: { 'app': [pids], 'service': [pids] }
+    """
+    current_id = INSTANCE_ID.lower()
+    root_str = str(ROOT).lower().replace('\\', '/')
+
+    def is_other_instance(cmd: str) -> bool:
+        c = cmd.lower().replace('\\', '/')
+        if '--instance-id' in c:
+            parts = c.split()
+            for i, tok in enumerate(parts):
+                if tok == '--instance-id' and i + 1 < len(parts):
+                    if parts[i + 1].lower() != current_id:
+                        return True
+                    return False
+            # '--instance-id' but couldn't read next token, treat as other
+            return True
+        # No instance-id: if command line doesn't include our repo root, consider it other
+        return root_str not in c
+
+    pids = {'app': [], 'service': []}
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline_list = proc.info.get('cmdline') or []
+                cmd = ' '.join(cmdline_list)
+                cl = cmd.lower()
+                if 'python' not in cl:
+                    continue
+                if 'webui/app.py' in cl or 'app.py' in cl:
+                    if is_other_instance(cmd):
+                        pids['app'].append(proc.info['pid'])
+                elif 'mwl_service.py' in cl:
+                    if is_other_instance(cmd):
+                        pids['service'].append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+    return pids
+
+
+def kill_other_instances(target: str = 'both'):
+    """Kill processes (app/service) that belong to other instance-ids.
+
+    target: 'app' | 'service' | 'both'
+    Returns dict with ok, killed, errors grouped by kind.
+    """
+    target = (target or 'both').lower()
+    pids = _collect_other_instance_pids()
+    to_kill = {
+        'app': pids['app'] if target in ('app', 'both') else [],
+        'service': pids['service'] if target in ('service', 'both') else []
+    }
+    killed = {'app': [], 'service': []}
+    errors = []
+    for kind in ('app', 'service'):
+        for pid in to_kill[kind]:
+            try:
+                if os.name == 'nt':
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], check=False,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                else:
+                    os.kill(pid, 9)
+                killed[kind].append(pid)
+            except Exception as e:
+                errors.append(f"{kind}:{pid}: {e}")
+    return {"ok": len(errors) == 0, "killed": killed, "errors": errors, "instance_id": INSTANCE_ID}
 
 
 def logs(limit: int = 20):
@@ -625,6 +1054,47 @@ def install(add_to_path: bool = False):
     print("  flow tail <path> [--lines N] - Tail log file")
 
 
+def print_status():
+    """Print status in a user-friendly format."""
+    st = status()
+    
+    print("\n" + "="*60)
+    print("FlowWorklist Status")
+    print("="*60)
+    
+    # App status
+    app = st.get('app', {})
+    print("\n📱 Management App (Web UI)")
+    print("-" * 60)
+    if app.get('running'):
+        print(f"  Status:     ✓ Running")
+        print(f"  PID:        {app.get('pid')}")
+        print(f"  URL:        {app.get('url', 'http://127.0.0.1:5000')}")
+        if app.get('timestamp'):
+            print(f"  Started:    {app.get('timestamp')}")
+    else:
+        print(f"  Status:     ✗ Stopped")
+    
+    # Service status
+    service = st.get('service', {})
+    print("\n🔧 MWL Service (DICOM Worklist)")
+    print("-" * 60)
+    if service.get('running'):
+        print(f"  Status:     ✓ Running")
+        print(f"  PID:        {service.get('pid')}")
+        if service.get('timestamp'):
+            print(f"  Started:    {service.get('timestamp')}")
+        if service.get('log'):
+            print(f"  Log:        {service.get('log')}")
+    else:
+        print(f"  Status:     ✗ Stopped")
+    
+    print("\n" + "="*60)
+    
+    # Return the raw status for programmatic use
+    return st
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="flow", description="FlowWorklist command line helper")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -677,7 +1147,7 @@ if __name__ == "__main__":
         if res is not None:
             print(res)
     elif args.cmd == "status":
-        print(status())
+        print_status()
     elif args.cmd == "logs":
         print(logs(limit=args.limit))
     elif args.cmd == "tail":

@@ -161,30 +161,56 @@ def action(cmd):
         if not valid:
             return jsonify({
                 'ok': False,
-                'msg': f"Configuration Error: {msg}. Please check config.json"
+                'msg': f"Configuration Error: {msg}. Please check config.json",
+                'error_type': 'config_error',
+                'error_detail': msg
             }), 400
     
-    if cmd == 'start':
-        r = manager.startservice(config_path=cfg)
-    elif cmd == 'stop':
-        r = manager.stopservice()
-    elif cmd == 'restart':
-        r = manager.restartservice(config_path=cfg)
-    else:
-        r = {"ok": False, "msg": 'unknown command'}
-    return jsonify(r)
+    try:
+        if cmd == 'start':
+            r = manager.startservice(config_path=cfg)
+        elif cmd == 'stop':
+            r = manager.stopservice()
+        elif cmd == 'restart':
+            r = manager.restartservice(config_path=cfg)
+        else:
+            r = {"ok": False, "msg": 'unknown command', "error_type": "unknown_command"}
+        
+        # Ensure response always has error_type and error_detail for better debugging
+        if not r.get('ok'):
+            if 'error_type' not in r:
+                r['error_type'] = 'execution_error'
+            if 'error_detail' not in r and 'msg' in r:
+                r['error_detail'] = r['msg']
+        
+        return jsonify(r)
+    
+    except Exception as e:
+        # Catch any unexpected errors
+        error_msg = str(e)
+        return jsonify({
+            'ok': False,
+            'msg': f'Unexpected error: {error_msg}',
+            'error_type': 'server_error',
+            'error_detail': error_msg
+        }), 500
 
 
 @app.route('/status')
 def status():
-    # Provide backward-compatible, simplified status payload
+    # Provide backward-compatible, simplified status payload with detailed info
     st = manager.status()
     svc = st.get('service') or {}
+    app_status = st.get('app') or {}
     return jsonify({
         'running': bool(svc.get('running')),
         'pid': svc.get('pid'),
+        'timestamp': svc.get('timestamp'),
+        'log': svc.get('log'),
+        'instance_id': svc.get('instance_id') or app_status.get('instance_id'),
         'service': svc,
-        'app': st.get('app') or {}
+        'app': app_status,
+        'message': 'Service is running' if svc.get('running') else 'Service is stopped'
     })
 
 
@@ -810,11 +836,33 @@ def set_language():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
+# Health endpoint for action APIs
+@app.route('/action/health', methods=['GET'])
+def action_health():
+    try:
+        return jsonify({'ok': True, 'endpoints': ['start', 'stop', 'restart']})
+    except Exception as e:
+        return jsonify({'ok': False, 'message': str(e)}), 500
+
+
 # Utilities to locate and kill stray service processes
 @app.route('/service/scan-kill', methods=['POST'])
 def service_scan_kill():
     try:
         res = manager.kill_orphan_services()
+        ok = res.get('ok', False)
+        status = 200 if ok else 500
+        return jsonify(res), status
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': f'Unhandled error: {e}'}), 500
+
+
+# Kill other-instance processes (service and/or app)
+@app.route('/service/scan-kill-others', methods=['POST'])
+def service_scan_kill_others():
+    try:
+        # Kill service and app processes that belong to different instance-id
+        res = manager.kill_other_instances('both')
         ok = res.get('ok', False)
         status = 200 if ok else 500
         return jsonify(res), status

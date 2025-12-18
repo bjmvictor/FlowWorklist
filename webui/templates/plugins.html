@@ -36,14 +36,14 @@
       </div>
       <div class="flex items-center gap-3">
         {% if p.installed %}
-          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return confirm('Uninstall {{ p.label }}?');">
+          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('Uninstall {{ p.label }}?')">
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
               <i class="fas fa-trash"></i>
               <span data-i18n="uninstall">Uninstall</span>
             </button>
           </form>
         {% else %}
-          <form action="/plugin/install/{{ p.id }}" method="POST">
+          <form action="/plugin/install/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit()">
             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
               <i class="fas fa-download"></i>
               <span data-i18n="install">Install</span>
@@ -55,4 +55,17 @@
     {% endfor %}
   </div>
 </div>
+<script>
+  function pluginFormSubmit(confirmMsg) {
+    try {
+      if (confirmMsg) {
+        const ok = confirm(confirmMsg);
+        if (!ok) return false;
+      }
+      window._showLoadingBar = true;
+      if (typeof showLoadingBar === 'function') { showLoadingBar(); }
+    } catch(e) {}
+    return true;
+  }
+</script>
 {% endblock %}

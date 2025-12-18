@@ -29,25 +29,15 @@ Complete guide to FlowWorklist documentation and setup.
    - Customization examples
    - Testing procedures
 
-### 🎨 UI Features & Operations
-
-4. **[DROPDOWN_MENU_IMPLEMENTATION.md](DROPDOWN_MENU_IMPLEMENTATION.md)** - Frontend dropdown menu
-   - UI/UX design pattern
-   - Implementation details
-   - JavaScript integration
-   - Testing and validation
-   - Multilingual support (10 languages)
-
-5. **[SCAN_KILL_FEATURE.md](SCAN_KILL_FEATURE.md)** - Process management
-   - Orphan process detection
-   - Service cleanup functionality
-   - Cross-platform support (Windows/Linux)
-   - API endpoints and integration
-   - Testing procedures
+4. **[SQL_QUERY_GUIDE.md](SQL_QUERY_GUIDE.md)** - SQL query examples
+   - Complete SQL templates
+   - Oracle, PostgreSQL, MySQL examples
+   - Query customization
+   - Performance tips
 
 ### 🚢 Deployment & DevOps
 
-6. **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide
+5. **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide
    - Windows deployment (NSSM, Task Scheduler)
    - Linux deployment (Systemd)
    - Docker deployment (single, docker-compose)
@@ -56,7 +46,7 @@ Complete guide to FlowWorklist documentation and setup.
    - Security best practices
    - Monitoring and troubleshooting
 
-7. **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Windows Executable Build
+6. **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Windows Executable Build
     - Creating standalone .exe files
     - Build automation script
     - Deployment with executables
@@ -66,7 +56,7 @@ Complete guide to FlowWorklist documentation and setup.
 
 ### 📦 Version Control
 
-8. **[GIT_QUICKSTART.md](GIT_QUICKSTART.md)** - Git initialization
+7. **[GIT_QUICKSTART.md](GIT_QUICKSTART.md)** - Git initialization
    - Repository setup
    - Commit and push procedures
    - Branch management
@@ -76,8 +66,10 @@ Complete guide to FlowWorklist documentation and setup.
 
 ### 📋 Project Tracking
 
-9. **[CHANGELOG.md](CHANGELOG.md)** - Version history
-   - v1.0.0 release notes
+8. **[CHANGELOG.md](../CHANGELOG.md)** - Version history
+   - Release notes and updates
+   - Feature additions
+   - Bug fixes
    - Features and technical details
    - Future roadmap
    - Contributing guidelines

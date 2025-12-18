@@ -28,15 +28,6 @@ A query SQL **DEVE** retornar exatamente **17 colunas** na seguinte ordem:
 | 16 | Code Meaning | Code Meaning | VARCHAR2 | CHEST X-RAY |
 | 17 | Code Scheme | Code Scheme Designator | VARCHAR2 | CBR |
 
-## ⚠️ Importante: Formatação de Nomes
-
-**O serviço MWL faz a conversão automática dos nomes para o formato DICOM (Sobrenome^Nome)**
-
-- ✅ **Envie**: `BENJAMIN SILVA` ou `MARY JONES`
-- ❌ **NÃO envie**: `SILVA^BENJAMIN` (a conversão é automática)
-
-O serviço detecta automaticamente o último nome como sobrenome e converte para o padrão DICOM.
-
 ## Exemplos de Queries Válidas
 
 ### Exemplo 1: Query Simples (Teste com dados dummy)

@@ -9,7 +9,7 @@
       <h2 class="text-4xl font-bold" data-i18n="logs">Log Files</h2>
     </div>
     <div class="flex items-center gap-3">
-      <form action="/logs/clear" method="POST" onsubmit="return confirm('Clear all log files?');">
+      <form action="/logs/clear" method="POST" onsubmit="return clearLogsSubmit();">
         <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg transition flex items-center gap-2">
           <i class="fas fa-trash"></i>
           <span data-i18n="clear_logs">Clear Logs</span>
@@ -52,4 +52,15 @@
     {% endif %}
   </div>
 </div>
+<script>
+  function clearLogsSubmit() {
+    const ok = confirm('Clear all log files?');
+    if (!ok) return false;
+    try {
+      window._showLoadingBar = true;
+      if (typeof showLoadingBar === 'function') { showLoadingBar(); }
+    } catch (e) {}
+    return true;
+  }
+</script>
 {% endblock %}

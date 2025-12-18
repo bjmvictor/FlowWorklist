@@ -19,6 +19,7 @@
           </span>
         </p>
         {% if status.pid %}<p class="text-blue-100 mt-2">PID: <span class="font-mono">{{ status.pid }}</span></p>{% endif %}
+        <p class="text-blue-100 mt-1">Instance: <span id="instance-id" class="font-mono">{{ status.instance_id or 'n/a' }}</span></p>
       </div>
       <div class="flex flex-col items-center gap-4">
         <div class="text-6xl opacity-20">
@@ -31,8 +32,8 @@
   <!-- Control Buttons - 3 Column Grid -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Start Button -->
-    <button 
-      onclick="executeAction('start')" 
+    <button
+      onclick="executeAction('start')"
       class="bg-green-500 hover:bg-green-600 dark:bg-green-700 dark:hover:bg-green-800 text-white font-bold py-6 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4"
     >
       <i class="fas fa-play text-4xl"></i>
@@ -41,8 +42,8 @@
     </button>
 
     <!-- Stop Button with in-button Arrow Dropdown -->
-    <button 
-      onclick="executeAction('stop')" 
+    <button
+      onclick="executeAction('stop')"
       class="relative bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-white font-bold py-6 px-8 rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4"
     >
       <i class="fas fa-stop text-4xl"></i>
@@ -51,7 +52,7 @@
 
       <!-- Arrow-only trigger INSIDE the button (top-right corner) -->
       <span class="absolute top-2 right-2 group" onclick="event.stopPropagation();">
-        <span 
+        <span
           title="Menu de ações do serviço"
           data-i18n-title="service_menu_tooltip"
           class="text-white/80 hover:text-white p-1"
@@ -69,6 +70,16 @@
             <i class="fas fa-sync-alt text-blue-500 mr-2"></i>
             <span data-i18n="scan_kill_btn">Limpar processos órfãos</span>
             <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="scan_kill_desc">Encerra todos os processos do serviço em execução</span>
+          </span>
+          <span 
+            role="button"
+            tabindex="0"
+            onclick="confirmScanAndKillOthers(); event.stopPropagation();" 
+            class="block w-full text-left px-4 py-3 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm transition"
+          >
+            <i class="fas fa-broom text-purple-500 mr-2"></i>
+            <span>Limpar outras instâncias</span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">Encerra processos de outras cópias/instâncias</span>
           </span>
         </span>
       </span>
@@ -121,80 +132,48 @@
 </div>
 
 <script>
-  async function executeAction(action) {
-    try {
-      // Show start notification
-      const startingMsg = {
-        'start': t('service_starting'),
-        'stop': t('service_stopping'),
-        'restart': t('service_restarting')
-      };
-      showNotification(startingMsg[action], 'info');
+  let lastSvcRunning = null;
+  let lastSvcPid = null;
+  let lastStopNotifiedPid = null;
 
-      const response = await fetch(`/action/${action}`, {method: 'POST'});
-      const data = await response.json();
+  // Auto-update status every 2 seconds
+  function updateStatus() {
+    fetch('/status')
+      .then(response => response.json())
+      .then(data => {
+        const statusElement = document.getElementById('service-status');
+        const iidEl = document.getElementById('instance-id');
+        const running = !!data.running;
+        const pid = data.pid;
+        const logPath = (data.service && data.service.log) || data.log;
 
-      if (data.ok) {
-        // Sucesso
-        const successMsg = {
-          'start': t('service_started'),
-          'stop': t('service_stopped'),
-          'restart': t('service_restarted')
-        };
-        showNotification(successMsg[action], 'success', 5000);
-        
-        // Recarregar status
-        setTimeout(() => location.reload(), 1500);
-      } else {
-        // Erro
-        const errorMsg = {
-          'start': t('service_start_failed'),
-          'stop': t('service_stop_failed'),
-          'restart': t('service_restart_failed')
-        };
-        
-        // Check if it's a configuration error
-        if (data.msg && (data.msg.includes('config') || data.msg.includes('Config') || data.msg.includes('configuration') || response.status === 400)) {
-          const configError = `❌ ${t('config_error')}: ${data.msg}\n💡 ${t('config_check_msg')}`;
-          showNotification(configError, 'error', 8000);
-        } else {
-          const msg = data.msg ? `${errorMsg[action]}: ${data.msg}` : errorMsg[action];
-          showNotification(msg, 'error', 5000);
+        if (statusElement) {
+          const icon = running ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+          const labelKey = running ? 'running' : 'stopped';
+          statusElement.className = running ? 'text-green-300' : 'text-red-300';
+          statusElement.innerHTML = `${icon} <span>${t(labelKey)}</span>`;
         }
-      }
-    } catch (err) {
-      showNotification(`⚠️ ${err.message}`, 'error', 5000);
-    }
+
+        if (iidEl) {
+          iidEl.textContent = data.instance_id || 'n/a';
+        }
+
+        // Detect unexpected stop only during start/restart transition
+        if ((window.serviceTransition === 'start' || window.serviceTransition === 'restart') && lastSvcRunning === true && !running && lastSvcPid && lastStopNotifiedPid !== lastSvcPid) {
+          const msg = `${t('service_stop_failed')}: PID ${lastSvcPid}. ${logPath ? 'Log: ' + logPath : ''}`;
+          showNotification(msg, 'error', 8000);
+          lastStopNotifiedPid = lastSvcPid;
+          // Clear transition marker to avoid repeated notifications
+          window.serviceTransition = null;
+        }
+
+        lastSvcRunning = running;
+        lastSvcPid = pid || lastSvcPid;
+      })
+      .catch(err => console.error('Status update error:', err));
   }
 
-  function confirmScanAndKill() {
-    const confirmMsg = t('scan_kill_confirm_msg') || 'Isto irá encerrar todos os processos do serviço DICOM em execução. Deseja continuar?';
-    const confirmTitle = t('scan_kill_confirm_title') || 'Confirmar Limpeza de Processos';
-    
-    if (confirm(`${confirmTitle}\n\n${confirmMsg}`)) {
-      scanAndKill();
-    }
-  }
-
-  async function scanAndKill() {
-    try {
-      showNotification(t('scan_kill_scanning'), 'info');
-      const response = await fetch('/service/scan-kill', { method: 'POST' });
-      const data = await response.json();
-      if (data.ok) {
-        const killed = (data.killed || []).length;
-        const msg = killed > 0 
-          ? t('scan_kill_killed').replace('{count}', killed).replace('{pids}', data.killed.join(', '))
-          : t('scan_kill_none');
-        showNotification(msg, 'success', 6000);
-        setTimeout(() => location.reload(), 1200);
-      } else {
-        const msg = t('scan_kill_error').replace('{error}', data.msg || 'Unknown error');
-        showNotification(`⚠️ ${msg}`, 'error', 6000);
-      }
-    } catch (err) {
-      showNotification(`⚠️ ${err.message}`, 'error', 6000);
-    }
-  }
+  // Update status every 2 seconds
+  setInterval(updateStatus, 2000);
 </script>
 {% endblock %}

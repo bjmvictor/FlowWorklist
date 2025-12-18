@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlowWorklist</title>
-    <link rel="icon" type="image/svg+xml" href="/static/brand/logo-mark.svg">
-    <link rel="alternate icon" type="image/png" href="/static/brand/logo-mark.png">
+    <link rel="icon" type="image/svg+xml" href="/static/brand/logo-mark.png">
+    <link rel="alternate icon" type="image/png" href="/static/brand/logo-mark.svg">
     <meta name="theme-color" content="#1e3a8a">
     <script>
       // Configure Tailwind dark mode to use the 'class' strategy (light theme by default)
@@ -103,6 +103,7 @@
           'service_starting': 'Serviço iniciando...', 'service_started': 'Serviço iniciado com sucesso', 'service_start_failed': 'Falha ao iniciar serviço',
           'service_stopping': 'Serviço parando...', 'service_stopped': 'Serviço parado com sucesso', 'service_stop_failed': 'Falha ao parar serviço',
           'service_restarting': 'Serviço reiniciando...', 'service_restarted': 'Serviço reiniciado com sucesso', 'service_restart_failed': 'Falha ao reiniciar serviço',
+          'service_hint_active': 'Serviço ativo', 'service_hint_stopped': 'Serviço parado', 'service_hint_unavailable': 'Serviço indisponível',
           'test_dcm_echo': 'Teste DICOM C-ECHO', 'test_dcm_find': 'Teste DICOM C-FIND', 'test_dcm_worklist': 'Teste de Resposta da Worklist',
           'desc_echo': 'Teste a associação DICOM e a resposta do servidor.', 'desc_find': 'Pesquise itens da worklist no banco de dados.', 'desc_worklist': 'Teste resposta DICOM C-FIND worklist com dados de pacientes reais.',
           'desc_db_conn': 'Teste a conectividade do banco de dados', 'desc_status': 'Verifique se o serviço está acessível e respondendo.',
@@ -138,7 +139,7 @@
           'config_error': 'Erro de Configuração', 'config_missing': 'Arquivo config.json não encontrado',
           'config_invalid': 'Configuração inválida ou incompleta', 'config_check_msg': 'Por favor, verifique suas configurações em config.json',
           'config_json_invalid': 'JSON inválido em config.json',
-          'config_view': 'Ver Configuração'
+          'config_view': 'Ver Configuración',
         },
         en: {
           'home': 'Home', 'config': 'Config', 'logs': 'Logs', 'tests': 'Tests', 'plugins': 'Plugins',
@@ -148,6 +149,7 @@
           'service_starting': 'Service starting...', 'service_started': 'Service started successfully', 'service_start_failed': 'Failed to start service',
           'service_stopping': 'Service stopping...', 'service_stopped': 'Service stopped successfully', 'service_stop_failed': 'Failed to stop service',
           'service_restarting': 'Service restarting...', 'service_restarted': 'Service restarted successfully', 'service_restart_failed': 'Failed to restart service',
+          'service_hint_active': 'Service running', 'service_hint_stopped': 'Service stopped', 'service_hint_unavailable': 'Service unavailable',
           'test_dcm_echo': 'DICOM C-ECHO Test', 'test_dcm_find': 'DICOM C-FIND Test', 'test_dcm_worklist': 'Worklist Response Test',
           'desc_echo': 'Test the DICOM association and echo response from the server.', 'desc_find': 'Search for worklist items in the DICOM database.', 'desc_worklist': 'Test DICOM C-FIND worklist response with actual patient data.',
           'desc_db_conn': 'Test database connectivity', 'desc_status': 'Check if the service is accessible and responding.',
@@ -197,6 +199,7 @@
           'service_starting': 'Service en cours de démarrage...', 'service_started': 'Service démarré avec succès', 'service_start_failed': 'Échec du démarrage du service',
           'service_stopping': 'Service en cours d\'arrêt...', 'service_stopped': 'Service arrêté avec succès', 'service_stop_failed': 'Échec de l\'arrêt du service',
           'service_restarting': 'Service en cours de redémarrage...', 'service_restarted': 'Service redémarré avec succès', 'service_restart_failed': 'Échec du redémarrage du service',
+          'service_hint_active': 'Service actif', 'service_hint_stopped': 'Service arrêté', 'service_hint_unavailable': 'Service indisponible',
           'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND',
           'desc_echo': 'Testez l\'association DICOM et la réponse d\'écho du serveur.', 'desc_find': 'Recherchez des éléments de la liste de travail dans la base de données DICOM.',
           'desc_db_conn': 'Testez la connectivité de la base de données', 'desc_status': 'Vérifiez si le service est accessible et répond.',
@@ -218,6 +221,7 @@
           'sql_col17_hint': '(Schéma de codage)',
           'error_missing_module': 'Erreur: Module introuvable',
           'test_database': 'Test de base de données', 'test_status': 'Test de statut', 'test_console': 'Console de test',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'plugins_desc': 'Installez ou supprimez des plugins optionnels qui étendent les fonctionnalités (ex: drivers de base de données). Type de base de données actuel:',
           'module': 'Module', 'package': 'Paquet', 'install': 'Installer', 'uninstall': 'Désinstaller',
           'installed': 'Installé', 'not_installed': 'Non installé', 'current': 'actuel', 'console_ready': '$ Prêt pour les tests...',
@@ -227,88 +231,6 @@
           'scan_kill_btn': 'Effacer les processus orphelins', 'scan_kill_desc': 'Arrêter tous les processus de service en cours d\'exécution',
           'scan_kill_tooltip': 'Menu de service', 'service_menu_tooltip': 'Menu d\'actions du service',
           'scan_kill_confirm_title': 'Confirmer le nettoyage des processus',
-          'scan_kill_confirm_msg': 'Cela arrêtera tous les processus de service DICOM en cours d\'exécution. Voulez-vous continuer?',
-          'scan_kill_scanning': 'Analyse des processus en cours d\'exécution...', 'scan_kill_none': 'Aucun processus de service en cours d\'exécution trouvé.',
-          'scan_kill_killed': 'Arrêt de {count} processus: {pids}', 'scan_kill_error': 'Erreur lors du nettoyage des processus: {error}',
-          'config_error': 'Erreur de Configuration', 'config_missing': 'Fichier config.json non trouvé',
-          'config_invalid': 'Configuration invalide ou incomplète', 'config_check_msg': 'Veuillez vérifier votre configuration dans config.json',
-          'config_json_invalid': 'JSON invalide dans config.json',
-          'config_view': 'Afficher la Configuration'
-          'install_pynetdicom_plugin': 'Installer le plugin pynetdicom',
-          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': 'Notifications', 'title_clear_history': 'Effacer l\'historique', 'title_install_db_driver': 'Installer le driver DB en fonction de config.json'
-        },
-        es: {
-          'home': 'Inicio', 'config': 'Configuración', 'logs': 'Registros', 'tests': 'Pruebas', 'plugins': 'Complementos',
-          'start': 'Iniciar', 'stop': 'Detener', 'restart': 'Reiniciar', 'recent_logs': 'Registros Recientes', 'back': 'Atrás',
-          'save': 'Guardar', 'clear': 'Limpiar', 'clear_logs': 'Limpiar registros', 'no_logs': 'Sin registros aún', 'language': 'Idioma',
-          'theme': 'Tema', 'status': 'Estado', 'service_status': 'Estado del Servicio', 'service_label': 'Servicio',
-          'service_starting': 'Iniciando servicio...', 'service_started': 'Servicio iniciado exitosamente', 'service_start_failed': 'Falló al iniciar el servicio',
-          'service_stopping': 'Deteniendo servicio...', 'service_stopped': 'Servicio detenido exitosamente', 'service_stop_failed': 'Falló al detener el servicio',
-          'service_restarting': 'Reiniciando servicio...', 'service_restarted': 'Servicio reiniciado exitosamente', 'service_restart_failed': 'Falló al reiniciar el servicio',
-          'test_dcm_echo': 'Prueba DICOM C-ECHO', 'test_dcm_find': 'Prueba DICOM C-FIND', 'test_dcm_worklist': 'Prueba de Respuesta de Worklist',
-          'desc_echo': 'Pruebe la asociación DICOM y la respuesta de eco del servidor.', 'desc_find': 'Busque elementos de la lista de trabajo en la base de datos DICOM.', 'desc_worklist': 'Pruebe la respuesta DICOM C-FIND worklist con datos reales de pacientes.',
-          'desc_db_conn': 'Pruebe la conectividad de la base de datos', 'desc_status': 'Verifique si el servicio es accesible y responde.',
-          'check_availability': 'Verificar disponibilidad', 'test_connection': 'Prueba de conexión', 'test_worklist': 'Respuesta de Worklist', 'install_db_driver': 'Instalar controlador de base de datos', 'install_pynetdicom': 'Instalar plugin pynetdicom', 'install_pynetdicom': 'Instalar plugin pynetdicom',
-          'running_test': 'Ejecutando prueba...', 'test_passed': 'Prueba aprobada', 'test_failed': 'Falló la prueba', 'output': 'Salida', 'copy': 'Copiar',
-          'running': 'Ejecutándose', 'stopped': 'Detenido', 'notifications': 'Notificaciones', 'no_notifications': 'Sin notificaciones',
-          'server_settings': 'CONFIGURACIÓN DEL SERVIDOR', 'aet_title': 'Título AE', 'aet_title_full': 'Título DICOM Application Entity',
-          'listen_all_interfaces': 'Escuchar en todas las interfaces', 'host': 'Host/IP', 'port': 'Puerto', 'server_port_full': 'Puerto del servidor DICOM',
-          'client_aet': 'AE del cliente', 'client_aet_title_full': 'Título AE del cliente esperado', 'database_settings': 'CONFIGURACIÓN DE LA BASE DE DATOS',
-          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PUERTO/BD (ej.: 192.168.1.3:1521/PRD)',
-          'database_user': 'Usuario', 'database_password': 'Contraseña', 'database_query': 'Consulta', 'sql_hint': 'Consulta SQL que retorna los elementos de Worklist',
-          'sql_guide_title': 'Guía de columnas esperadas por la lista de trabajo', 'sql_guide_warning': '⚠️ La consulta debe retornar EXACTAMENTE 17 columnas en este orden:',
-          'sql_guide_link': 'Ver guía completa con ejemplos SQL',
-          'sql_col1_hint': '(Nombre completo del paciente)', 'sql_col2_hint': '(Identificador único)',
-          'sql_col5_hint': '(Descripción del examen)', 'sql_col6_hint': '(Número de pedido)',
-          'sql_col9_hint': '(Nombre completo del médico)', 'sql_col12_hint': '(Tipo de atención)',
-          'sql_col13_hint': '(ID de atención)', 'sql_col14_hint': '(Lugar del examen)',
-          'sql_col15_hint': '(Código del procedimiento)', 'sql_col16_hint': '(Significado del código)',
-          'sql_col17_hint': '(Esquema de codificación)',
-          'error_missing_module': 'Error: Módulo no encontrado',
-          'test_database': 'Prueba de base de datos', 'test_status': 'Prueba de estado', 'test_console': 'Consola de prueba',
-          'plugins_desc': 'Instale o elimine complementos opcionales que amplíen la funcionalidad (ej: drivers de base de datos). Tipo de base de datos actual:',
-          'module': 'Módulo', 'package': 'Paquete', 'install': 'Instalar', 'uninstall': 'Desinstalar',
-          'installed': 'Instalado', 'not_installed': 'No instalado', 'current': 'actual',
-          'console_ready': '$ Listo para pruebas...',
-          'test_success': 'ÉXITO', 'test_failed': 'FALLÓ', 'test_error': 'ERROR',
-          'scan_kill_btn': 'Limpiar procesos huérfanos', 'scan_kill_desc': 'Terminar todos los procesos de servicio en ejecución',
-          'scan_kill_tooltip': 'Menú de servicio', 'service_menu_tooltip': 'Menú de acciones del servicio',
-          'scan_kill_confirm_title': 'Confirmar limpieza de procesos',
-          'scan_kill_confirm_msg': 'Esto terminará todos los procesos de servicio DICOM en ejecución. ¿Desea continuar?',
-          'scan_kill_scanning': 'Buscando procesos en ejecución...', 'scan_kill_none': 'No se encontraron procesos de servicio en ejecución.',
-          'scan_kill_killed': 'Se eliminaron {count} proceso(s): {pids}', 'scan_kill_error': 'Error al limpiar procesos: {error}',
-          'config_error': 'Error de Configuración', 'config_missing': 'Archivo config.json no encontrado',
-          'config_invalid': 'Configuración inválida o incompleta', 'config_check_msg': 'Por favor, verifique su configuración en config.json',
-          'config_json_invalid': 'JSON inválido en config.json',
-          'config_view': 'Ver Configuración'
-          'config_saved': '¡Configuración guardada con éxito!',
-          'config_save_error': 'Error al guardar la configuración',
-          'install_pynetdicom_plugin': 'Instalar plugin pynetdicom',
-          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': 'Notificaciones', 'title_clear_history': 'Borrar historial', 'title_install_db_driver': 'Instalar controlador de base de datos basado en config.json'
-        },
-        zh: {
-          'home': '主页', 'config': '配置', 'logs': '日志', 'tests': '测试', 'plugins': '插件',
-          'start': '启动', 'stop': '停止', 'restart': '重新启动', 'recent_logs': '最近的日志', 'back': '返回',
-          'save': '保存', 'clear': '清除', 'clear_logs': '清除日志', 'no_logs': '未找到日志', 'language': '语言',
-          'theme': '主题', 'status': '状态', 'service_status': '服务状态', 'service_label': '服务',
-          'service_starting': '服务启动中...', 'service_started': '服务成功启动', 'service_start_failed': '服务启动失败',
-          'service_stopping': '服务停止中...', 'service_stopped': '服务成功停止', 'service_stop_failed': '服务停止失败',
-          'service_restarting': '服务重启中...', 'service_restarted': '服务成功重启', 'service_restart_failed': '服务重启失败',
-          'test_dcm_echo': 'DICOM C-ECHO测试', 'test_dcm_find': 'DICOM C-FIND测试', 'test_dcm_worklist': '工作列表响应测试',
-          'desc_echo': '测试DICOM关联和服务器的回显响应。', 'desc_find': '在DICOM数据库中搜索工作列表项。', 'desc_worklist': '使用实际患者数据测试DICOM C-FIND worklist响应。',
-          'desc_db_conn': '测试数据库连接性', 'desc_status': '检查服务是否可访问且响应。',
-          'check_availability': '检查可用性', 'test_connection': '测试接绝', 'test_worklist': 'Worklist应答', 'install_db_driver': '安装数据库驱动程序', 'install_pynetdicom': '安装pynetdicom插件',
-          'running_test': '测试运行中...', 'test_passed': '测试通过', 'test_failed': '测试失败', 'output': '输出', 'copy': '复制',
-          'running': '运行中', 'stopped': '已停止', 'notifications': '通知', 'no_notifications': '无通知',
-          'server_settings': '服务器设置', 'aet_title': '应用实体标题', 'aet_title_full': 'DICOM应用实体标题',
-          'listen_all_interfaces': '监听所有接口', 'host': '主机/IP', 'port': '端口', 'server_port_full': 'DICOM服务器端口',
-          'client_aet': '客户端AE', 'client_aet_title_full': '预期的客户端应用实体标题', 'database_settings': '数据库设置',
-          'database_type': '类型', 'database_dsn': 'DSN', 'dsn_hint': '格式: IP:端口/数据库 (例: 192.168.1.3:1521/PRD)',
-          'database_user': '用户', 'database_password': '密码', 'database_query': '查询', 'sql_hint': '返回工作列表项的SQL查询',
-          'sql_guide_title': '工作列表预期列指南', 'sql_guide_warning': '⚠️ 查询必须按此顺序返回确切的17列：',
-          'sql_guide_link': '查看带有SQL示例的完整指南',
           'sql_col1_hint': '(患者全名)', 'sql_col2_hint': '(唯一标识符)',
           'sql_col5_hint': '(检查描述)', 'sql_col6_hint': '(请求编号)',
           'sql_col9_hint': '(医生全名)', 'sql_col12_hint': '(就诊类型)',
@@ -331,7 +253,7 @@
           'config_error': '配置错误', 'config_missing': '未找到 config.json 文件',
           'config_invalid': '配置无效或不完整', 'config_check_msg': '请检查 config.json 中的配置',
           'config_json_invalid': 'config.json 中的 JSON 无效',
-          'config_view': '查看配置'
+          'config_view': '查看配置',
           'config_saved': '配置保存成功！',
           'config_save_error': '保存配置时出错',
           'install_pynetdicom_plugin': '安装pynetdicom插件',
@@ -346,6 +268,7 @@
           'service_starting': 'Сервис запускается...', 'service_started': 'Сервис успешно запущен', 'service_start_failed': 'Ошибка запуска сервиса',
           'service_stopping': 'Сервис останавливается...', 'service_stopped': 'Сервис успешно остановлен', 'service_stop_failed': 'Ошибка остановки сервиса',
           'service_restarting': 'Сервис перезагружается...', 'service_restarted': 'Сервис успешно перезагружен', 'service_restart_failed': 'Ошибка перезагрузки сервиса',
+          'service_hint_active': 'Сервис работает', 'service_hint_stopped': 'Сервис остановлен', 'service_hint_unavailable': 'Сервис недоступен',
           'test_dcm_echo': 'Тест DICOM C-ECHO', 'test_dcm_find': 'Тест DICOM C-FIND', 'test_dcm_worklist': 'Тест ответа Worklist',
           'desc_echo': 'Протестируйте ассоциацию DICOM и ответ echo сервера.', 'desc_find': 'Поиск элементов рабочего списка в базе данных DICOM.', 'desc_worklist': 'Тестируйте ответ DICOM C-FIND worklist с реальными данными пациентов.',
           'desc_db_conn': 'Протестируйте подключение к базе данных', 'desc_status': 'Проверьте доступность и отзывчивость сервиса.',
@@ -376,7 +299,7 @@
           'config_error': 'Ошибка конфигурации', 'config_missing': 'Файл config.json не найден',
           'config_invalid': 'Конфигурация недействительна или неполна', 'config_check_msg': 'Пожалуйста, проверьте вашу конфигурацию в config.json',
           'config_json_invalid': 'Неверный JSON в config.json',
-          'config_view': 'Просмотр конфигурации'
+          'config_view': 'Просмотр конфигурации',
           'config_saved': 'Конфигурация успешно сохранена!',
           'config_save_error': 'Ошибка при сохранении конфигурации',
           'install_pynetdicom_plugin': 'Установить плагин pynetdicom',
@@ -391,6 +314,7 @@
           'service_starting': 'サービス開始中...', 'service_started': 'サービスが正常に開始しました', 'service_start_failed': 'サービスの開始に失敗しました',
           'service_stopping': 'サービス停止中...', 'service_stopped': 'サービスが正常に停止しました', 'service_stop_failed': 'サービスの停止に失敗しました',
           'service_restarting': 'サービス再起動中...', 'service_restarted': 'サービスが正常に再起動しました', 'service_restart_failed': 'サービスの再起動に失敗しました',
+          'service_hint_active': 'サービス稼働中', 'service_hint_stopped': 'サービス停止中', 'service_hint_unavailable': 'サービス利用不可',
           'test_dcm_echo': 'DICOM C-ECHOテスト', 'test_dcm_find': 'DICOM C-FINDテスト', 'test_dcm_worklist': 'ワークリスト応答テスト',
           'desc_echo': 'DICOM関連付けとサーバーのエコー応答をテストします。', 'desc_find': 'DICOMデータベースでワークリストアイテムを検索します。', 'desc_worklist': '実患者データを使用してDICOM C-FIND worklist応答をテストします。',
           'desc_db_conn': 'データベース接続をテストします', 'desc_status': 'サービスがアクセス可能で応答しているかを確認します。',
@@ -426,7 +350,7 @@
           'config_error': '設定エラー', 'config_missing': 'config.jsonファイルが見つかりません',
           'config_invalid': '設定が無効または不完全です', 'config_check_msg': 'config.jsonの設定を確認してください',
           'config_json_invalid': 'config.jsonのJSONが無効です',
-          'config_view': '設定を表示'
+          'config_view': '設定を表示',
           'config_saved': '設定が正常に保存されました！',
           'config_save_error': '設定の保存中にエラーが発生しました',
           'install_pynetdicom_plugin': 'pynetdicomプラグインをインストール',
@@ -441,6 +365,7 @@
           'service_starting': 'Servizio in avvio...', 'service_started': 'Servizio avviato con successo', 'service_start_failed': 'Errore nell\'avvio del servizio',
           'service_stopping': 'Servizio in arresto...', 'service_stopped': 'Servizio arrestato con successo', 'service_stop_failed': 'Errore nell\'arresto del servizio',
           'service_restarting': 'Servizio in riavvio...', 'service_restarted': 'Servizio riavviato con successo', 'service_restart_failed': 'Errore nel riavvio del servizio',
+          'service_hint_active': 'Servizio attivo', 'service_hint_stopped': 'Servizio fermo', 'service_hint_unavailable': 'Servizio non disponibile',
           'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND', 'test_dcm_worklist': 'Test de réponse Worklist',
           'desc_echo': 'Testare l\'associazione DICOM e la risposta di echo del server.', 'desc_find': 'Ricerca di elementi dell\'elenco di lavoro nel database DICOM.', 'desc_worklist': 'Testare la risposta DICOM C-FIND worklist con dati pazienti reali.',
           'desc_db_conn': 'Testare la connettività del database', 'desc_status': 'Verificare se il servizio è accessibile e risponde.',
@@ -471,7 +396,7 @@
           'config_error': 'Errore di configurazione', 'config_missing': 'File config.json non trovato',
           'config_invalid': 'Configurazione non valida o incompleta', 'config_check_msg': 'Si prega di controllare la configurazione in config.json',
           'config_json_invalid': 'JSON non valido in config.json',
-          'config_view': 'Visualizza configurazione'
+          'config_view': 'Visualizza configurazione',
           'install_pynetdicom_plugin': 'Installa plugin pynetdicom',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'title_notifications': 'Notifiche', 'title_clear_history': 'Cancella cronologia', 'title_install_db_driver': 'Installa driver database basato su config.json',
@@ -485,6 +410,7 @@
           'service_starting': 'Hizmet başlatılıyor...', 'service_started': 'Hizmet başarıyla başlatıldı', 'service_start_failed': 'Hizmet başlatılamadı',
           'service_stopping': 'Hizmet durduruluyor...', 'service_stopped': 'Hizmet başarıyla durduruldu', 'service_stop_failed': 'Hizmet durdurulamadı',
           'service_restarting': 'Hizmet yeniden başlatılıyor...', 'service_restarted': 'Hizmet başarıyla yeniden başlatıldı', 'service_restart_failed': 'Hizmet yeniden başlatılamadı',
+          'service_hint_active': 'Hizmet çalışıyor', 'service_hint_stopped': 'Hizmet durdu', 'service_hint_unavailable': 'Hizmet kullanılamıyor',
           'test_dcm_echo': 'DICOM C-ECHO Testi', 'test_dcm_find': 'DICOM C-FIND Testi', 'test_dcm_worklist': 'Worklist Yanıt Testi',
           'desc_echo': 'DICOM ilişkilendirmesi ve sunucu echo yanıtını test edin.', 'desc_find': 'DICOM veritabanında çalışma listesi öğelerini arayın.', 'desc_worklist': 'Gerçek hasta verileri ile DICOM C-FIND worklist yanıtını test edin.',
           'desc_db_conn': 'Veritabanı bağlantısını test edin', 'desc_status': 'Hizmetin erişilebilir ve yanıt verip vermediğini kontrol edin.',
@@ -515,7 +441,7 @@
           'config_error': 'Yapılandırma Hatası', 'config_missing': 'config.json dosyası bulunamadı',
           'config_invalid': 'Yapılandırma geçersiz veya eksik', 'config_check_msg': 'Lütfen config.json içinde yapılandırmanızı kontrol edin',
           'config_json_invalid': 'config.json içinde geçersiz JSON',
-          'config_view': 'Yapılandırmayı görüntüle'
+          'config_view': 'Yapılandırmayı görüntüle',
           'install_pynetdicom_plugin': 'pynetdicom Eklentisini Yükle',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'title_notifications': 'Bildirimler', 'title_clear_history': 'Geçmişi Temizle', 'title_install_db_driver': 'config.json ̓e Göre Veritabanı Sürücsünü Yükle'
@@ -528,6 +454,7 @@
           'service_starting': 'Nagsisimula ang serbisyo...', 'service_started': 'Matagumpay na nagsimula ang serbisyo', 'service_start_failed': 'Nabigo ang paglunsad ng serbisyo',
           'service_stopping': 'Titigil ang serbisyo...', 'service_stopped': 'Matagumpay na tumitigil ang serbisyo', 'service_stop_failed': 'Nabigo ang paghinto ng serbisyo',
           'service_restarting': 'Nag-restart ang serbisyo...', 'service_restarted': 'Matagumpay na nag-restart ang serbisyo', 'service_restart_failed': 'Nabigo ang pag-restart ng serbisyo',
+          'service_hint_active': 'Nakaandar ang serbisyo', 'service_hint_stopped': 'Huminto ang serbisyo', 'service_hint_unavailable': 'Hindi magamit ang serbisyo',
           'test_dcm_echo': 'DICOM C-ECHO Pagsubok', 'test_dcm_find': 'DICOM C-FIND Pagsubok', 'test_dcm_worklist': 'Pagsubok ng Tugon ng Worklist',
           'desc_echo': 'Subukan ang DICOM association at echo response ng server.', 'desc_find': 'Maghanap ng worklist items sa DICOM database.', 'desc_worklist': 'Subukan ang DICOM C-FIND worklist response gamit ang tunay na patient data.',
           'desc_db_conn': 'Subukan ang database connectivity', 'desc_status': 'Suriin kung ang serbisyo ay accessible at tumutugon.',
@@ -558,7 +485,7 @@
           'config_error': 'Kamalian sa Pagsasaayos', 'config_missing': 'Ang config.json file ay hindi nahanap',
           'config_invalid': 'Ang pagsasaayos ay hindi wasto o hindi kumpleto', 'config_check_msg': 'Mangyaring suriin ang inyong pagsasaayos sa config.json',
           'config_json_invalid': 'Ang JSON sa config.json ay hindi wasto',
-          'config_view': 'Tingnan ang Pagsasaayos'
+          'config_view': 'Tingnan ang Pagsasaayos',
           'install_pynetdicom_plugin': 'I-install ang pynetdicom Plugin',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'title_notifications': 'Mga Notipikasyon', 'title_clear_history': 'Burahin ang kasaysayan', 'title_install_db_driver': 'I-install ang DB Driver base sa config.json'
@@ -746,102 +673,311 @@
         }).join('');
       }
 
+      // Processing indicator and loading bar functions
+      window._activeRequests = 0;
+      // Gate to show loading bar only during user actions
+      window._showLoadingBar = false;
+      
+      function setProcessingIndicator() {
+        const dot = document.getElementById('svc-health-dot');
+        if (!dot) return;
+        
+        if (window._activeRequests > 0) {
+          // Add yellow ring while processing
+          dot.classList.add('ring-4', 'ring-yellow-400', 'animate-pulse');
+        } else {
+          // Remove yellow ring when done
+          dot.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse');
+        }
+      }
+      
+      let _loadingTimer = null;
+
+      function showLoadingBar() {
+        let bar = document.getElementById('loading-bar');
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.id = 'loading-bar';
+          bar.style.cssText = 'position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); z-index: 9999; transition: width 0.25s ease, opacity 0.4s ease;';
+          document.body.appendChild(bar);
+        }
+        // Reset and start smooth progress
+        bar.style.opacity = '1';
+        bar.style.width = '10%';
+        if (_loadingTimer) clearInterval(_loadingTimer);
+        _loadingTimer = setInterval(() => {
+          const current = parseFloat(bar.style.width);
+          const next = Math.min(90, current + Math.random() * 12 + 5);
+          bar.style.width = `${next}%`;
+          if (next >= 90) {
+            clearInterval(_loadingTimer);
+            _loadingTimer = null;
+          }
+        }, 200);
+      }
+      
+      function hideLoadingBar() {
+        const bar = document.getElementById('loading-bar');
+        if (_loadingTimer) {
+          clearInterval(_loadingTimer);
+          _loadingTimer = null;
+        }
+        if (bar) {
+          bar.style.width = '100%';
+          setTimeout(() => {
+            bar.style.opacity = '0';
+            bar.style.transition = 'opacity 0.4s ease';
+            // Fully remove the bar after fade to avoid lingering overlay
+            setTimeout(() => { try { bar.remove(); } catch(e) {} }, 400);
+          }, 150);
+        }
+      }
+
+      // Fetch/XHR interception - GLOBAL
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        window._activeRequests += 1;
+        setProcessingIndicator();
+        if (window._showLoadingBar) {
+          showLoadingBar();
+        }
+        return originalFetch.apply(this, args)
+          .then(response => {
+            window._activeRequests = Math.max(0, window._activeRequests - 1);
+            setProcessingIndicator();
+            if (window._showLoadingBar) {
+              hideLoadingBar();
+            }
+            return response;
+          })
+          .catch(error => {
+            window._activeRequests = Math.max(0, window._activeRequests - 1);
+            setProcessingIndicator();
+            if (window._showLoadingBar) {
+              hideLoadingBar();
+            }
+            try { console.error('fetch error:', error); } catch (e) {}
+            throw error;
+          });
+      };
+      
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(...args) {
+        window._activeRequests += 1;
+        setProcessingIndicator();
+        if (window._showLoadingBar) {
+          showLoadingBar();
+        }
+        return originalOpen.apply(this, args);
+      };
+      
+      const originalSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function(...args) {
+        this.addEventListener('load', () => {
+          window._activeRequests = Math.max(0, window._activeRequests - 1);
+          setProcessingIndicator();
+          if (window._showLoadingBar) {
+            hideLoadingBar();
+          }
+        });
+        this.addEventListener('error', () => {
+          window._activeRequests = Math.max(0, window._activeRequests - 1);
+          setProcessingIndicator();
+          if (window._showLoadingBar) {
+            hideLoadingBar();
+          }
+        });
+        this.addEventListener('abort', () => {
+          window._activeRequests = Math.max(0, window._activeRequests - 1);
+          setProcessingIndicator();
+          if (window._showLoadingBar) {
+            hideLoadingBar();
+          }
+        });
+        return originalSend.apply(this, args);
+      };
+
+      // Service action functions - GLOBALLY AVAILABLE
+      async function executeAction(action) {
+        try {
+          console.info('executeAction', action);
+          // Show loading bar only for user-triggered actions
+          window._showLoadingBar = true;
+          showLoadingBar();
+          if (['start', 'restart'].includes(action)) {
+            window.serviceTransition = action;
+            setTimeout(() => { if (window.serviceTransition === action) window.serviceTransition = null; }, 12000);
+          }
+          const startingMsg = {
+            'start': t('service_starting'),
+            'stop': t('service_stopping'),
+            'restart': t('service_restarting')
+          };
+          showNotification(startingMsg[action] || `Executing ${action}...`, 'info');
+
+          const response = await fetch(`/action/${action}`, { method: 'POST' });
+          const raw = await response.text();
+          let data;
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (e) {
+            console.error('action json parse error', e, raw);
+            data = { ok: false, msg: 'Invalid JSON response', error_detail: raw };
+          }
+
+          if (data.ok) {
+            const successMsg = {
+              'start': t('service_started'),
+              'stop': t('service_stopped'),
+              'restart': t('service_restarted')
+            };
+            showNotification(successMsg[action] || 'OK', 'success', 5000);
+            if (typeof updateStatus === 'function') {
+              setTimeout(updateStatus, 500);
+              setTimeout(updateStatus, 2000);
+            }
+          } else {
+            let errorDetail = data.error_detail || data.msg || raw || 'Erro desconhecido';
+            const errorMsg = {
+              'start': t('service_start_failed'),
+              'stop': t('service_stop_failed'),
+              'restart': t('service_restart_failed')
+            };
+
+            if (data.error_type === 'config_error' || response.status === 400) {
+              const configError = `${t('config_error')}: ${errorDetail}\n${t('config_check_msg')}`;
+              showNotification(configError, 'error', 8000);
+            } else {
+              const typeTag = data.error_type ? `[${data.error_type}] ` : '';
+              const msg = `${errorMsg[action] || 'Erro'}: ${typeTag}${errorDetail}`;
+              showNotification(msg, 'error', 7000);
+            }
+            if (typeof updateStatus === 'function') {
+              setTimeout(updateStatus, 1000);
+            }
+          }
+        } catch (err) {
+          console.error('executeAction error', err);
+          showNotification(`⚠️ ${err.message}`, 'error', 5000);
+          if (typeof updateStatus === 'function') {
+            setTimeout(updateStatus, 1000);
+          }
+        } finally {
+          // Ensure loading bar is hidden and flag reset
+          hideLoadingBar();
+          window._showLoadingBar = false;
+        }
+      }
+
+      function confirmScanAndKill() {
+        const confirmMsg = t('scan_kill_confirm_msg') || 'Isto irá encerrar todos os processos do serviço DICOM em execução. Deseja continuar?';
+        const confirmTitle = t('scan_kill_confirm_title') || 'Confirmar Limpeza de Processos';
+
+        if (confirm(`${confirmTitle}\n\n${confirmMsg}`)) {
+          scanAndKill();
+        }
+      }
+
+      function confirmScanAndKillOthers() {
+        const title = 'Limpar outras instâncias';
+        const msg = 'Isto irá encerrar processos do app/serviço que pertencem a outras instâncias/cópias. Deseja continuar?';
+        if (confirm(`${title}\n\n${msg}`)) {
+          scanAndKillOthers();
+        }
+      }
+
+      async function scanAndKillOthers() {
+        try {
+          window._showLoadingBar = true;
+          showLoadingBar();
+          showNotification('Procurando e encerrando outras instâncias...', 'info');
+          const response = await fetch('/service/scan-kill-others', { method: 'POST' });
+          const raw = await response.text();
+          let data = {};
+          try { data = raw ? JSON.parse(raw) : {}; } catch (e) { console.error('scan-kill-others json parse error', e, raw); }
+          if (data.ok) {
+            const svc = (data.killed && data.killed.service) ? data.killed.service.length : 0;
+            const app = (data.killed && data.killed.app) ? data.killed.app.length : 0;
+            const total = svc + app;
+            const msg = total > 0 ? `Encerradas ${total} tarefa(s) de outras instâncias (service: ${svc}, app: ${app}).` : 'Nenhuma outra instância encontrada.';
+            showNotification(msg, 'success', 6000);
+            if (typeof updateStatus === 'function') {
+              setTimeout(updateStatus, 1200);
+            }
+          } else {
+            const err = (data.errors || []).join('; ') || data.msg || 'Erro desconhecido';
+            showNotification(`Falha ao limpar outras instâncias: ${err}`, 'error', 6000);
+          }
+        } catch (err) {
+          showNotification(`⚠️ ${err.message}`, 'error', 6000);
+        } finally {
+          hideLoadingBar();
+          window._showLoadingBar = false;
+        }
+      }
+
+      async function scanAndKill() {
+        try {
+          window._showLoadingBar = true;
+          showLoadingBar();
+          showNotification(t('scan_kill_scanning'), 'info');
+          const response = await fetch('/service/scan-kill', { method: 'POST' });
+          const raw = await response.text();
+          let data = {};
+          try { data = raw ? JSON.parse(raw) : {}; } catch (e) { console.error('scan-kill json parse error', e, raw); }
+          if (data.ok) {
+            const killed = (data.killed || []).length;
+            const msg = killed > 0
+              ? t('scan_kill_killed').replace('{count}', killed).replace('{pids}', data.killed.join(', '))
+              : t('scan_kill_none');
+            showNotification(msg, 'success', 6000);
+            setTimeout(() => location.reload(), 1200);
+          } else {
+            const msg = t('scan_kill_error').replace('{error}', data.msg || 'Unknown error');
+            showNotification(`⚠️ ${msg}`, 'error', 6000);
+          }
+        } catch (err) {
+          showNotification(`⚠️ ${err.message}`, 'error', 6000);
+        } finally {
+          hideLoadingBar();
+          window._showLoadingBar = false;
+        }
+      }
+
       // Initialize history on page load
       window.addEventListener('DOMContentLoaded', () => {
         setLang(currentLang);
         updateNotificationBadge();
         renderNotificationHistory();
-        
+
+        setupNavLoading();
+
         // Fechar dropdown quando clicar fora
         document.addEventListener('click', (e) => {
           const dropdown = document.getElementById('notification-dropdown');
-          const notifContainer = document.querySelector('[onclick*="toggleNotificationDropdown"]').parentElement;
-          if (!notifContainer.contains(e.target) && dropdown) {
+          const notifTrigger = document.querySelector('[onclick*="toggleNotificationDropdown"]');
+          const notifContainer = notifTrigger ? notifTrigger.parentElement : null;
+          if (dropdown && notifContainer && !notifContainer.contains(e.target)) {
             dropdown.classList.remove('show');
           }
         });
       });
     </script>
   </head>
-  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
-    <!-- Barra de Carregamento Colorida (Progress Bar) -->
-    <div id="global-loading-bar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 z-[9999] origin-left scale-x-0 transition-all duration-300" style="transform: scaleX(0);"></div>
-    <style>
-      @keyframes loading-bar-animation {
-        0% { left: -100%; width: 100%; }
-        50% { left: 100%; width: 100%; }
-        100% { left: 100%; width: 100%; }
-      }
-      @keyframes color-shift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      #global-loading-bar.loading {
-        transform: scaleX(1);
-        animation: color-shift 2s ease-in-out infinite;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
-        background-size: 200% 100%;
-      }
-    </style>
-    <script>
-      const loadingBar = document.getElementById('global-loading-bar');
-      
-      // Show loading bar on request start
-      function showLoadingBar() {
-        loadingBar.classList.add('loading');
-      }
-      
-      // Esconder barra ao concluir
-      function hideLoadingBar() {
-        loadingBar.classList.remove('loading');
-      }
-      
-      // Interceptar fetch
-      const originalFetch = window.fetch;
-      window.fetch = function(...args) {
-        showLoadingBar();
-        return originalFetch.apply(this, args)
-          .then(response => {
-            hideLoadingBar();
-            return response;
-          })
-          .catch(error => {
-            hideLoadingBar();
-            throw error;
-          });
-      };
-      
-      // Interceptar XMLHttpRequest
-      const originalOpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function(...args) {
-        showLoadingBar();
-        return originalOpen.apply(this, args);
-      };
-      
-      const originalSend = XMLHttpRequest.prototype.send;
-      XMLHttpRequest.prototype.send = function(...args) {
-        this.addEventListener('load', hideLoadingBar);
-        this.addEventListener('error', hideLoadingBar);
-        this.addEventListener('abort', hideLoadingBar);
-        return originalSend.apply(this, args);
-      };
-    </script>
-    <!-- Navbar -->
-    <nav class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 shadow-lg">
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+    <nav class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 shadow-lg z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-20">
+        <div class="flex justify-between items-center h-16 md:h-20">
           <!-- Logo/Title -->
           <div class="flex items-center gap-3">
-            <img src="/static/brand/logo-mark.svg" alt="FlowWorklist" class="w-10 h-10">
+            <img src="/static/brand/logo-mark.png" alt="FlowWorklist" class="md:w-10 md:h-10" style="width: 100px; height: auto; margin-right: -15px;">
             <div>
-              <h1 class="text-white font-bold text-xl">FlowWorklist</h1>
+              <h1 class="text-white font-bold text-lg md:text-xl">FlowWorklist</h1>
               <p class="text-blue-100 text-xs">DICOM Worklist Server</p>
             </div>
           </div>
-
           <!-- Navigation Links -->
-          <div class="hidden md:flex items-center gap-8">
+          <div class="hidden md:flex items-center gap-6">
             <a href="/" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2" title="Home">
               <i class="fas fa-home"></i>
               <span data-i18n="home">Home</span>
@@ -863,9 +999,13 @@
               <span data-i18n="plugins">Plugins</span>
             </a>
           </div>
-
           <!-- Right Controls -->
           <div class="flex items-center gap-4">
+            <!-- Service Health Indicator + PID badge -->
+            <div class="flex items-center gap-2">
+              <span id="svc-health-dot" data-color="bg-red-500" class="w-3 h-3 rounded-full bg-red-500 ring-2 ring-transparent" title="Serviço"></span>
+              <span id="svc-pid-badge" class="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-white/20 text-white hidden"></span>
+            </div>
             <!-- Notification Bell -->
             <div class="relative">
               <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" data-i18n-title="title_notifications">
@@ -882,7 +1022,6 @@
                 <div id="notification-history" class="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto" style="max-height: 400px;"></div>
               </div>
             </div>
-
             <!-- Language Selector -->
             <div class="relative group">
               <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2" data-i18n-title="language">
@@ -890,66 +1029,126 @@
                 <span id="langCode">PT</span>
               </button>
               <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto">
-                <button onclick="setLang('pt');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-brazil"></i> Português
-                </button>
-                <button onclick="setLang('en');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-usa"></i> English
-                </button>
-                <button onclick="setLang('fr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-france"></i> Français
-                </button>
-                <button onclick="setLang('es');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-spain"></i> Español
-                </button>
-                <button onclick="setLang('zh');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-china"></i> 中文
-                </button>
-                <button onclick="setLang('ru');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-russia"></i> Русский
-                </button>
-                <button onclick="setLang('ja');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-japan"></i> 日本語
-                </button>
-                <button onclick="setLang('it');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-italy"></i> Italiano
-                </button>
-                <button onclick="setLang('tr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-turkey"></i> Türkçe
-                </button>
-                <button onclick="setLang('fil');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                  <i class="fas fa-flag-philippines"></i> Filipino
-                </button>
+                <button onclick="setLang('pt');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Português</button>
+                <button onclick="setLang('en');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> English</button>
+                <button onclick="setLang('fr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Français</button>
+                <button onclick="setLang('es');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Español</button>
+                <button onclick="setLang('zh');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> 中文</button>
+                <button onclick="setLang('ru');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Русский</button>
+                <button onclick="setLang('ja');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> 日本語</button>
+                <button onclick="setLang('it');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Italiano</button>
+                <button onclick="setLang('tr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Türkçe</button>
+                <button onclick="setLang('fil');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Filipino</button>
               </div>
             </div>
           </div>
         </div>
       </div>
     </nav>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {% block content %}{% endblock %}
     </main>
 
     <script>
-      // Atualizar status com menor atraso
-      setInterval(() => {
-        if (document.location.pathname === '/') {
-          fetch('/status')
-            .then(r => r.json())
-            .then(data => {
-              const statusEl = document.getElementById('service-status');
-              if (statusEl) {
-                // Update text only, keeping icon and classes consistent with server
-                const txt = data.running ? t('running') : t('stopped');
-                const icon = data.running ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
-                statusEl.innerHTML = `${icon} <span data-i18n="${data.running ? 'running' : 'stopped'}">${txt}</span>`;
-                statusEl.className = data.running ? 'text-green-300' : 'text-red-300';
-              }
-            });
+      // Atualizar status do card na home
+      function refreshCardStatus() {
+        if (document.location.pathname !== '/') return;
+        fetch('/status')
+          .then(r => r.json())
+          .then(data => {
+            const statusEl = document.getElementById('service-status');
+            if (statusEl) {
+              const running = !!(data.running || (data.service && data.service.running));
+              const txt = running ? t('running') : t('stopped');
+              const icon = running ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+              statusEl.innerHTML = `${icon} <span data-i18n="${running ? 'running' : 'stopped'}">${txt}</span>`;
+              statusEl.className = running ? 'text-green-300' : 'text-red-300';
+            }
+          });
+      }
+      setInterval(refreshCardStatus, 1500);
+      
+      let lastStableClass = 'w-3 h-3 rounded-full bg-red-500';
+
+      function setupNavLoading() {
+        const navLinks = document.querySelectorAll('nav a[href]');
+        navLinks.forEach(link => {
+          link.addEventListener('click', (e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            if (link.target === '_blank') return;
+            if (link.href === window.location.href) return;
+            try {
+              window._showLoadingBar = true;
+              showLoadingBar();
+            } catch (err) {}
+          });
+        });
+      }
+
+      async function refreshSvcDot() {
+        try {
+          const dot = document.getElementById('svc-health-dot');
+          const pidBadge = document.getElementById('svc-pid-badge');
+          if (!dot) return;
+          const statusRes = await fetch('/status', { cache: 'no-store' });
+          const statusJson = await statusRes.json();
+          const svc = statusJson.service || {};
+          const svcRunning = !!(statusJson.running || svc.running);
+          const pid = statusJson.pid || svc.pid;
+          const runningTitle = t('service_hint_active');
+          const stoppedTitle = t('service_hint_stopped');
+          const unavailableTitle = t('service_hint_unavailable');
+          let cls = 'w-3 h-3 rounded-full ';
+          let title = '';
+          if (svcRunning) {
+            cls += 'bg-green-500';
+            title = runningTitle;
+            dot.dataset.color = 'bg-green-500';
+          } else {
+            cls += 'bg-red-500';
+            title = stoppedTitle;
+            dot.dataset.color = 'bg-red-500';
+          }
+          lastStableClass = cls;
+          dot.className = cls + ' ring-2 ring-transparent';
+          dot.title = title;
+          dot.setAttribute('aria-label', title);
+          setProcessingIndicator();
+
+          if (pidBadge && pid) {
+            pidBadge.textContent = `PID ${pid}`;
+            pidBadge.classList.remove('hidden');
+          } else if (pidBadge) {
+            pidBadge.textContent = '';
+            pidBadge.classList.add('hidden');
+          }
+          console.log('[refreshSvcDot] running=', svcRunning, 'pid=', pid, 'badge=', pidBadge?.textContent);
+        } catch (e) {
+          const dot = document.getElementById('svc-health-dot');
+          const pidBadge = document.getElementById('svc-pid-badge');
+          if (dot) {
+            dot.className = `${lastStableClass} ring-2 ring-transparent`;
+            dot.title = t('service_hint_unavailable');
+            dot.dataset.color = lastStableClass.split(' ').find(c => c.startsWith('bg-')) || 'bg-red-500';
+            setProcessingIndicator();
+          }
+          if (pidBadge) {
+            pidBadge.textContent = '';
+            pidBadge.classList.add('hidden');
+          }
         }
-      }, 1500);
+      }
+
+      // First paint ASAP after DOM ready, then poll
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          refreshSvcDot();
+          setInterval(refreshSvcDot, 2000);
+        });
+      } else {
+        refreshSvcDot();
+        setInterval(refreshSvcDot, 2000);
+      }
     </script>
   </body>
 </html>

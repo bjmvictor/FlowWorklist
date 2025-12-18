@@ -5,3 +5,4 @@ cx_Oracle>=8.0
 psycopg2-binary>=2.9
 PyMySQL>=1.1
 Unidecode>=1.4.0
+psutil>=5.9.0
