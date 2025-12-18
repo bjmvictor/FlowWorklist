@@ -313,6 +313,9 @@ def stopapp():
     try:
         proc = psutil.Process(pid)
         
+        # Get children BEFORE terminating parent (they won't be accessible after)
+        children = proc.children(recursive=True)
+        
         # Terminate gracefully first
         proc.terminate()
         
@@ -328,9 +331,10 @@ def stopapp():
             print(f"[OK] App force-killed (PID {pid})")
         
         # Kill all children too
-        for child in proc.children(recursive=True):
+        for child in children:
             try:
                 child.kill()
+                print(f"[OK] Killed child process (PID {child.pid})")
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
         
