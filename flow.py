@@ -262,12 +262,35 @@ def stopservice():
 
 
 def _is_process_running(pid: int) -> bool:
-    """Check if process with given PID is running."""
+    """Check if process with given PID is running.
+    
+    Uses CIM on Windows (more reliable than tasklist for processes with CREATE_NO_WINDOW).
+    Uses kill(pid, 0) on Unix/Linux.
+    """
     try:
         if os.name == 'nt':
-            out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            return str(pid) in out.stdout
+            # Prefer CIM (PowerShell) - more reliable for processes with hidden windows
+            try:
+                cmd = [
+                    'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+                    f'(Get-CimInstance Win32_Process -Filter "ProcessId={pid}") -ne $null'
+                ]
+                out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                if out.returncode == 0 and out.stdout.strip().lower() == 'true':
+                    return True
+            except Exception:
+                pass
+            
+            # Fallback to tasklist
+            try:
+                out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                return str(pid) in out.stdout
+            except Exception:
+                pass
+            
+            return False
         else:
+            # Unix/Linux: use kill(pid, 0) to check without signal
             os.kill(pid, 0)
             return True
     except Exception:
@@ -283,7 +306,11 @@ def restartservice(config_path: str | None = None):
 
 
 def status():
-    """Show status for both App and Service."""
+    """Show status for both App and Service.
+    
+    Prioritizes SERVICE_STATE.json as source of truth when available,
+    falls back to PID file check.
+    """
     app_status = {
         "running": False,
         "pid": None
@@ -300,17 +327,40 @@ def status():
         "running": False,
         "pid": None
     }
-    if SERVICE_PID.exists():
+    
+    # First check SERVICE_STATE.json (source of truth when available)
+    if SERVICE_STATE.exists():
+        try:
+            state = json.loads(SERVICE_STATE.read_text())
+            if state.get("pid"):
+                service_status["pid"] = state["pid"]
+                # Verify PID is still running
+                if _is_process_running(state["pid"]):
+                    service_status["running"] = True
+                    service_status.update(state)
+                else:
+                    # Process died, clean up state
+                    SERVICE_STATE.unlink(missing_ok=True)
+                    SERVICE_PID.unlink(missing_ok=True)
+        except Exception:
+            pass
+    
+    # Fallback to SERVICE_PID file if SERVICE_STATE not available
+    if not service_status["running"] and SERVICE_PID.exists():
         try:
             pid = int(SERVICE_PID.read_text().strip())
             service_status["pid"] = pid
-            service_status["running"] = _is_process_running(pid)
-            if SERVICE_STATE.exists():
-                try:
-                    data = json.loads(SERVICE_STATE.read_text())
-                    service_status.update(data)
-                except Exception:
-                    pass
+            if _is_process_running(pid):
+                service_status["running"] = True
+                if SERVICE_STATE.exists():
+                    try:
+                        data = json.loads(SERVICE_STATE.read_text())
+                        service_status.update(data)
+                    except Exception:
+                        pass
+            else:
+                # PID is stale, clean up
+                SERVICE_PID.unlink(missing_ok=True)
         except Exception:
             pass
     
