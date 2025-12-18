@@ -29,9 +29,25 @@ Complete guide to FlowWorklist documentation and setup.
    - Customization examples
    - Testing procedures
 
+### 🎨 UI Features & Operations
+
+4. **[DROPDOWN_MENU_IMPLEMENTATION.md](DROPDOWN_MENU_IMPLEMENTATION.md)** - Frontend dropdown menu
+   - UI/UX design pattern
+   - Implementation details
+   - JavaScript integration
+   - Testing and validation
+   - Multilingual support (10 languages)
+
+5. **[SCAN_KILL_FEATURE.md](SCAN_KILL_FEATURE.md)** - Process management
+   - Orphan process detection
+   - Service cleanup functionality
+   - Cross-platform support (Windows/Linux)
+   - API endpoints and integration
+   - Testing procedures
+
 ### 🚢 Deployment & DevOps
 
-4. **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide
+6. **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment guide
    - Windows deployment (NSSM, Task Scheduler)
    - Linux deployment (Systemd)
    - Docker deployment (single, docker-compose)
@@ -39,7 +55,8 @@ Complete guide to FlowWorklist documentation and setup.
    - Network configuration
    - Security best practices
    - Monitoring and troubleshooting
-5. **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Windows Executable Build
+
+7. **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Windows Executable Build
     - Creating standalone .exe files
     - Build automation script
     - Deployment with executables
@@ -49,7 +66,7 @@ Complete guide to FlowWorklist documentation and setup.
 
 ### 📦 Version Control
 
-5. **[GIT_QUICKSTART.md](GIT_QUICKSTART.md)** - Git initialization
+8. **[GIT_QUICKSTART.md](GIT_QUICKSTART.md)** - Git initialization
    - Repository setup
    - Commit and push procedures
    - Branch management
@@ -59,7 +76,7 @@ Complete guide to FlowWorklist documentation and setup.
 
 ### 📋 Project Tracking
 
-6. **[CHANGELOG.md](CHANGELOG.md)** - Version history
+9. **[CHANGELOG.md](CHANGELOG.md)** - Version history
    - v1.0.0 release notes
    - Features and technical details
    - Future roadmap
@@ -67,11 +84,11 @@ Complete guide to FlowWorklist documentation and setup.
 
 ### 🧹 Repository
 
-7. **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - Repository preparation
-   - Changes made during setup
-   - Files cleaned/removed
-   - Git configuration
-   - Pre-deployment checklist
+10. **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - Repository preparation
+    - Changes made during setup
+    - Files cleaned/removed
+    - Git configuration
+    - Pre-deployment checklist
 
 ---
 
@@ -113,7 +130,10 @@ Complete guide to FlowWorklist documentation and setup.
 | README.md | Everyone | 1400+ lines | Complete overview |
 | QUICK_REFERENCE.md | Developers | 300 lines | Quick lookup |
 | COLUMN_MAPPING_GUIDE.md | DBA/DevOps | 200 lines | SQL mapping |
+| DROPDOWN_MENU_IMPLEMENTATION.md | Frontend Devs | 150 lines | UI dropdown feature |
+| SCAN_KILL_FEATURE.md | Full Stack | 100 lines | Process management |
 | DEPLOYMENT.md | DevOps/SysAdmin | 400 lines | Deployment |
+| BUILD_GUIDE.md | DevOps | 200 lines | .exe building |
 | GIT_QUICKSTART.md | Developers | 250 lines | Version control |
 | CHANGELOG.md | Everyone | 150 lines | History & plans |
 | CLEANUP_SUMMARY.md | Project Managers | 250 lines | Setup details |
@@ -188,7 +208,10 @@ Complete guide to FlowWorklist documentation and setup.
 ### I Need...
 - **Quick start** → [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
 - **Database help** → [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md)
+- **UI dropdown feature** → [DROPDOWN_MENU_IMPLEMENTATION.md](DROPDOWN_MENU_IMPLEMENTATION.md)
+- **Process cleanup** → [SCAN_KILL_FEATURE.md](SCAN_KILL_FEATURE.md)
 - **Deployment guide** → [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Build .exe** → [BUILD_GUIDE.md](BUILD_GUIDE.md)
 - **Git help** → [GIT_QUICKSTART.md](GIT_QUICKSTART.md)
 - **History** → [CHANGELOG.md](CHANGELOG.md)
 
@@ -274,12 +297,12 @@ See [README.md](README.md) for comprehensive documentation.
 ## 📈 Version Information
 
 - **Current Version**: 1.0.0
-- **Release Date**: December 16, 2025
+- **Last Updated**: December 18, 2025
 - **Status**: Production Ready
 - **See**: [CHANGELOG.md](CHANGELOG.md) for history and roadmap
 
 ---
 
 **Created**: December 16, 2025  
-**Last Updated**: December 16, 2025  
-**Status**: ✅ Ready for Production
+**Last Updated**: December 18, 2025  
+**Status**: ✅ Ready for Production (Directory reorganized, tests/logs cleaned)

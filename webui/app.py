@@ -124,7 +124,9 @@ def plugins_status():
 def index():
     st = manager.status()
     logs = manager.logs(limit=10)
-    return render_template('index.html', status=st, logs=logs)
+    # Pass only service status to template to match expected keys
+    service_status = (st.get('service') or {})
+    return render_template('index.html', status=service_status, logs=logs)
 
 
 @app.route('/action/<cmd>', methods=['POST'])
@@ -143,7 +145,15 @@ def action(cmd):
 
 @app.route('/status')
 def status():
-    return jsonify(manager.status())
+    # Provide backward-compatible, simplified status payload
+    st = manager.status()
+    svc = st.get('service') or {}
+    return jsonify({
+        'running': bool(svc.get('running')),
+        'pid': svc.get('pid'),
+        'service': svc,
+        'app': st.get('app') or {}
+    })
 
 
 @app.route('/logs')
@@ -284,11 +294,12 @@ def test_status():
     """Test service availability"""
     try:
         st = manager.status()
-        if st['running']:
+        running = bool((st.get('service') or {}).get('running'))
+        if running:
             return jsonify({
                 'ok': True, 
                 'message': 'Service is running',
-                'details': {'pid': st.get('pid'), 'running': st.get('running')}
+                'details': {'pid': (st.get('service') or {}).get('pid'), 'running': running}
             })
         else:
             return jsonify({
@@ -765,6 +776,18 @@ def set_language():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
+
+
+# Utilities to locate and kill stray service processes
+@app.route('/service/scan-kill', methods=['POST'])
+def service_scan_kill():
+    try:
+        res = manager.kill_orphan_services()
+        ok = res.get('ok', False)
+        status = 200 if ok else 500
+        return jsonify(res), status
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': f'Unhandled error: {e}'}), 500
 
 
 if __name__ == '__main__':

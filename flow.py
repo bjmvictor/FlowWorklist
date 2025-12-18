@@ -317,6 +317,103 @@ def status():
     return {"app": app_status, "service": service_status}
 
 
+def _find_service_pids_windows() -> list[int]:
+    """Find PIDs of running service processes on Windows by command line match."""
+    pids: list[int] = []
+    try:
+        # Prefer CIM if available (more reliable than tasklist for command line)
+        cmd = [
+            'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+            'Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*mwl_service.py*" } | Select-Object -ExpandProperty ProcessId'
+        ]
+        out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in out.stdout.splitlines():
+            try:
+                pid = int(line.strip())
+                if pid > 0:
+                    pids.append(pid)
+            except Exception:
+                pass
+        # Fallback to WMIC if CIM returned nothing
+        if not pids:
+            cmd = ['wmic', 'process', 'where', "CommandLine like '%mwl_service.py%'", 'get', 'ProcessId']
+            out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            for tok in out.stdout.replace('\r', '').split():
+                if tok.isdigit():
+                    pids.append(int(tok))
+    except Exception:
+        pass
+    return list(sorted(set(pids)))
+
+
+def _find_service_pids_unix() -> list[int]:
+    pids: list[int] = []
+    try:
+        out = subprocess.run(['sh', '-lc', "ps -eo pid,command | grep -v grep | grep mwl_service.py | awk '{print $1}'"],
+                             check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in out.stdout.splitlines():
+            try:
+                pid = int(line.strip())
+                if pid > 0:
+                    pids.append(pid)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return list(sorted(set(pids)))
+
+
+def find_service_pids() -> list[int]:
+    """Find all candidate service PIDs including from pid file and process list."""
+    pids: set[int] = set()
+    # Add PID from file if running
+    if SERVICE_PID.exists():
+        try:
+            pid = int(SERVICE_PID.read_text().strip())
+            if _is_process_running(pid):
+                pids.add(pid)
+        except Exception:
+            pass
+    # Add by scanning processes
+    scan = _find_service_pids_windows() if os.name == 'nt' else _find_service_pids_unix()
+    for pid in scan:
+        if _is_process_running(pid):
+            pids.add(pid)
+    return list(sorted(pids))
+
+
+def kill_orphan_services():
+    """Locate and kill any running mwl_service.py processes; cleanup pid/lock files.
+
+    Returns a dict with ok, killed, errors.
+    """
+    killed: list[int] = []
+    errors: list[str] = []
+    candidates = find_service_pids()
+    for pid in candidates:
+        try:
+            if os.name == 'nt':
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], check=False,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            else:
+                os.kill(pid, 9)
+            killed.append(pid)
+        except Exception as e:
+            errors.append(f"{pid}: {e}")
+    # Cleanup pid and lock files regardless
+    try:
+        SERVICE_PID.unlink(missing_ok=True)
+    except Exception:
+        pass
+    lock_file = ROOT / "mwl_server.lock"
+    try:
+        lock_file.unlink(missing_ok=True)
+    except Exception:
+        pass
+    ok = len(errors) == 0
+    return {"ok": ok, "killed": killed, "errors": errors}
+
+
 def logs(limit: int = 20):
     """List recent service log files."""
     files = sorted(SERVICE_LOG_DIR.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
