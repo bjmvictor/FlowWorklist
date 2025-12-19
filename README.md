@@ -1,6 +1,19 @@
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue) ![DICOM](https://img.shields.io/badge/DICOM-MWL-green)
 
-# FlowWorklist
+<div style="
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+">
+  <img
+    src="https://github.com/bjmvictor/FlowWorklist/blob/main/webui/static/brand/logo-lockup-white.png?raw=true"
+    style="width: 70%; object-fit: cover;"
+  />
+</div>
+
 
 A lightweight, vendor-neutral **DICOM Modality Worklist (MWL)** server with a user-friendly web interface for management.
 
@@ -480,8 +493,8 @@ The MWLSCP server listens on port 11112 and implements the DICOM Modality Workli
 #### Example using DCMTK: findscu Query
 
 ```bash
-# Query all pending orders
-findscu -aec FlowMWL -aet Client <IP/HOST> 11112
+# Query all pending orders (requires at least one key query)
+findscu -k PatientName="*" -aec FlowMWL -aet Client <IP/HOST> 11112
 
 # Query specific patient
 findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client <IP/HOST> 11112
