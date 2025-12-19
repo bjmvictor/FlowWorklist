@@ -178,7 +178,7 @@ def startapp():
     if existing_by_id:
         pid = existing_by_id[0]
         print(f"App already running for {iid} (PID {pid})")
-        print(f"Use 'flow stopapp' to stop it first.")
+        print(f"Use 'flow stop app' to stop it first.")
         return
     
     lock_data = _read_lock_file(APP_LOCK)
@@ -187,7 +187,7 @@ def startapp():
         if pid and _is_process_alive(pid, 'app.py'):
             print(f"App already running (PID {pid})")
             print(f"Started at: {lock_data.get('timestamp', 'unknown')}")
-            print(f"Use 'flow stopapp' to stop it first.")
+            print(f"Use 'flow stop app' to stop it first.")
             return
     
     app_script = ROOT / "webui" / "app.py"
@@ -240,7 +240,7 @@ def startapp():
     except Exception:
         print(f"[INFO] Could not open browser automatically. Please visit: {url}")
     
-    print("[OK] App is running. Use 'flow stopapp' to stop.")
+    print("[OK] App is running. Use 'flow stop app' to stop.")
 
 
 def stopapp():
@@ -1157,10 +1157,10 @@ if __name__ == "__main__":
     p_restart.add_argument("--config", default=None, help="Path to MWL config file (service only)")
 
     # Backward-compatible commands
-    sub.add_parser("startapp")
-    sub.add_parser("stopapp")
-    sub.add_parser("startall")
-    sub.add_parser("stopall")
+    sub.add_parser("start app")
+    sub.add_parser("stop app")
+    sub.add_parser("start all")
+    sub.add_parser("stop all")
 
     p_startsvc = sub.add_parser("startservice")
     p_startsvc.add_argument("--config", default=None, help="Path to MWL config file")
@@ -1216,13 +1216,13 @@ if __name__ == "__main__":
                 print(res)
 
     # Legacy commands remain supported
-    elif args.cmd == "startapp":
+    elif args.cmd == "start app":
         startapp()
-    elif args.cmd == "stopapp":
+    elif args.cmd == "stop app":
         stopapp()
-    elif args.cmd == "startall":
+    elif args.cmd == "start all":
         startall()
-    elif args.cmd == "stopall":
+    elif args.cmd == "stop all":
         stopall()
     elif args.cmd == "startservice":
         res = startservice(config_path=args.config)

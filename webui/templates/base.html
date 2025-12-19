@@ -7,6 +7,9 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/logo-mark.png') }}">
     <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='brand/logo-mark.svg') }}">
     <meta name="theme-color" content="#1e3a8a">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script>
       // Configure Tailwind dark mode to use the 'class' strategy (light theme by default)
       tailwind = window.tailwind || {};
@@ -1107,7 +1110,6 @@
             <div class="relative group">
               <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
                 <i class="fas fa-ellipsis-v"></i>
-                <span data-i18n="menu">Menu</span>
               </button>
               <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
                 <a href="/plugins" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">

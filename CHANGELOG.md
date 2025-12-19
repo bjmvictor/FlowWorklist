@@ -33,9 +33,9 @@
     - Mostra app e service lado a lado
 
 - ✅ Funções modificadas:
-  - `startapp()` - Com bloqueio de duplicação
+  - `start app()` - Com bloqueio de duplicação
   - `startservice()` - Com bloqueio de duplicação
-  - `stopapp()` - Parada graciosa com psutil
+  - `stop app()` - Parada graciosa com psutil
   - `stopservice()` - Parada graciosa com psutil
   - `status()` - Usa novo sistema de lock
   
@@ -136,9 +136,9 @@ SERVICE_LOCK = ROOT / "service.lock"
 5. `print_status()` - Status formatado
 
 **Funções Modificadas (280+ linhas alteradas):**
-1. `startapp()` - Adicionado bloqueio de duplicação
+1. `start app()` - Adicionado bloqueio de duplicação
 2. `startservice()` - Adicionado bloqueio de duplicação
-3. `stopapp()` - Melhorado com psutil
+3. `stop app()` - Melhorado com psutil
 4. `stopservice()` - Melhorado com psutil
 5. `status()` - Usa novo sistema de lock
 6. `find_service_pids()` - Usa `_is_process_alive()`

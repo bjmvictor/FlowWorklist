@@ -357,12 +357,12 @@ For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_M
 ```powershell
 # Windows (single terminal, Flow CLI)
 .\flow startservice     # MWL DICOM Server
-.\flow startapp         # Management App (UI)
+.\flow start app         # Management App (UI)
 # Then open http://127.0.0.1:5000
 
 # Linux/macOS
 python flow.py startservice
-python flow.py startapp
+python flow.py start app
 ```
 
 ### Production Deployment
