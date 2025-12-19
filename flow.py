@@ -1047,15 +1047,17 @@ def install(add_to_path: bool = False):
             print(f"  python {ROOT}/flow.py install --add-to-path")
     
     print("\nAvailable commands:")
-    print("  flow startapp      - Start management App")
-    print("  flow stopapp       - Stop management App")
-    print("  flow startservice  - Start DICOM MWL service")
-    print("  flow stopservice   - Stop DICOM MWL service")
-    print("  flow startall      - Start App and Service")
-    print("  flow stopall       - Stop App and Service")
-    print("  flow status        - Show status of App and Service")
-    print("  flow logs [--limit N] - List N most recent logs")
-    print("  flow tail <path> [--lines N] - Tail log file")
+    print("  flow start all                   - Start App and Service")
+    print("  flow start app                   - Start management App")
+    print("  flow start service [--config p]  - Start DICOM MWL service")
+    print("  flow stop all                    - Stop App and Service")
+    print("  flow stop app|service            - Stop targets")
+    print("  flow restart all|app|service [--config p] - Restart targets")
+    print("  flow status                      - Show status of App and Service")
+    print("  flow logs [--limit N]            - List N most recent logs")
+    print("  flow tail <path> [--lines N]     - Tail log file")
+    print("  flow install [--add-to-path]     - Generate wrappers")
+    print("  flow uninstall                   - Remove generated wrappers")
 
 
 def uninstall():
