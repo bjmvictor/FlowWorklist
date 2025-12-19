@@ -10,6 +10,72 @@
 
   <!-- Test Grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Database Connection Test -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <i class="fas fa-database text-3xl text-green-500"></i>
+        <h3 class="text-2xl font-bold" data-i18n="test_database">Database Connection</h3>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">
+        <span data-i18n="desc_db_conn">Test database connectivity</span>
+        <span>(</span><span data-i18n="current">current</span>: {{ db_type|upper }})
+      </p>
+      {% if plugin_installed %}
+        <button
+          onclick="runTest('db')"
+          id="btn-db"
+          class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+        >
+          <i class="fas fa-database"></i>
+          <span data-i18n="test_connection">Test Connection</span>
+        </button>
+      {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            onclick="runTest('db')"
+            id="btn-db"
+            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+          >
+            <i class="fas fa-database"></i>
+            <span data-i18n="test_connection">Test Connection</span>
+          </button>
+          <form action="/install-driver" method="POST" onsubmit="return pluginFormSubmit()">
+            <button
+              type="submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+              data-i18n-title="title_install_db_driver"
+            >
+              <i class="fas fa-download"></i>
+              <span data-i18n="install_db_driver">Install DB Driver</span>
+            </button>
+          </form>
+        </div>
+      {% endif %}
+      <div id="result-db" class="mt-4 hidden">
+        <div class="p-4 rounded-lg text-white" id="result-db-box"></div>
+      </div>
+    </div>
+
+    <!-- DICOM C-FIND Worklist Response Test -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <i class="fas fa-list text-3xl text-cyan-500"></i>
+        <h3 class="text-2xl font-bold" data-i18n="test_dcm_worklist">DICOM Worklist Test</h3>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400 mb-6" data-i18n="desc_worklist">Test DICOM C-FIND worklist response with actual patient data.</p>
+      <button
+        onclick="runTest('worklist')"
+        id="btn-worklist"
+        class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+      >
+        <i class="fas fa-list"></i>
+        <span data-i18n="test_worklist">Worklist Response</span>
+      </button>
+      <div id="result-worklist" class="mt-4 hidden">
+        <div class="p-4 rounded-lg text-white" id="result-worklist-box"></div>
+      </div>
+    </div>
+
     <!-- DICOM C-ECHO Test -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
       <div class="flex items-center gap-3 mb-6">
@@ -50,73 +116,8 @@
       </div>
     </div>
 
-    <!-- DICOM C-FIND Worklist Response Test -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-      <div class="flex items-center gap-3 mb-6">
-        <i class="fas fa-list text-3xl text-cyan-500"></i>
-        <h3 class="text-2xl font-bold" data-i18n="test_dcm_worklist">DICOM Worklist Test</h3>
-      </div>
-      <p class="text-gray-600 dark:text-gray-400 mb-6" data-i18n="desc_worklist">Test DICOM C-FIND worklist response with actual patient data.</p>
-      <button 
-        onclick="runTest('worklist')" 
-        id="btn-worklist"
-        class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-      >
-        <i class="fas fa-list"></i>
-        <span data-i18n="test_worklist">Worklist Response</span>
-      </button>
-      <div id="result-worklist" class="mt-4 hidden">
-        <div class="p-4 rounded-lg text-white" id="result-worklist-box"></div>
-      </div>
-    </div>
-
-    <!-- Database Connection Test -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-      <div class="flex items-center gap-3 mb-6">
-        <i class="fas fa-database text-3xl text-green-500"></i>
-        <h3 class="text-2xl font-bold" data-i18n="test_database">Database Connection</h3>
-      </div>
-      <p class="text-gray-600 dark:text-gray-400 mb-6">
-        <span data-i18n="desc_db_conn">Test database connectivity</span>
-        <span>(</span><span data-i18n="current">current</span>: {{ db_type|upper }})
-      </p>
-      {% if plugin_installed %}
-        <button 
-          onclick="runTest('db')" 
-          id="btn-db"
-          class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-        >
-          <i class="fas fa-database"></i>
-          <span data-i18n="test_connection">Test Connection</span>
-        </button>
-      {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button 
-            onclick="runTest('db')" 
-            id="btn-db"
-            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-          >
-            <i class="fas fa-database"></i>
-            <span data-i18n="test_connection">Test Connection</span>
-          </button>
-          <form action="/install-driver" method="POST" onsubmit="return pluginFormSubmit()">
-            <button 
-              type="submit"
-              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-              data-i18n-title="title_install_db_driver"
-            >
-              <i class="fas fa-download"></i>
-              <span data-i18n="install_db_driver">Install DB Driver</span>
-            </button>
-          </form>
-        </div>
-      {% endif %}
-      <div id="result-db" class="mt-4 hidden">
-        <div class="p-4 rounded-lg text-white" id="result-db-box"></div>
-      </div>
-    </div>
-
     <!-- Service Availability Test -->
+     <!--
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
       <div class="flex items-center gap-3 mb-6">
         <i class="fas fa-wifi text-3xl text-purple-500"></i>
@@ -134,7 +135,7 @@
       <div id="result-status" class="mt-4 hidden">
         <div class="p-4 rounded-lg text-white" id="result-status-box"></div>
       </div>
-    </div>
+    </div>-->
   </div>
 
   <!-- Test Output Console -->
@@ -146,8 +147,8 @@
     <div id="test-console" class="bg-black rounded-lg p-4 font-mono text-sm text-green-400 min-h-32 max-h-96 overflow-y-auto border-l-4 border-green-500">
       <div class="text-gray-500" data-i18n="console_ready">$ Ready for tests...</div>
     </div>
-    <button 
-      onclick="clearConsole()" 
+    <button
+      onclick="clearConsole()"
       class="mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition flex items-center gap-2"
     >
       <i class="fas fa-trash"></i>
