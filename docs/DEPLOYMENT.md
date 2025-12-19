@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 # 4. Start management App (Flow CLI)
 python .\flow.py install
-.\flow startapp
+.\flow start app
 # Open http://127.0.0.1:5000
 ```
 

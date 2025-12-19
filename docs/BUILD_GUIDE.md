@@ -8,15 +8,15 @@ This guide explains how to create a standalone Windows executable (.exe) of Flow
 - Virtual environment created and activated
 - Project dependencies installed (`pip install -r requirements.txt`)
 
-> Note (Development): When running from source (no executable), prefer the new Flow CLI for initialization:
+> Note (Development): When running from source (no executable), prefer the Flow CLI for initialization:
 > 
 > ```powershell
 > # Windows PowerShell
 > & .\Scripts\Activate.ps1
 > pip install -r requirements.txt
 > python .\flow.py install
-> .\flow startapp       # UI at http://127.0.0.1:5000
-> .\flow startservice   # DICOM MWL at port 11112
+> .\flow start app       # UI at http://127.0.0.1:5000
+> .\flow start service   # DICOM MWL at port 11112
 > ```
 
 ## 🚀 Build Process
@@ -38,8 +38,6 @@ pyinstaller --name=FlowWorklist ^
   --hidden-import=pynetdicom ^
   --hidden-import=pydicom ^
   --hidden-import=flask ^
-  --hidden-import=oracledb ^
-  --hidden-import=pymysql ^
   --collect-all=pynetdicom ^
   --collect-all=pydicom ^
   --collect-all=flask ^
@@ -55,11 +53,11 @@ pyinstaller --name=FlowWorklist-Service ^
   --add-data="config.json;." ^
   --hidden-import=pynetdicom ^
   --hidden-import=pydicom ^
-  --hidden-import=oracledb ^
-  --hidden-import=pymysql ^
   --collect-all=pynetdicom ^
   --collect-all=pydicom ^
   mwl_service.py
+
+> If your deployment needs a specific database driver inside the executable, add `--hidden-import=<driver>` for it (e.g., `oracledb`, `pymysql`, or `psycopg`). By default, DB drivers are not bundled; install them via Plugins in the web UI when running from source.
 ```
 
 ## 📦 Generated Artifacts

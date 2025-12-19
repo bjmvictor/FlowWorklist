@@ -215,16 +215,16 @@ git branch -d feature/your-feature-name
 & .\Scripts\Activate.ps1
 pip install -r requirements.txt
 python .\flow.py install
-.\flow startapp
-.\flow startservice
+.\flow start app
+.\flow start service
 ```
 
 ```bash
 # Linux/macOS
 source bin/activate
 pip install -r requirements.txt
-python flow.py startapp
-python flow.py startservice
+python flow.py start app
+python flow.py start service
 ```
 
 ## 📚 Documentation Files

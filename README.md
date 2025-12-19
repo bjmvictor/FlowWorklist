@@ -16,6 +16,7 @@ A lightweight, vendor-neutral **DICOM Modality Worklist (MWL)** server with a us
 - Python 3.8+ installed
 - Git installed
 - Database access (Oracle, PostgreSQL, or MySQL)
+  - Install the specific database driver from **Plugins** in the web UI (drivers are optional and not bundled by default)
 
 Pick your platform and run the commands:
 
@@ -27,7 +28,7 @@ python -m venv .
 .\Scripts\Activate.ps1
 pip install -r requirements.txt
 python .\flow.py install
-.\flow startapp
+.\flow start app
 
 ```
 
@@ -39,7 +40,7 @@ python -m venv .
 .\Scripts\activate.bat
 pip install -r requirements.txt
 python flow.py install
-flow startapp
+flow start app
 
 ```
 
@@ -50,7 +51,7 @@ cd FlowWorklist
 python3 -m venv .
 source bin/activate
 pip install -r requirements.txt
-python flow.py startapp
+python flow.py start app
 
 ```
 
@@ -68,20 +69,23 @@ Only after the configuration is valid, start the DICOM service.
 
 ### Start the Service
 - **Web UI**: Click **Start Service**
-- **PowerShell**: `./flow startservice`
-- **CMD**: `flow startservice`
-- **Linux/macOS**: `python flow.py startservice`
+- **PowerShell**: `./flow start service`
+- **CMD**: `flow start service`
+- **Linux/macOS**: `python flow.py start service`
 
 ---
 
 ## 🧰 Useful Commands
 
-- `flow startapp` → Start the dashboard (port 5000)
-- `flow stopapp` → Stop the dashboard
-- `flow startservice` → Start MWL DICOM server (port 11112)
-- `flow stopservice` → Stop DICOM server
-- `flow startall` / `flow stopall` → Start/stop both
+- `flow start all` → Start both app and service
+- `flow start app` → Start the dashboard (port 5000)
+- `flow start service [--config path]` → Start MWL DICOM server (port 11112)
+- `flow stop all` → Stop both
+- `flow stop app` / `flow stop service` → Stop dashboard or service
+- `flow restart all|app|service [--config path]` → Restart targets
 - `flow status` → Show App + Service status
+- `flow install [--add-to-path]` → Generate wrappers; optionally add to PATH (admin for system PATH)
+- `flow uninstall` → Remove generated wrappers from this folder
 
 Optional (Windows, System PATH): run terminal as Administrator then `python flow.py install --add-to-path` to use `flow` from any directory.
 > ⚠️ **Note**: Administrator privileges are required to modify System PATH. If you don't have admin access, you can add the FlowWorklist directory to your User PATH manually through System Environment Variables.
@@ -171,12 +175,14 @@ Dashboard URL: (http://localhost:5000)
 | Command | Purpose |
 |---------|---------|
 | `flow install [--add-to-path]` | Initialize CLI wrappers; optionally add to system PATH |
-| `flow startapp` | Start management dashboard (port 5000) |
-| `flow startservice` | Start DICOM MWL server (port 11112) |
-| `flow startall` | Start both App and Service together (recommended) |
-| `flow stopapp` | Stop management dashboard gracefully |
-| `flow stopservice` | Stop DICOM MWL server |
-| `flow stopall` | Stop both Service and App gracefully (recommended) |
+| `flow uninstall` | Remove generated wrappers from the current folder |
+| `flow start all` | Start both App and Service together (recommended) |
+| `flow start app` | Start management dashboard (port 5000) |
+| `flow start service [--config path]` | Start DICOM MWL server (port 11112) |
+| `flow stop all` | Stop both Service and App gracefully (recommended) |
+| `flow stop app` | Stop management dashboard gracefully |
+| `flow stop service` | Stop DICOM MWL server |
+| `flow restart all|app|service [--config path]` | Restart targets |
 | `flow status` | Show App and Service status |
 
 ### Alternative: Windows Executable

@@ -1058,6 +1058,23 @@ def install(add_to_path: bool = False):
     print("  flow tail <path> [--lines N] - Tail log file")
 
 
+def uninstall():
+    """Remove local wrappers created by install()."""
+    removed = []
+    for fname in ["flow.bat", "flow.ps1"]:
+        p = ROOT / fname
+        if p.exists():
+            try:
+                p.unlink()
+                removed.append(fname)
+            except Exception as e:
+                print(f"Failed to remove {fname}: {e}")
+    if removed:
+        print(f"Removed: {', '.join(removed)}")
+    else:
+        print("No wrappers to remove.")
+
+
 def print_status():
     """Print status in a user-friendly format."""
     st = status()
@@ -1103,6 +1120,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="flow", description="FlowWorklist command line helper")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    # New grouped commands (e.g., flow start all)
+    p_start = sub.add_parser("start")
+    p_start.add_argument("target", choices=["all", "app", "service"], help="What to start")
+    p_start.add_argument("--config", default=None, help="Path to MWL config file (service only)")
+
+    p_stop = sub.add_parser("stop")
+    p_stop.add_argument("target", choices=["all", "app", "service"], help="What to stop")
+
+    p_restart = sub.add_parser("restart")
+    p_restart.add_argument("target", choices=["all", "app", "service"], help="What to restart")
+    p_restart.add_argument("--config", default=None, help="Path to MWL config file (service only)")
+
+    # Backward-compatible commands
     sub.add_parser("startapp")
     sub.add_parser("stopapp")
     sub.add_parser("startall")
@@ -1128,9 +1158,41 @@ if __name__ == "__main__":
     p_install = sub.add_parser("install")
     p_install.add_argument("--add-to-path", action="store_true", help="Add FlowWorklist to system PATH")
 
+    sub.add_parser("uninstall")
+
     args = parser.parse_args()
 
-    if args.cmd == "startapp":
+    # New grouped commands
+    if args.cmd == "start":
+        if args.target == "all":
+            startall()
+        elif args.target == "app":
+            startapp()
+        elif args.target == "service":
+            res = startservice(config_path=args.config)
+            if res is not None:
+                print(res)
+    elif args.cmd == "stop":
+        if args.target == "all":
+            stopall()
+        elif args.target == "app":
+            stopapp()
+        elif args.target == "service":
+            res = stopservice()
+            if res is not None:
+                print(res)
+    elif args.cmd == "restart":
+        if args.target == "all":
+            stopall(); time.sleep(1); startall()
+        elif args.target == "app":
+            stopapp(); time.sleep(1); startapp()
+        elif args.target == "service":
+            res = restartservice(config_path=args.config)
+            if res is not None:
+                print(res)
+
+    # Legacy commands remain supported
+    elif args.cmd == "startapp":
         startapp()
     elif args.cmd == "stopapp":
         stopapp()
@@ -1158,3 +1220,5 @@ if __name__ == "__main__":
         print(tail(args.log, lines=args.lines))
     elif args.cmd == "install":
         install(add_to_path=args.add_to_path)
+    elif args.cmd == "uninstall":
+        uninstall()

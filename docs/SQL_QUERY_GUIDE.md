@@ -142,10 +142,10 @@ Ou execute a query e verifique no terminal quantas colunas aparecem.
 Depois de atualizar a query, reinicie os serviços:
 ```powershell
 # Terminal 1
-python flow.py startservice
+python flow.py start service
 
 # Terminal 2
-python flow.py startapp
+python flow.py start app
 
 # Acesse: http://localhost:5000/tests
 # Clique em "DICOM Worklist Test"

@@ -56,11 +56,11 @@ pip install -r requirements.txt
 ```powershell
 # PowerShell:
 python flow.py install
-.\flow startapp
+.\flow start app
 
 # CMD:
 python flow.py install
-flow startapp
+flow start app
 ```
 
 ### Step 4: Configure Database
@@ -79,10 +79,10 @@ flow startapp
 
 ```powershell
 # PowerShell:
-.\flow startservice
+.\flow start service
 
 # CMD:
-flow startservice
+flow start service
 ```
 
 ---
