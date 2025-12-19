@@ -28,6 +28,7 @@ python -m venv .
 pip install -r requirements.txt
 python .\flow.py install
 .\flow startapp
+
 ```
 
 ### Windows (CMD)
@@ -39,6 +40,7 @@ python -m venv .
 pip install -r requirements.txt
 python flow.py install
 flow startapp
+
 ```
 
 ### Linux/macOS
@@ -49,6 +51,7 @@ python3 -m venv .
 source bin/activate
 pip install -r requirements.txt
 python flow.py startapp
+
 ```
 
 ## ⚙️ Configure Before Starting the Service
