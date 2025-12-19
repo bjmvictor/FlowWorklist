@@ -363,36 +363,44 @@ def plugin_uninstall(name):
 def test_status():
     """Test service availability"""
     try:
-        # Use a timeout to prevent hanging
-        import signal
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Status check timed out")
+        # Use threading timeout for cross-platform support (SIGALRM doesn't exist on Windows)
+        import threading
+        st = [None]
+        error = [None]
         
-        # Set a 5-second timeout for status check
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(5)
-        try:
-            st = manager.status()
-            running = bool((st.get('service') or {}).get('running'))
-            signal.alarm(0)  # Cancel alarm
+        def check_status():
+            try:
+                st[0] = manager.status()
+            except Exception as e:
+                error[0] = e
+        
+        # Run status check in thread with timeout
+        thread = threading.Thread(target=check_status, daemon=True)
+        thread.start()
+        thread.join(timeout=5)  # 5-second timeout
+        
+        if error[0]:
+            raise error[0]
+        
+        if thread.is_alive():
+            # Thread still running after timeout
+            return jsonify({'ok': False, 'message': 'Status check timed out'})
+        
+        if st[0]:
+            running = bool((st[0].get('service') or {}).get('running'))
             if running:
                 return jsonify({
                     'ok': True, 
                     'message': 'Service is running',
-                    'details': {'pid': (st.get('service') or {}).get('pid'), 'running': running}
+                    'details': {'pid': (st[0].get('service') or {}).get('pid'), 'running': running}
                 })
             else:
                 return jsonify({
                     'ok': False,
                     'message': 'Service is not running'
                 })
-        except TimeoutError:
-            signal.alarm(0)  # Cancel alarm
-            return jsonify({
-                'ok': False,
-                'message': 'Service check timed out',
-                'error': 'The service status check took too long to respond'
-            }), 504
+        else:
+            return jsonify({'ok': False, 'message': 'Unable to check service status'})
     except Exception as e:
         return jsonify({
             'ok': False,
