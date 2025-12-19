@@ -99,6 +99,25 @@
         font-size: 12px;
         color: #9ca3af;
       }
+      
+      /* Dropdown chevron rotation */
+      .dropdown-chevron {
+        transition: transform 0.3s ease;
+      }
+      
+      .group:hover .dropdown-chevron {
+        transform: rotate(180deg);
+      }
+      
+      /* Hide scrollbar but keep scroll functionality */
+      .scrollable-hidden::-webkit-scrollbar {
+        display: none;
+      }
+      
+      .scrollable-hidden {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
     </style>
     <script>
       // Complete translation system with multiple languages
@@ -1109,7 +1128,7 @@
             <!-- Dropdown Menu -->
             <div class="relative group">
               <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
-                <i class="fas fa-ellipsis-v"></i>
+                <i class="fas fa-chevron-down dropdown-chevron"></i>
               </button>
               <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
                 <a href="/plugins" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
@@ -1147,7 +1166,7 @@
                 <i class="fas fa-globe"></i>
                 <span id="langCode">PT</span>
               </button>
-              <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto">
+              <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto scrollable-hidden">
                 <button onclick="setLang('pt');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Português</button>
                 <button onclick="setLang('en');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> English</button>
                 <button onclick="setLang('fr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Français</button>
