@@ -1099,6 +1099,8 @@
       }
 
       async function refreshSvcDot() {
+        // Skip status polling while user actions are in progress
+        if (window._suppressStatusPoll || window._showLoadingBar) return;
         try {
           const dot = document.getElementById('svc-health-dot');
           const pidBadge = document.getElementById('svc-pid-badge');
@@ -1135,7 +1137,7 @@
             pidBadge.textContent = '';
             pidBadge.classList.add('hidden');
           }
-          console.log('[refreshSvcDot] running=', svcRunning, 'pid=', pid, 'badge=', pidBadge?.textContent);
+          // Status dot refresh completed silently to avoid console noise
         } catch (e) {
           const dot = document.getElementById('svc-health-dot');
           const pidBadge = document.getElementById('svc-pid-badge');

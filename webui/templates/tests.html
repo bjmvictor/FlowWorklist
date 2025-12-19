@@ -193,6 +193,8 @@
     try {
       // Show user-facing loading bar for test actions
       window._showLoadingBar = true;
+      // Temporarily pause status polling to reduce background fetch contention
+      window._suppressStatusPoll = true;
       if (typeof showLoadingBar === 'function') { showLoadingBar(); }
       const response = await fetch(`/test/${testType}`, {method: 'POST'});
       const data = await response.json();
@@ -235,6 +237,7 @@
       button.disabled = false;
       if (typeof hideLoadingBar === 'function') { hideLoadingBar(); }
       window._showLoadingBar = false;
+      window._suppressStatusPoll = false;
     }
   }
 
