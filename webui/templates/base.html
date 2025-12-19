@@ -791,20 +791,6 @@
       window._activeRequests = 0;
       // Gate to show loading bar only during user actions
       window._showLoadingBar = false;
-      
-      function setProcessingIndicator() {
-        const dot = document.getElementById('svc-health-dot');
-        if (!dot) return;
-        
-        // Only animate if there are active requests
-        if (window._activeRequests > 0) {
-          // Add yellow ring (lighter than pulse - no continuous animation)
-          dot.classList.add('ring-4', 'ring-yellow-400');
-        } else {
-          // Remove ring when done
-          dot.classList.remove('ring-4', 'ring-yellow-400');
-        }
-      }
 
       let _loadingTimer = null;
 
@@ -859,7 +845,6 @@
         return originalFetch.apply(this, args)
           .then(response => {
             window._activeRequests = Math.max(0, window._activeRequests - 1);
-            setProcessingIndicator();
             if (window._showLoadingBar) {
               hideLoadingBar();
             }
@@ -867,7 +852,6 @@
           })
           .catch(error => {
             window._activeRequests = Math.max(0, window._activeRequests - 1);
-            setProcessingIndicator();
             if (window._showLoadingBar) {
               hideLoadingBar();
             }
@@ -886,7 +870,6 @@
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(...args) {
         window._activeRequests += 1;
-        setProcessingIndicator();
         if (window._showLoadingBar) {
           showLoadingBar();
         }
@@ -897,21 +880,18 @@
       XMLHttpRequest.prototype.send = function(...args) {
         this.addEventListener('load', () => {
           window._activeRequests = Math.max(0, window._activeRequests - 1);
-          setProcessingIndicator();
           if (window._showLoadingBar) {
             hideLoadingBar();
           }
         });
         this.addEventListener('error', () => {
           window._activeRequests = Math.max(0, window._activeRequests - 1);
-          setProcessingIndicator();
           if (window._showLoadingBar) {
             hideLoadingBar();
           }
         });
         this.addEventListener('abort', () => {
           window._activeRequests = Math.max(0, window._activeRequests - 1);
-          setProcessingIndicator();
           if (window._showLoadingBar) {
             hideLoadingBar();
           }
@@ -1125,11 +1105,6 @@
           </div>
           <!-- Right Controls -->
           <div class="flex items-center gap-4">
-            <!-- Service Health Indicator + PID badge -->
-            <div class="flex items-center gap-2">
-              <span id="svc-health-dot" data-color="bg-red-500" class="w-3 h-3 rounded-full bg-red-500 ring-2 ring-transparent" title="Serviço"></span>
-              <span id="svc-pid-badge" class="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-white/20 text-white hidden"></span>
-            </div>
             <!-- Notification Bell -->
             <div class="relative">
               <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" data-i18n-title="title_notifications">
@@ -1194,8 +1169,6 @@
           });
       }
       setInterval(refreshCardStatus, 1500);
-      
-      let lastStableClass = 'w-3 h-3 rounded-full bg-red-500';
 
       function setupNavLoading() {
         const navLinks = document.querySelectorAll('nav a[href]');
@@ -1212,72 +1185,7 @@
         });
       }
 
-      async function refreshSvcDot() {
-        // Skip status polling while user actions are in progress
-        if (window._suppressStatusPoll || window._showLoadingBar) return;
-        try {
-          const dot = document.getElementById('svc-health-dot');
-          const pidBadge = document.getElementById('svc-pid-badge');
-          if (!dot) return;
-          const statusRes = await fetch('/status', { cache: 'no-store' });
-          const statusJson = await statusRes.json();
-          const svc = statusJson.service || {};
-          const svcRunning = !!(statusJson.running || svc.running);
-          const pid = statusJson.pid || svc.pid;
-          const runningTitle = t('service_hint_active');
-          const stoppedTitle = t('service_hint_stopped');
-          const unavailableTitle = t('service_hint_unavailable');
-          let cls = 'w-3 h-3 rounded-full ';
-          let title = '';
-          if (svcRunning) {
-            cls += 'bg-green-500';
-            title = runningTitle;
-            dot.dataset.color = 'bg-green-500';
-          } else {
-            cls += 'bg-red-500';
-            title = stoppedTitle;
-            dot.dataset.color = 'bg-red-500';
-          }
-          lastStableClass = cls;
-          dot.className = cls + ' ring-2 ring-transparent';
-          dot.title = title;
-          dot.setAttribute('aria-label', title);
-          setProcessingIndicator();
-
-          if (pidBadge && pid) {
-            pidBadge.textContent = `PID ${pid}`;
-            pidBadge.classList.remove('hidden');
-          } else if (pidBadge) {
-            pidBadge.textContent = '';
-            pidBadge.classList.add('hidden');
-          }
-          // Status dot refresh completed silently to avoid console noise
-        } catch (e) {
-          const dot = document.getElementById('svc-health-dot');
-          const pidBadge = document.getElementById('svc-pid-badge');
-          if (dot) {
-            dot.className = `${lastStableClass} ring-2 ring-transparent`;
-            dot.title = t('service_hint_unavailable');
-            dot.dataset.color = lastStableClass.split(' ').find(c => c.startsWith('bg-')) || 'bg-red-500';
-            setProcessingIndicator();
-          }
-          if (pidBadge) {
-            pidBadge.textContent = '';
-            pidBadge.classList.add('hidden');
-          }
-        }
-      }
-
-      // First paint ASAP after DOM ready, then poll
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-          refreshSvcDot();
-          setInterval(refreshSvcDot, 2000);
-        });
-      } else {
-        refreshSvcDot();
-        setInterval(refreshSvcDot, 2000);
-      }
+      setupNavLoading();
     </script>
   </body>
 </html>

@@ -462,7 +462,8 @@ def test_db():
                         'error': 'cx_Oracle is not installed'
                     })
 
-                conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn)
+                # Set connection timeout to avoid long waits
+                conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn, timeout=10)
                 driver_name = 'cx_Oracle'
                 test_sql = "SELECT 1 FROM dual"
 
@@ -478,7 +479,8 @@ def test_db():
                 host, port, dbname = parse_dsn_ip_port_db(dsn)
                 if not host:
                     return jsonify({'ok': False, 'message': 'Invalid DSN format for PostgreSQL. Expected IP:PORT/DB'})
-                conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=pwd)
+                # Set connection timeout
+                conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=pwd, connect_timeout=10)
                 driver_name = 'psycopg2'
                 test_sql = "SELECT 1"
 
@@ -495,7 +497,8 @@ def test_db():
                 host, port, dbname = parse_dsn_ip_port_db(dsn)
                 if not host:
                     return jsonify({'ok': False, 'message': 'Invalid DSN format for MySQL. Expected IP:PORT/DB'})
-                conn = pymysql.connect(host=host, port=port, user=user, password=pwd, database=dbname)
+                # Set connection timeout
+                conn = pymysql.connect(host=host, port=port, user=user, password=pwd, database=dbname, connect_timeout=10)
                 driver_name = 'PyMySQL'
                 test_sql = "SELECT 1"
 
