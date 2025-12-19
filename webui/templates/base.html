@@ -525,7 +525,7 @@
 
       // Fixed theme: keep light theme by default
 
-      function showNotification(message, type = 'info', duration = 4000) {
+      function showNotification(message, type = 'info', duration = 4000, persist = true) {
         const notification = document.createElement('div');
         notification.className = `notification notification-enter p-4 rounded-lg shadow-lg text-white ${
           type === 'success' ? 'bg-green-500' :
@@ -555,8 +555,10 @@
         
         document.body.appendChild(notification);
         
-        // Add to notification history
-        addNotificationToHistory(message, type);
+        // Add to notification history unless explicitly disabled
+        if (persist) {
+          addNotificationToHistory(message, type);
+        }
         
         setTimeout(() => {
           notification.classList.remove('notification-enter');
@@ -823,7 +825,8 @@
             'stop': t('service_stopping'),
             'restart': t('service_restarting')
           };
-          showNotification(startingMsg[action] || `Executing ${action}...`, 'info');
+          // Ephemeral status for action begin (do not persist in history)
+          showNotification(startingMsg[action] || `Executing ${action}...`, 'info', 3000, false);
 
           const response = await fetch(`/action/${action}`, { method: 'POST' });
           const raw = await response.text();
@@ -841,7 +844,8 @@
               'stop': t('service_stopped'),
               'restart': t('service_restarted')
             };
-            showNotification(successMsg[action] || 'OK', 'success', 5000);
+            // Success notice is ephemeral; keep history clean
+            showNotification(successMsg[action] || 'OK', 'success', 5000, false);
             if (typeof updateStatus === 'function') {
               setTimeout(updateStatus, 500);
               setTimeout(updateStatus, 2000);
