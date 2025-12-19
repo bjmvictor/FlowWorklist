@@ -36,7 +36,7 @@
       </div>
       <div class="flex items-center gap-3">
         {% if p.installed %}
-          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('Uninstall {{ p.label }}?')">
+          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('uninstall_confirm')">
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
               <i class="fas fa-trash"></i>
               <span data-i18n="uninstall">Uninstall</span>
@@ -56,10 +56,12 @@
   </div>
 </div>
 <script>
-  function pluginFormSubmit(confirmMsg) {
+  function pluginFormSubmit(translationKey) {
     try {
-      if (confirmMsg) {
-        const ok = confirm(confirmMsg);
+      if (translationKey) {
+        // translationKey is a key like 'uninstall_confirm', resolve it using the t() function
+        const message = typeof t === 'function' ? t(translationKey) : translationKey;
+        const ok = confirm(message);
         if (!ok) return false;
       }
       window._showLoadingBar = true;

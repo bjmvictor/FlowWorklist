@@ -69,14 +69,19 @@
         border-bottom: 1px solid #e5e7eb;
         cursor: pointer;
         transition: background-color 0.2s;
+        color: #111827;
+      }
+      
+      .dark .notification-item {
+        color: #f3f4f6;
       }
       
       .notification-item:hover {
-        background-color: #f3f4f6;
+        background-color: #e5e7eb;
       }
       
       .dark .notification-item:hover {
-        background-color: #374151;
+        background-color: #4b5563;
       }
       
       .notification-item.unread {
@@ -140,6 +145,8 @@
           'config_invalid': 'Configuração inválida ou incompleta', 'config_check_msg': 'Por favor, verifique suas configurações em config.json',
           'config_json_invalid': 'JSON inválido em config.json',
           'config_view': 'Ver Configuración',
+          'clear_logs_confirm': 'Limpar todos os arquivos de log?',
+          'uninstall_confirm': 'Tem certeza que deseja desinstalar este plugin?',
         },
         en: {
           'home': 'Home', 'config': 'Config', 'logs': 'Logs', 'tests': 'Tests', 'plugins': 'Plugins',
@@ -189,7 +196,59 @@
           'config_error': 'Configuration Error', 'config_missing': 'config.json file not found',
           'config_invalid': 'Invalid or incomplete configuration', 'config_check_msg': 'Please check your configuration in config.json',
           'config_json_invalid': 'Invalid JSON in config.json',
-          'config_view': 'View Configuration'
+          'config_view': 'View Configuration',
+          'clear_logs_confirm': 'Clear all log files?',
+          'uninstall_confirm': 'Are you sure you want to uninstall this plugin?'
+        },
+        es: {
+          'home': 'Inicio', 'config': 'Configuración', 'logs': 'Registros', 'tests': 'Pruebas', 'plugins': 'Complementos',
+          'start': 'Iniciar', 'stop': 'Detener', 'restart': 'Reiniciar', 'recent_logs': 'Registros Recientes', 'back': 'Atrás',
+          'save': 'Guardar', 'clear': 'Borrar', 'clear_logs': 'Borrar Registros', 'no_logs': 'No se encontraron registros', 'language': 'Idioma',
+          'theme': 'Tema', 'status': 'Estado', 'service_status': 'Estado del Servicio', 'service_label': 'Servicio',
+          'service_starting': 'Iniciando servicio...', 'service_started': 'Servicio iniciado correctamente', 'service_start_failed': 'Error al iniciar el servicio',
+          'service_stopping': 'Deteniendo servicio...', 'service_stopped': 'Servicio detenido correctamente', 'service_stop_failed': 'Error al detener el servicio',
+          'service_restarting': 'Reiniciando servicio...', 'service_restarted': 'Servicio reiniciado correctamente', 'service_restart_failed': 'Error al reiniciar el servicio',
+          'service_hint_active': 'Servicio activo', 'service_hint_stopped': 'Servicio detenido', 'service_hint_unavailable': 'Servicio no disponible',
+          'test_dcm_echo': 'Prueba DICOM C-ECHO', 'test_dcm_find': 'Prueba DICOM C-FIND', 'test_dcm_worklist': 'Prueba de Respuesta de Worklist',
+          'desc_echo': 'Prueba la asociación DICOM y la respuesta de echo del servidor.', 'desc_find': 'Busca elementos de la lista de trabajo en la base de datos DICOM.', 'desc_worklist': 'Prueba la respuesta DICOM C-FIND worklist con datos de pacientes reales.',
+          'desc_db_conn': 'Prueba la conectividad de la base de datos', 'desc_status': 'Verifica si el servicio es accesible y responde.',
+          'check_availability': 'Verificar Disponibilidad', 'test_connection': 'Probar Conexión', 'test_worklist': 'Respuesta de Worklist', 'install_db_driver': 'Instalar Controlador de BD', 'install_pynetdicom': 'Instalar Complemento pynetdicom',
+          'running_test': 'Ejecutando prueba...', 'test_passed': 'Prueba completada', 'test_failed': 'Prueba fallida', 'output': 'Salida', 'copy': 'Copiar',
+          'running': 'Ejecutándose', 'stopped': 'Detenido', 'notifications': 'Notificaciones', 'no_notifications': 'Sin notificaciones',
+          'server_settings': 'CONFIGURACIÓN DEL SERVIDOR', 'aet_title': 'Título AE', 'aet_title_full': 'Título de Entidad de Aplicación DICOM',
+          'listen_all_interfaces': 'Escuchar en todas las interfaces', 'host': 'Host/IP', 'port': 'Puerto', 'server_port_full': 'Puerto del servidor DICOM',
+          'client_aet': 'AE de Cliente', 'client_aet_title_full': 'Título AE del cliente esperado', 'database_settings': 'CONFIGURACIÓN DE BASE DE DATOS',
+          'database_type': 'Tipo', 'database_dsn': 'DSN', 'dsn_hint': 'Formato: IP:PUERTO/BD (ej: 192.168.1.3:1521/PRD)',
+          'database_user': 'Usuario', 'database_password': 'Contraseña', 'database_query': 'Consulta', 'sql_hint': 'Consulta SQL que devuelve elementos de Worklist',
+          'sql_guide_title': 'Guía de columnas esperadas por Worklist', 'sql_guide_warning': '⚠️ La consulta debe devolver EXACTAMENTE 17 columnas en este orden:',
+          'sql_guide_link': 'Ver guía completa con ejemplos SQL',
+          'sql_col1_hint': '(Nombre completo del paciente)', 'sql_col2_hint': '(Identificador único)',
+          'sql_col5_hint': '(Descripción del examen)', 'sql_col6_hint': '(Número de solicitud)',
+          'sql_col9_hint': '(Nombre completo del médico)', 'sql_col12_hint': '(Tipo de consulta)',
+          'sql_col13_hint': '(ID de consulta)', 'sql_col14_hint': '(Lugar del examen)',
+          'sql_col15_hint': '(Código de procedimiento)', 'sql_col16_hint': '(Significado del código)',
+          'sql_col17_hint': '(Esquema de codificación)',
+          'error_missing_module': 'Error: Módulo no encontrado',
+          'test_database': 'Prueba de Base de Datos', 'test_status': 'Prueba de Estado', 'test_console': 'Consola de Pruebas',
+          'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
+          'plugins_desc': 'Instala o desinstala complementos opcionales que amplían la funcionalidad (ej: controladores de BD). Tipo de BD actual:',
+          'module': 'Módulo', 'package': 'Paquete', 'install': 'Instalar', 'uninstall': 'Desinstalar',
+          'installed': 'Instalado', 'not_installed': 'No instalado', 'current': 'actual', 'console_ready': '$ Listo para pruebas...',
+          'test_success': 'ÉXITO', 'test_failed': 'FALLIDA', 'test_error': 'ERROR',
+          'config_saved': '¡Configuración guardada correctamente!',
+          'config_save_error': 'Error al guardar la configuración',
+          'scan_kill_btn': 'Limpiar procesos huérfanos', 'scan_kill_desc': 'Terminar todos los procesos de servicio en ejecución',
+          'scan_kill_tooltip': 'Menú de servicio', 'service_menu_tooltip': 'Menú de acciones del servicio',
+          'scan_kill_confirm_title': 'Confirmar Limpieza de Procesos',
+          'scan_kill_confirm_msg': 'Esto terminará todos los procesos de servicio DICOM en ejecución. ¿Deseas continuar?',
+          'scan_kill_scanning': 'Escaneando procesos en ejecución...', 'scan_kill_none': 'No se encontraron procesos de servicio en ejecución.',
+          'scan_kill_killed': 'Se terminaron {count} proceso(s): {pids}', 'scan_kill_error': 'Error al limpiar procesos: {error}',
+          'config_error': 'Error de Configuración', 'config_missing': 'Archivo config.json no encontrado',
+          'config_invalid': 'Configuración inválida o incompleta', 'config_check_msg': 'Por favor, verifica tu configuración en config.json',
+          'config_json_invalid': 'JSON inválido en config.json',
+          'config_view': 'Ver Configuración',
+          'clear_logs_confirm': '¿Limpiar todos los archivos de registro?',
+          'uninstall_confirm': '¿Estás seguro de que deseas desinstalar este complemento?',
         },
         fr: {
           'home': 'Accueil', 'config': 'Configuration', 'logs': 'Journaux', 'tests': 'Tests', 'plugins': 'Plugins',
@@ -200,10 +259,10 @@
           'service_stopping': 'Service en cours d\'arrêt...', 'service_stopped': 'Service arrêté avec succès', 'service_stop_failed': 'Échec de l\'arrêt du service',
           'service_restarting': 'Service en cours de redémarrage...', 'service_restarted': 'Service redémarré avec succès', 'service_restart_failed': 'Échec du redémarrage du service',
           'service_hint_active': 'Service actif', 'service_hint_stopped': 'Service arrêté', 'service_hint_unavailable': 'Service indisponible',
-          'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND',
-          'desc_echo': 'Testez l\'association DICOM et la réponse d\'écho du serveur.', 'desc_find': 'Recherchez des éléments de la liste de travail dans la base de données DICOM.',
+          'test_dcm_echo': 'Test DICOM C-ECHO', 'test_dcm_find': 'Test DICOM C-FIND', 'test_dcm_worklist': 'Test de réponse Worklist',
+          'desc_echo': 'Testez l\'association DICOM et la réponse d\'écho du serveur.', 'desc_find': 'Recherchez des éléments de la liste de travail dans la base de données DICOM.', 'desc_worklist': 'Testez la réponse DICOM C-FIND worklist avec les données réelles des patients.',
           'desc_db_conn': 'Testez la connectivité de la base de données', 'desc_status': 'Vérifiez si le service est accessible et répond.',
-          'check_availability': 'Vérifier la disponibilité', 'test_connection': 'Tester la connexion', 'install_db_driver': 'Installer le plugin de base de données', 'install_pynetdicom': 'Installer le plugin pynetdicom',
+          'check_availability': 'Vérifier la disponibilité', 'test_connection': 'Tester la connexion', 'test_worklist': 'Réponse Worklist', 'install_db_driver': 'Installer le plugin de base de données', 'install_pynetdicom': 'Installer le plugin pynetdicom',
           'running_test': 'Test en cours d\'exécution...', 'test_passed': 'Test réussi', 'test_failed': 'Échec du test', 'output': 'Sortie', 'copy': 'Copier',
           'running': 'En cours d\'exécution', 'stopped': 'Arrêté', 'notifications': 'Notifications', 'no_notifications': 'Aucune notification',
           'server_settings': 'PARAMÈTRES DU SERVEUR', 'aet_title': 'Titre AE', 'aet_title_full': 'Titre DICOM Application Entity',
@@ -231,6 +290,40 @@
           'scan_kill_btn': 'Effacer les processus orphelins', 'scan_kill_desc': 'Arrêter tous les processus de service en cours d\'exécution',
           'scan_kill_tooltip': 'Menu de service', 'service_menu_tooltip': 'Menu d\'actions du service',
           'scan_kill_confirm_title': 'Confirmer le nettoyage des processus',
+          'scan_kill_confirm_msg': 'Ceci terminera tous les processus de service DICOM en cours d\'exécution. Voulez-vous continuer?',
+          'scan_kill_scanning': 'Analyse des processus en cours...', 'scan_kill_none': 'Aucun processus de service en cours d\'exécution trouvé.',
+          'scan_kill_killed': 'Arrêté {count} processus: {pids}', 'scan_kill_error': 'Erreur lors du nettoyage des processus: {error}',
+          'config_error': 'Erreur de configuration', 'config_missing': 'Fichier config.json introuvable',
+          'config_invalid': 'Configuration invalide ou incomplète', 'config_check_msg': 'Veuillez vérifier votre configuration dans config.json',
+          'config_json_invalid': 'JSON invalide dans config.json',
+          'config_view': 'Afficher la configuration',
+          'clear_logs_confirm': 'Effacer tous les fichiers journaux?',
+          'uninstall_confirm': 'Êtes-vous sûr de vouloir désinstaller ce plugin?',
+          'install_pynetdicom_plugin': 'Installer le plugin pynetdicom',
+          'title_notifications': 'Notifications', 'title_clear_history': 'Effacer l\'historique', 'title_install_db_driver': 'Installer le pilote DB basé sur config.json'
+        },
+        zh: {
+          'home': '首页', 'config': '配置', 'logs': '日志', 'tests': '测试', 'plugins': '插件',
+          'start': '启动', 'stop': '停止', 'restart': '重启', 'recent_logs': '最近的日志', 'back': '返回',
+          'save': '保存', 'clear': '清除', 'clear_logs': '清除日志', 'no_logs': '未找到日志', 'language': '语言',
+          'theme': '主题', 'status': '状态', 'service_status': '服务状态', 'service_label': '服务',
+          'service_starting': '服务启动中...', 'service_started': '服务启动成功', 'service_start_failed': '服务启动失败',
+          'service_stopping': '服务停止中...', 'service_stopped': '服务停止成功', 'service_stop_failed': '服务停止失败',
+          'service_restarting': '服务重启中...', 'service_restarted': '服务重启成功', 'service_restart_failed': '服务重启失败',
+          'service_hint_active': '服务运行中', 'service_hint_stopped': '服务已停止', 'service_hint_unavailable': '服务不可用',
+          'test_dcm_echo': 'DICOM C-ECHO测试', 'test_dcm_find': 'DICOM C-FIND测试', 'test_dcm_worklist': '工作列表响应测试',
+          'desc_echo': '测试DICOM关联和服务器的回显响应。', 'desc_find': '在DICOM数据库中搜索工作列表项。', 'desc_worklist': '使用真实患者数据测试DICOM C-FIND工作列表响应。',
+          'desc_db_conn': '测试数据库连接', 'desc_status': '检查服务是否可访问并响应。',
+          'check_availability': '检查可用性', 'test_connection': '测试连接', 'test_worklist': '工作列表响应', 'install_db_driver': '安装数据库驱动程序', 'install_pynetdicom': '安装pynetdicom插件',
+          'running_test': '运行测试中...', 'test_passed': '测试通过', 'test_failed': '测试失败', 'output': '输出', 'copy': '复制',
+          'running': '运行中', 'stopped': '已停止', 'notifications': '通知', 'no_notifications': '无通知',
+          'server_settings': '服务器设置', 'aet_title': 'AE标题', 'aet_title_full': 'DICOM应用实体标题',
+          'listen_all_interfaces': '在所有接口上监听', 'host': '主机/IP', 'port': '端口', 'server_port_full': 'DICOM服务器端口',
+          'client_aet': '客户端AE', 'client_aet_title_full': '预期的客户端AE标题', 'database_settings': '数据库设置',
+          'database_type': '类型', 'database_dsn': 'DSN', 'dsn_hint': '格式: IP:PORT/DB (例: 192.168.1.3:1521/PRD)',
+          'database_user': '用户', 'database_password': '密码', 'database_query': '查询', 'sql_hint': '返回工作列表项的SQL查询',
+          'sql_guide_title': '工作列表预期列的指南', 'sql_guide_warning': '⚠️ 查询必须按此顺序返回EXACTLY 17列:',
+          'sql_guide_link': '查看包含SQL示例的完整指南',
           'sql_col1_hint': '(患者全名)', 'sql_col2_hint': '(唯一标识符)',
           'sql_col5_hint': '(检查描述)', 'sql_col6_hint': '(请求编号)',
           'sql_col9_hint': '(医生全名)', 'sql_col12_hint': '(就诊类型)',
@@ -256,6 +349,8 @@
           'config_view': '查看配置',
           'config_saved': '配置保存成功！',
           'config_save_error': '保存配置时出错',
+          'clear_logs_confirm': '清除所有日志文件吗?',
+          'uninstall_confirm': '确定要卸载此插件吗?',
           'install_pynetdicom_plugin': '安装pynetdicom插件',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'title_notifications': '通知', 'title_clear_history': '清除历史', 'title_install_db_driver': '根据 config.json 安装 DB 驱动程序'
@@ -304,7 +399,9 @@
           'config_save_error': 'Ошибка при сохранении конфигурации',
           'install_pynetdicom_plugin': 'Установить плагин pynetdicom',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': 'Уведомления', 'title_clear_history': 'Очистить историю', 'title_install_db_driver': 'Установить драйвер базы данных на основе config.json'
+          'title_notifications': 'Уведомления', 'title_clear_history': 'Очистить историю', 'title_install_db_driver': 'Установить драйвер базы данных на основе config.json',
+          'clear_logs_confirm': 'Очистить все файлы логов?',
+          'uninstall_confirm': 'Вы уверены, что хотите удалить этот плагин?'
         },
         ja: {
           'home': 'ホーム', 'config': '設定', 'logs': 'ログ', 'tests': 'テスト', 'plugins': 'プラグイン',
@@ -355,7 +452,9 @@
           'config_save_error': '設定の保存中にエラーが発生しました',
           'install_pynetdicom_plugin': 'pynetdicomプラグインをインストール',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': '通知', 'title_clear_history': '履歴を消去', 'title_install_db_driver': 'config.json に基づいて DB ドライバーをインストール'
+          'title_notifications': '通知', 'title_clear_history': '履歴を消去', 'title_install_db_driver': 'config.json に基づいて DB ドライバーをインストール',
+          'clear_logs_confirm': 'すべてのログファイルをクリアしますか?',
+          'uninstall_confirm': 'このプラグインをアンインストールしてもよろしいですか?'
         },
         it: {
           'home': 'Home', 'config': 'Configurazione', 'logs': 'Log', 'tests': 'Test', 'plugins': 'Plugin',
@@ -400,7 +499,8 @@
           'install_pynetdicom_plugin': 'Installa plugin pynetdicom',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
           'title_notifications': 'Notifiche', 'title_clear_history': 'Cancella cronologia', 'title_install_db_driver': 'Installa driver database basato su config.json',
-          'title_notifications': 'Notificações', 'title_clear_history': 'Limpar histórico', 'title_install_db_driver': 'Instalar driver de banco baseado em config.json'
+          'clear_logs_confirm': 'Cancellare tutti i file di log?',
+          'uninstall_confirm': 'Sei sicuro di voler disinstallare questo plugin?'
         },
         tr: {
           'home': 'Anasayfa', 'config': 'Yapılandırma', 'logs': 'Günlükler', 'tests': 'Testler', 'plugins': 'Eklentiler',
@@ -444,7 +544,9 @@
           'config_view': 'Yapılandırmayı görüntüle',
           'install_pynetdicom_plugin': 'pynetdicom Eklentisini Yükle',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': 'Bildirimler', 'title_clear_history': 'Geçmişi Temizle', 'title_install_db_driver': 'config.json ̓e Göre Veritabanı Sürücsünü Yükle'
+          'title_notifications': 'Bildirimler', 'title_clear_history': 'Geçmişi Temizle', 'title_install_db_driver': 'config.json ̓e Göre Veritabanı Sürücsünü Yükle',
+          'clear_logs_confirm': 'Tüm günlük dosyalarını temizle?',
+          'uninstall_confirm': 'Bu eklentiyi kaldırmak istediğinizden emin misiniz?'
         },
         fil: {
           'home': 'Tahanan', 'config': 'Pagsasaayos', 'logs': 'Mga Log', 'tests': 'Mga Pagsubok', 'plugins': 'Mga Plugin',
@@ -488,7 +590,9 @@
           'config_view': 'Tingnan ang Pagsasaayos',
           'install_pynetdicom_plugin': 'I-install ang pynetdicom Plugin',
           'db_type_oracle': 'Oracle', 'db_type_postgresql': 'PostgreSQL', 'db_type_mysql': 'MySQL',
-          'title_notifications': 'Mga Notipikasyon', 'title_clear_history': 'Burahin ang kasaysayan', 'title_install_db_driver': 'I-install ang DB Driver base sa config.json'
+          'title_notifications': 'Mga Notipikasyon', 'title_clear_history': 'Burahin ang kasaysayan', 'title_install_db_driver': 'I-install ang DB Driver base sa config.json',
+          'clear_logs_confirm': 'Burahin ang lahat ng log files?',
+          'uninstall_confirm': 'Sigurado ka na gustong i-uninstall ang plugin na ito?'
         }
       };
 

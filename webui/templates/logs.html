@@ -54,7 +54,7 @@
 </div>
 <script>
   function clearLogsSubmit() {
-    const ok = confirm('Clear all log files?');
+    const ok = confirm(t('clear_logs_confirm'));
     if (!ok) return false;
     try {
       window._showLoadingBar = true;
