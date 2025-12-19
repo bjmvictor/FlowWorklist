@@ -9,6 +9,8 @@ import socket
 import sys
 import json
 import importlib.util
+import logging
+from datetime import datetime
 
 # Ensure project root on sys.path before importing local modules
 ROOT = Path(__file__).parent.parent  # Parent of webui/
@@ -69,6 +71,26 @@ def install_db_driver(db_type: str):
     }
     packages = pkg_map.get((db_type or '').lower())
     if not packages:
+    # Setup application logging
+    LOG_DIR = ROOT / "logs"
+    LOG_DIR.mkdir(exist_ok=True)
+    log_file = LOG_DIR / f"app_{datetime.now().strftime('%Y%m%d')}.log"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+    app_logger = logging.getLogger('flowworklist.app')
+
+    def log_action(action, details="", user_ip=None):
+        """Log user actions in the application"""
+        if user_ip is None:
+            user_ip = request.remote_addr if request else "system"
+        app_logger.info(f"[{user_ip}] {action} | {details}")
         return False, f"Unknown DB type: {db_type}"
     _py, pip_exe = _venv_python_and_pip()
     try:
@@ -154,12 +176,14 @@ def _validate_config():
 
 @app.route('/action/<cmd>', methods=['POST'])
 def action(cmd):
+    log_action(f"Service action: {cmd}", f"User requested {cmd} service")
     cfg = str(ROOT / "config.json")
     
     # Validate config before attempting to start
     if cmd in ['start', 'restart']:
         valid, msg = _validate_config()
         if not valid:
+            log_action(f"Service {cmd} failed", f"Config validation error: {msg}")
             return jsonify({
                 'ok': False,
                 'msg': f"Configuration Error: {msg}. Please check config.json",
@@ -170,10 +194,13 @@ def action(cmd):
     try:
         if cmd == 'start':
             r = manager.startservice(config_path=cfg)
+                log_action("Service started", f"Result: {r.get('ok', False)}")
         elif cmd == 'stop':
             r = manager.stopservice()
+                log_action("Service stopped", f"Result: {r.get('ok', False)}")
         elif cmd == 'restart':
             r = manager.restartservice(config_path=cfg)
+                log_action("Service restarted", f"Result: {r.get('ok', False)}")
         else:
             r = {"ok": False, "msg": 'unknown command', "error_type": "unknown_command"}
         
@@ -251,6 +278,7 @@ def view_log():
 @app.route('/config', methods=['GET', 'POST'])
 def config():
     if request.method == 'POST':
+    log_action("Config update", "User updated configuration file")
         # Read current config file to preserve structure
         cfg_path = ROOT / "config.json"
         if cfg_path.exists():
@@ -281,8 +309,10 @@ def config():
         # Save to config.json
         try:
             cfg_path.write_text(json.dumps(config_data, indent=2))
+                log_action("Config saved", f"Successfully saved configuration: server={config_data.get('server', {}).get('aet')}, db_type={config_data.get('database', {}).get('type')}")
             return redirect(url_for('config', notice='config_saved', status='success'))
         except Exception as e:
+                log_action("Config save failed", f"Error: {str(e)}")
             return redirect(url_for('config', notice=f'config_save_error: {str(e)}', status='error'))
     else:
         # Read config.json
@@ -366,6 +396,7 @@ def plugin_uninstall(name):
 @app.route('/test/status', methods=['POST'])
 def test_status():
     """Test service availability"""
+    log_action("Test: Status", "Running service status test")
     try:
         # Use threading timeout for cross-platform support (SIGALRM doesn't exist on Windows)
         import threading
@@ -393,12 +424,14 @@ def test_status():
         if st[0]:
             running = bool((st[0].get('service') or {}).get('running'))
             if running:
+                    log_action("Test: Status passed", f"Service is running (PID: {st[0].get('service', {}).get('pid')})")
                 return jsonify({
                     'ok': True, 
                     'message': 'Service is running',
                     'details': {'pid': (st[0].get('service') or {}).get('pid'), 'running': running}
                 })
             else:
+                    log_action("Test: Status failed", "Service is not running")
                 return jsonify({
                     'ok': False,
                     'message': 'Service is not running'
@@ -416,6 +449,7 @@ def test_status():
 @app.route('/test/db', methods=['POST'])
 def test_db():
     """Test database connectivity"""
+    log_action("Test: Database", "Running database connectivity test")
     try:
         # Read config.json directly
         cfg_path = ROOT / "config.json"
@@ -516,12 +550,14 @@ def test_db():
             cursor.close()
             conn.close()
 
+            log_action("Test: DB passed", f"Connected to {db_type} database using {driver_name}")
             return jsonify({
                 'ok': True,
                 'message': f'Database connection successful using {driver_name}',
                 'details': {'driver': driver_name, 'dsn': dsn, 'user': user, 'type': db_type}
             })
         except Exception as conn_err:
+            log_action("Test: DB failed", f"Connection error: {str(conn_err)}")
             return jsonify({
                 'ok': False,
                 'message': f'Database connection failed: {str(conn_err)}',
@@ -538,11 +574,13 @@ def test_db():
 @app.route('/install-driver', methods=['POST'])
 def install_driver_route():
     """Install the database driver for the current config."""
+    log_action("Plugin: Install driver", "User requested database driver installation")
     try:
         cfg_path = ROOT / "config.json"
         cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
         db_type = cfg.get('database', {}).get('type', 'oracle')
         ok, msg = install_db_driver(db_type)
+        log_action("Plugin: Install driver result", f"Driver={db_type}, Success={ok}, Message={msg}")
         status = 'success' if ok else 'error'
         return redirect(url_for('tests', notice=msg, status=status))
     except Exception as e:
@@ -552,6 +590,7 @@ def install_driver_route():
 @app.route('/logs/clear', methods=['POST'])
 def clear_logs():
     """Clear log files under service_logs/ and logs/ directories."""
+    log_action("Logs: Clear", "User requested to clear all log files")
     removed = []
     errors = []
     for folder in ['service_logs', 'logs']:
@@ -564,6 +603,7 @@ def clear_logs():
                         removed.append(f.name)
                     except Exception as e:
                         errors.append(f"{f.name}: {e}")
+        log_action("Logs: Clear result", f"Removed {len(removed)} files, Errors: {len(errors)}")
     status = 'success' if not errors else 'error'
     msg = 'Logs cleared' if status == 'success' else f"Partial clear; errors: {', '.join(errors)}"
     return redirect(url_for('logs', notice=msg, status=status))
@@ -572,6 +612,7 @@ def clear_logs():
 @app.route('/test/echo', methods=['POST'])
 def test_echo():
     """Test DICOM C-ECHO with fast timeouts (fail fast)."""
+    log_action("Test: DICOM C-ECHO", "Running DICOM C-ECHO test")
     try:
         cfg_path = ROOT / 'config.json'
         cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
@@ -664,6 +705,7 @@ def test_echo():
 @app.route('/test/worklist', methods=['POST'])
 def test_worklist():
     """Test DICOM C-FIND Worklist Response"""
+    log_action("Test: DICOM Worklist", "Running DICOM worklist response test")
     try:
         # Debug: Check sys.path and reload site-packages
         _lib_path = ROOT / 'Lib' / 'site-packages'
@@ -811,6 +853,7 @@ def test_worklist():
 @app.route('/test/find', methods=['POST'])
 def test_find():
     """Test DICOM C-FIND - Query worklist"""
+    log_action("Test: DICOM C-FIND", "Running DICOM C-FIND query test")
     try:
         # Read config.json directly
         cfg_path = ROOT / "config.json"
@@ -918,6 +961,8 @@ def setlang(lang):
 def set_language():
     try:
         data = request.get_json(silent=True) or {}
+    lang = data.get('lang', 'en')
+    log_action("Language changed", f"User changed language to: {lang}")
         lang = (data.get('lang') or '').lower()[:2]
         if not lang:
             return jsonify({'ok': False, 'message': 'Missing lang'}), 400
