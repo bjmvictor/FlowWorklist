@@ -527,40 +527,92 @@ def clear_logs():
 
 @app.route('/test/echo', methods=['POST'])
 def test_echo():
-    """Test DICOM C-ECHO"""
+    """Test DICOM C-ECHO with fast timeouts (fail fast)."""
     try:
         cfg_path = ROOT / 'config.json'
         cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
-        host = cfg.get('server', {}).get('host', '127.0.0.1') or '127.0.0.1'
-        port = cfg.get('server', {}).get('port', 11112) or 11112
-        
+        server_cfg = cfg.get('server', {})
+        host = server_cfg.get('host', '127.0.0.1') or '127.0.0.1'
+        port = server_cfg.get('port', 11112) or 11112
+        remote_aet = server_cfg.get('aet', 'MWLSCP') or 'MWLSCP'
+        client_aet = server_cfg.get('client_aet', 'TEST') or 'TEST'
+
         if host == '0.0.0.0':
             host = '127.0.0.1'
-        
-        # Try to reach the port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
-        result = sock.connect_ex((host, port))
-        sock.close()
-        
-        if result == 0:
-            return jsonify({
-                'ok': True,
-                'message': f'DICOM service is listening on {host}:{port}',
-                'details': {'host': host, 'port': port, 'accessible': True}
-            })
-        else:
-            return jsonify({
-                'ok': False,
-                'message': f'Cannot connect to DICOM service on {host}:{port}',
-                'error': 'Connection refused or timeout'
-            })
+
+        # Prefer a real DICOM C-ECHO via pynetdicom with short timeouts
+        try:
+            import pynetdicom
+            from pynetdicom.sop_class import Verification
+
+            ae = pynetdicom.AE()
+            ae.add_requested_context(Verification)
+            # Fail fast: short timeouts
+            try:
+                ae.acse_timeout = 3
+                ae.network_timeout = 3
+                ae.dimse_timeout = 3
+            except Exception:
+                # Older versions may not expose all timeouts; proceed with defaults
+                pass
+
+            # Try association with provided AETs; support older signature
+            try:
+                assoc = ae.associate(host, port, ae_title=client_aet, remote_ae=remote_aet)
+            except TypeError:
+                assoc = ae.associate(host, port)
+
+            if assoc and assoc.is_established:
+                try:
+                    status = assoc.send_c_echo()
+                    assoc.release()
+                    if status and getattr(status, 'Status', None) == 0x0000:
+                        return jsonify({
+                            'ok': True,
+                            'message': f'C-ECHO (Verification) successful with {remote_aet}',
+                            'details': {'host': host, 'port': port, 'aet': remote_aet}
+                        })
+                    else:
+                        return jsonify({
+                            'ok': False,
+                            'message': 'C-ECHO failed',
+                            'error': f'Status: {getattr(status, "Status", "unknown")}'
+                        })
+                except Exception as e:
+                    try:
+                        assoc.release()
+                    except Exception:
+                        pass
+                    return jsonify({'ok': False, 'message': 'C-ECHO send failed', 'error': str(e)})
+            else:
+                return jsonify({
+                    'ok': False,
+                    'message': 'Cannot establish verification association',
+                    'error': 'Association failed or service not running'
+                })
+        except ImportError:
+            # Fallback: TCP connect check with 2s timeout
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2)
+                result = sock.connect_ex((host, port))
+                sock.close()
+                if result == 0:
+                    return jsonify({
+                        'ok': True,
+                        'message': f'DICOM service is listening on {host}:{port}',
+                        'details': {'host': host, 'port': port, 'accessible': True}
+                    })
+                else:
+                    return jsonify({
+                        'ok': False,
+                        'message': f'Cannot connect to DICOM service on {host}:{port}',
+                        'error': 'Connection refused or timeout'
+                    })
+            except Exception as e:
+                return jsonify({'ok': False, 'message': 'Echo test failed', 'error': str(e)})
     except Exception as e:
-        return jsonify({
-            'ok': False,
-            'message': f'DICOM echo test failed: {str(e)}',
-            'error': str(e)
-        })
+        return jsonify({'ok': False, 'message': f'DICOM echo test failed: {str(e)}', 'error': str(e)})
 
 
 
