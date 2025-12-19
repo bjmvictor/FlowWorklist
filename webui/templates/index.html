@@ -102,36 +102,72 @@
       <i class="fas fa-history text-blue-500"></i>
       <span data-i18n="recent_logs">Recent Logs</span>
     </h3>
-    <div class="space-y-3 max-h-96 overflow-y-auto">
-      {% if logs %}
-        {% for log in logs[:10] %}
+    <div id="logs-container" class="space-y-3 max-h-96 overflow-y-auto">
+      <div class="text-center py-8">
+        <i class="fas fa-spinner text-2xl text-blue-500 animate-spin mb-2"></i>
+        <p class="text-gray-500 dark:text-gray-400">Loading logs...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Load logs asynchronously after page loads
+  async function loadLogsAsync() {
+    try {
+      const response = await fetch('/api/logs?limit=10');
+      const data = await response.json();
+      const container = document.getElementById('logs-container');
+      
+      if (!data.logs || data.logs.length === 0) {
+        container.innerHTML = `
+          <p class="text-gray-500 dark:text-gray-400 text-center py-8">
+            <i class="fas fa-inbox text-2xl mb-2 block"></i>
+            <span data-i18n="no_logs">No logs yet</span>
+          </p>
+        `;
+        return;
+      }
+      
+      let html = '';
+      for (const log of data.logs) {
+        html += `
           <a 
-            href="/logs/view?path={{ log.path|urlencode }}" 
+            href="/logs/view?path=${encodeURIComponent(log.path)}" 
             class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-600 transition border-l-4 border-blue-500"
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <i class="fas fa-file-alt text-gray-500"></i>
                 <div>
-                  <p class="font-semibold">{{ log.name }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+                  <p class="font-semibold">${log.name}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">${log.size} bytes</p>
                 </div>
               </div>
               <i class="fas fa-chevron-right text-gray-400"></i>
             </div>
           </a>
-        {% endfor %}
-      {% else %}
-        <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-          <i class="fas fa-inbox text-2xl mb-2 block"></i>
-          <span data-i18n="no_logs">No logs yet</span>
+        `;
+      }
+      container.innerHTML = html;
+    } catch (err) {
+      const container = document.getElementById('logs-container');
+      container.innerHTML = `
+        <p class="text-red-500 text-center py-8">
+          <i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>
+          Error loading logs
         </p>
-      {% endif %}
-    </div>
-  </div>
-</div>
+      `;
+    }
+  }
 
-<script>
+  // Load logs after page is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadLogsAsync);
+  } else {
+    loadLogsAsync();
+  }
+
   let lastSvcRunning = null;
   let lastSvcPid = null;
   let lastStopNotifiedPid = null;
@@ -176,4 +212,3 @@
   // Update status every 2 seconds
   setInterval(updateStatus, 2000);
 </script>
-{% endblock %}

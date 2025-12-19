@@ -123,10 +123,11 @@ def plugins_status():
 @app.route('/')
 def index():
     st = manager.status()
-    logs = manager.logs(limit=10)
+    # Don't wait for logs on initial page load - load them async
+    # logs = manager.logs(limit=10)
     # Pass only service status to template to match expected keys
     service_status = (st.get('service') or {})
-    return render_template('index.html', status=service_status, logs=logs)
+    return render_template('index.html', status=service_status, logs=[])
 
 
 def _validate_config():
@@ -212,6 +213,17 @@ def status():
         'app': app_status,
         'message': 'Service is running' if svc.get('running') else 'Service is stopped'
     })
+
+
+@app.route('/api/logs')
+def get_logs_api():
+    """Get recent logs as JSON for async loading"""
+    try:
+        limit = request.args.get('limit', default=10, type=int)
+        logs = manager.logs(limit=limit)
+        return jsonify({'logs': logs})
+    except Exception as e:
+        return jsonify({'logs': [], 'error': str(e)}), 500
 
 
 @app.route('/logs')
@@ -351,19 +363,36 @@ def plugin_uninstall(name):
 def test_status():
     """Test service availability"""
     try:
-        st = manager.status()
-        running = bool((st.get('service') or {}).get('running'))
-        if running:
-            return jsonify({
-                'ok': True, 
-                'message': 'Service is running',
-                'details': {'pid': (st.get('service') or {}).get('pid'), 'running': running}
-            })
-        else:
+        # Use a timeout to prevent hanging
+        import signal
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Status check timed out")
+        
+        # Set a 5-second timeout for status check
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(5)
+        try:
+            st = manager.status()
+            running = bool((st.get('service') or {}).get('running'))
+            signal.alarm(0)  # Cancel alarm
+            if running:
+                return jsonify({
+                    'ok': True, 
+                    'message': 'Service is running',
+                    'details': {'pid': (st.get('service') or {}).get('pid'), 'running': running}
+                })
+            else:
+                return jsonify({
+                    'ok': False,
+                    'message': 'Service is not running'
+                })
+        except TimeoutError:
+            signal.alarm(0)  # Cancel alarm
             return jsonify({
                 'ok': False,
-                'message': 'Service is not running'
-            })
+                'message': 'Service check timed out',
+                'error': 'The service status check took too long to respond'
+            }), 504
     except Exception as e:
         return jsonify({
             'ok': False,
