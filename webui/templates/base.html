@@ -682,11 +682,14 @@
         const dot = document.getElementById('svc-health-dot');
         if (!dot) return;
         
-        if (window._activeRequests > 0) {
-          // Add yellow ring while processing
+        // Only add pulse animation if requests are active AND service is running (green dot)
+        const isServiceRunning = dot.classList.contains('bg-green-500');
+        
+        if (window._activeRequests > 0 && isServiceRunning) {
+          // Add yellow ring with pulse while processing (only if service is running)
           dot.classList.add('ring-4', 'ring-yellow-400', 'animate-pulse');
         } else {
-          // Remove yellow ring when done
+          // Remove yellow ring and pulse when done or service stopped
           dot.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse');
         }
       }

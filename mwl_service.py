@@ -774,7 +774,8 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
 def run_mwl_scp():
     worklist_provider = WorklistProvider()
     if not worklist_provider.connect():
-        logging.error("Falha ao conectar ao banco. Servidor MWL não iniciado.")
+        msg = TR.get('db_connect_error', {}).get(LANG, 'Failed to connect to database. MWL Server not started.')
+        logging.error(msg)
         return
 
     ae = AE(ae_title=MWL_AE_TITLE)
