@@ -100,13 +100,42 @@
         color: #9ca3af;
       }
       
+      /* Notification text wrapping and truncation */
+      .notification {
+        max-width: 400px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+      
+      .notification-text {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+      }
+      
+      .notification-item-text {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      
+      .notification-item-text.expanded {
+        -webkit-line-clamp: unset;
+        overflow: visible;
+      }
+      
       /* Dropdown chevron rotation */
       .dropdown-chevron {
         transition: transform 0.3s ease;
       }
       
       .group:hover .dropdown-chevron {
-        transform: rotate(180deg);
+        transform: rotate(90deg);
       }
       
       /* Hide scrollbar but keep scroll functionality */
@@ -678,14 +707,14 @@
           'bg-blue-500'
         }`;
         notification.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-start gap-3">
             <i class="fas ${
               type === 'success' ? 'fa-check-circle' :
               type === 'error' ? 'fa-times-circle' :
               type === 'warning' ? 'fa-exclamation-circle' :
               'fa-info-circle'
-            }"></i>
-            <span>${message}</span>
+            } mt-1"></i>
+            <span class="notification-text flex-1">${message}</span>
           </div>
         `;
         
@@ -808,9 +837,9 @@
           return `
             <div class="notification-item ${!n.read ? 'unread' : ''}">
               <div class="flex items-start gap-3">
-                <i class="fas ${typeIcons[n.type] || typeIcons.info} mt-1"></i>
-                <div class="flex-1">
-                  <p class="text-gray-900 dark:text-white text-sm">${n.message}</p>
+                <i class="fas ${typeIcons[n.type] || typeIcons.info} mt-1 flex-shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                  <p class="notification-item-text text-gray-900 dark:text-white text-sm" onclick="this.classList.toggle('expanded')" title="Clique para expandir">${n.message}</p>
                   <p class="notification-item-time">${n.timestamp}</p>
                 </div>
               </div>
