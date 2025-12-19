@@ -22,34 +22,81 @@
     </div>
   </div>
 
-  <!-- Log Files List -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-    {% if logs %}
-      <div class="divide-y dark:divide-gray-700">
-        {% for log in logs %}
-          <a
-            href="/logs/view?path={{ log.path|urlencode }}"
-            class="block p-6 hover:bg-blue-50 dark:hover:bg-gray-700 transition border-l-4 border-transparent hover:border-blue-500"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <i class="fas fa-scroll text-2xl text-gray-500"></i>
-                <div>
-                  <p class="font-semibold text-lg">{{ log.name }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+  <!-- Two Column Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Service Logs Column -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+      <div class="bg-blue-500 dark:bg-blue-700 px-6 py-4">
+        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fas fa-cogs"></i>
+          <span data-i18n="service_logs">Service Logs</span>
+        </h3>
+      </div>
+      {% if logs.service %}
+        <div class="divide-y dark:divide-gray-700">
+          {% for log in logs.service %}
+            <a
+              href="/logs/view?path={{ log.path|urlencode }}"
+              class="block p-4 hover:bg-blue-50 dark:hover:bg-gray-700 transition border-l-4 border-transparent hover:border-blue-500"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-scroll text-lg text-blue-500"></i>
+                  <div>
+                    <p class="font-semibold">{{ log.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+                  </div>
                 </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
               </div>
-              <i class="fas fa-chevron-right text-gray-400 text-2xl"></i>
-            </div>
-          </a>
-        {% endfor %}
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="p-6 text-center">
+          <i class="fas fa-inbox text-3xl text-gray-400 mb-3 block"></i>
+          <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="no_logs">No logs found</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- App Logs Column -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+      <div class="bg-green-500 dark:bg-green-700 px-6 py-4">
+        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fas fa-desktop"></i>
+          <span data-i18n="app_logs">Application Logs</span>
+        </h3>
       </div>
-    {% else %}
-      <div class="p-8 text-center">
-        <i class="fas fa-inbox text-4xl text-gray-400 mb-4 block"></i>
-        <p class="text-gray-500 dark:text-gray-400" data-i18n="no_logs">No logs found</p>
-      </div>
-    {% endif %}
+      {% if logs.app %}
+        <div class="divide-y dark:divide-gray-700">
+          {% for log in logs.app %}
+            <a
+              href="/logs/view?path={{ log.path|urlencode }}"
+              class="block p-4 hover:bg-green-50 dark:hover:bg-gray-700 transition border-l-4 border-transparent hover:border-green-500"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-scroll text-lg text-green-500"></i>
+                  <div>
+                    <p class="font-semibold">{{ log.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ log.size }} bytes</p>
+                  </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="p-6 text-center">
+          <i class="fas fa-inbox text-3xl text-gray-400 mb-3 block"></i>
+          <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="no_logs">No logs found</p>
+        </div>
+      {% endif %}
+    </div>
+    
   </div>
 </div>
 <script>

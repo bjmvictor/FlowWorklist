@@ -220,18 +220,22 @@ def get_logs_api():
     """Get recent logs as JSON for async loading"""
     try:
         limit = request.args.get('limit', default=10, type=int)
-        logs = manager.logs(limit=limit)
-        return jsonify({'logs': logs})
+        logs_data = manager.logs(limit=limit)
+        # Combine both service and app logs for homepage display
+        all_logs = logs_data.get('service', []) + logs_data.get('app', [])
+        # Sort by mtime (most recent first)
+        all_logs.sort(key=lambda x: x.get('mtime', 0), reverse=True)
+        return jsonify({'logs': all_logs[:limit]})
     except Exception as e:
         return jsonify({'logs': [], 'error': str(e)}), 500
 
 
 @app.route('/logs')
 def logs():
-    logs = manager.logs(limit=50)
+    logs_data = manager.logs(limit=50)
     notice = request.args.get('notice')
     status = request.args.get('status')
-    return render_template('logs.html', logs=logs, notice=notice, status=status)
+    return render_template('logs.html', logs=logs_data, notice=notice, status=status)
 
 
 @app.route('/logs/view')

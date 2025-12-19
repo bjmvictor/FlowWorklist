@@ -898,12 +898,34 @@ def kill_other_instances(target: str = 'both'):
 
 
 def logs(limit: int = 20):
-    """List recent service log files."""
-    files = sorted(SERVICE_LOG_DIR.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
-    out = []
-    for p in files[:limit]:
-        out.append({"name": p.name, "path": str(p), "size": p.stat().st_size, "mtime": p.stat().st_mtime})
-    return out
+    """List recent log files from both service_logs and logs directories."""
+    # Service logs
+    service_files = sorted(SERVICE_LOG_DIR.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
+    service_logs = []
+    for p in service_files[:limit]:
+        service_logs.append({
+            "name": p.name, 
+            "path": str(p), 
+            "size": p.stat().st_size, 
+            "mtime": p.stat().st_mtime,
+            "type": "service"
+        })
+    
+    # App logs (from logs/ directory)
+    app_log_dir = ROOT / "logs"
+    app_logs = []
+    if app_log_dir.exists():
+        app_files = sorted(app_log_dir.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
+        for p in app_files[:limit]:
+            app_logs.append({
+                "name": p.name,
+                "path": str(p),
+                "size": p.stat().st_size,
+                "mtime": p.stat().st_mtime,
+                "type": "app"
+            })
+    
+    return {"service": service_logs, "app": app_logs}
 
 
 def tail(log_path: str, lines: int = 200):
