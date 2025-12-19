@@ -7,9 +7,9 @@
   },
   "database": {
     "type": "mysql",
-    "user": "dbahrp",
-    "password": "Fmsa@3459",
-    "dsn": "hrp-web:3306/sgr",
+    "user": "<DB_USER>",
+    "password": "<DB_PASSWORD>",
+    "dsn": "<DB_HOST>:3306/<DB>",
     "query": "SELECT \r\n  'PATIENT NAME' AS col_patient_name,\r\n  '12345678' AS col_patient_id,\r\n  '20030201' AS col_birth_date,\r\n  'M' AS col_patient_sex,\r\n  'TORAX - PA' AS col_exam_description,\r\n  'P102025' AS col_accession_number,\r\n  '20251216' AS col_exam_date,\r\n  '143000' AS col_exam_time,\r\n  'MARY JONES' AS col_physician_name,\r\n  'CR' AS col_modality,\r\n  'HIGH' AS col_priority,\r\n  'URGENCIA' AS col_encounter_type,\r\n  '456789' AS col_encounter_id,\r\n  'EMERGENCY ROOM' AS col_unit_name,\r\n  'FCR0101' AS col_procedure_code,\r\n  'CHEST X-RAY' AS col_code_meaning,\r\n  'CBR' AS col_code_scheme\r\nFROM DUAL"
   },
   "ui": {
