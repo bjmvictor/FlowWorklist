@@ -30,6 +30,31 @@ _lib_path = ROOT / 'Lib' / 'site-packages'
 if _lib_path.exists() and str(_lib_path) not in sys.path:
     sys.path.insert(0, str(_lib_path))
 
+# Application logging (app logs)
+LOG_DIR = ROOT / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+log_file = LOG_DIR / f"app_{datetime.now().strftime('%Y%m%d')}.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(str(log_file), encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+app_logger = logging.getLogger('flowworklist.app')
+
+def log_action(action, details="", user_ip=None):
+    """Log user actions in the application."""
+    try:
+        if user_ip is None:
+            user_ip = request.remote_addr if request else "system"
+    except RuntimeError:
+        # Outside request context
+        user_ip = "system"
+    app_logger.info(f"[{user_ip}] {action} | {details}")
+
 
 def _load_module_from_venv(module_name):
     """Load a module from venv site-packages, ensuring it comes from the right location."""
@@ -71,26 +96,6 @@ def install_db_driver(db_type: str):
     }
     packages = pkg_map.get((db_type or '').lower())
     if not packages:
-    # Setup application logging
-    LOG_DIR = ROOT / "logs"
-    LOG_DIR.mkdir(exist_ok=True)
-    log_file = LOG_DIR / f"app_{datetime.now().strftime('%Y%m%d')}.log"
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler()
-        ]
-    )
-    app_logger = logging.getLogger('flowworklist.app')
-
-    def log_action(action, details="", user_ip=None):
-        """Log user actions in the application"""
-        if user_ip is None:
-            user_ip = request.remote_addr if request else "system"
-        app_logger.info(f"[{user_ip}] {action} | {details}")
         return False, f"Unknown DB type: {db_type}"
     _py, pip_exe = _venv_python_and_pip()
     try:
@@ -194,13 +199,13 @@ def action(cmd):
     try:
         if cmd == 'start':
             r = manager.startservice(config_path=cfg)
-                log_action("Service started", f"Result: {r.get('ok', False)}")
+            log_action("Service started", f"Result: {r.get('ok', False)}")
         elif cmd == 'stop':
             r = manager.stopservice()
-                log_action("Service stopped", f"Result: {r.get('ok', False)}")
+            log_action("Service stopped", f"Result: {r.get('ok', False)}")
         elif cmd == 'restart':
             r = manager.restartservice(config_path=cfg)
-                log_action("Service restarted", f"Result: {r.get('ok', False)}")
+            log_action("Service restarted", f"Result: {r.get('ok', False)}")
         else:
             r = {"ok": False, "msg": 'unknown command', "error_type": "unknown_command"}
         
@@ -278,7 +283,7 @@ def view_log():
 @app.route('/config', methods=['GET', 'POST'])
 def config():
     if request.method == 'POST':
-    log_action("Config update", "User updated configuration file")
+        log_action("Config update", "User updated configuration file")
         # Read current config file to preserve structure
         cfg_path = ROOT / "config.json"
         if cfg_path.exists():
@@ -309,10 +314,10 @@ def config():
         # Save to config.json
         try:
             cfg_path.write_text(json.dumps(config_data, indent=2))
-                log_action("Config saved", f"Successfully saved configuration: server={config_data.get('server', {}).get('aet')}, db_type={config_data.get('database', {}).get('type')}")
+            log_action("Config saved", f"Successfully saved configuration: server={config_data.get('server', {}).get('aet')}, db_type={config_data.get('database', {}).get('type')}")
             return redirect(url_for('config', notice='config_saved', status='success'))
         except Exception as e:
-                log_action("Config save failed", f"Error: {str(e)}")
+            log_action("Config save failed", f"Error: {str(e)}")
             return redirect(url_for('config', notice=f'config_save_error: {str(e)}', status='error'))
     else:
         # Read config.json
@@ -424,14 +429,14 @@ def test_status():
         if st[0]:
             running = bool((st[0].get('service') or {}).get('running'))
             if running:
-                    log_action("Test: Status passed", f"Service is running (PID: {st[0].get('service', {}).get('pid')})")
+                log_action("Test: Status passed", f"Service is running (PID: {st[0].get('service', {}).get('pid')})")
                 return jsonify({
                     'ok': True, 
                     'message': 'Service is running',
                     'details': {'pid': (st[0].get('service') or {}).get('pid'), 'running': running}
                 })
             else:
-                    log_action("Test: Status failed", "Service is not running")
+                log_action("Test: Status failed", "Service is not running")
                 return jsonify({
                     'ok': False,
                     'message': 'Service is not running'
@@ -961,9 +966,8 @@ def setlang(lang):
 def set_language():
     try:
         data = request.get_json(silent=True) or {}
-    lang = data.get('lang', 'en')
-    log_action("Language changed", f"User changed language to: {lang}")
-        lang = (data.get('lang') or '').lower()[:2]
+        lang = (data.get('lang') or 'en').lower()[:2]
+        log_action("Language changed", f"User changed language to: {lang}")
         if not lang:
             return jsonify({'ok': False, 'message': 'Missing lang'}), 400
         cfg_path = ROOT / 'config.json'
