@@ -493,8 +493,8 @@ The MWLSCP server listens on port 11112 and implements the DICOM Modality Workli
 #### Example using DCMTK: findscu Query
 
 ```bash
-# Query all pending orders
-findscu -aec FlowMWL -aet Client <IP/HOST> 11112
+# Query all pending orders (requires at least one key query)
+findscu -k PatientName="*" -aec FlowMWL -aet Client <IP/HOST> 11112
 
 # Query specific patient
 findscu -k PatientName="SMITH*" -k PatientID="12345678" -aec FlowMWL -aet Client <IP/HOST> 11112
