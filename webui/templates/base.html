@@ -759,7 +759,14 @@
             if (window._showLoadingBar) {
               hideLoadingBar();
             }
-            try { console.error('fetch error:', error); } catch (e) {}
+            try {
+              const url = (args && args[0] && args[0].toString()) || '';
+              const isStatusPoll = typeof url === 'string' && url.includes('/status');
+              // Silence noisy logs for background status polls; still log other errors
+              if (!isStatusPoll) {
+                console.error('fetch error:', error);
+              }
+            } catch (e) {}
             throw error;
           });
       };
@@ -1067,6 +1074,9 @@
               statusEl.innerHTML = `${icon} <span data-i18n="${running ? 'running' : 'stopped'}">${txt}</span>`;
               statusEl.className = running ? 'text-green-300' : 'text-red-300';
             }
+          })
+          .catch(() => {
+            // Avoid unhandled errors when backend is down during homepage polling
           });
       }
       setInterval(refreshCardStatus, 1500);
