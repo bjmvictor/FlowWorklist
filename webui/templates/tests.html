@@ -247,6 +247,10 @@
           if (!data.running) {
             logToConsole('Service is not running', 'warning');
           }
+        })
+        .catch(err => {
+          // Avoid unhandled rejections when the backend is unreachable during tests
+          logToConsole(`Status check failed: ${err.message}`, 'warning');
         });
     }
   }, 10000);

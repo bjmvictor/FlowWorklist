@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlowWorklist</title>
-    <link rel="icon" type="image/svg+xml" href="/static/brand/logo-mark.png">
-    <link rel="alternate icon" type="image/png" href="/static/brand/logo-mark.svg">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/logo-mark.png') }}">
+    <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='brand/logo-mark.svg') }}">
     <meta name="theme-color" content="#1e3a8a">
     <script>
       // Configure Tailwind dark mode to use the 'class' strategy (light theme by default)
@@ -693,7 +693,7 @@
           dot.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse');
         }
       }
-      
+
       let _loadingTimer = null;
 
       function showLoadingBar() {
@@ -973,7 +973,7 @@
         <div class="flex justify-between items-center h-16 md:h-20">
           <!-- Logo/Title -->
           <div class="flex items-center gap-3">
-            <img src="/static/brand/logo-mark.png" alt="FlowWorklist" class="md:w-10 md:h-10" style="width: 100px; height: auto; margin-right: -15px;">
+            <img src="{{ url_for('static', filename='brand/logo-mark.png') }}" alt="FlowWorklist" class="md:w-10 md:h-10" style="width: 100px; height: auto; margin-right: -15px;">
             <div>
               <h1 class="text-white font-bold text-lg md:text-xl">FlowWorklist</h1>
               <p class="text-blue-100 text-xs">DICOM Worklist Server</p>
