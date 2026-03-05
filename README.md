@@ -20,6 +20,7 @@ A lightweight, vendor-neutral **DICOM Modality Worklist (MWL)** server with a us
 - 🏥 Connects to hospital databases (Oracle, PostgreSQL, MySQL)
 - 🧾 Serves pending exams as C-FIND worklists to imaging modalities
 - 🌐 Web dashboard to manage, configure, test, and monitor the system
+- 🖨️ Serves as a virtual DICOM gateway, receiving jobs and forwarding them to a physical printer.
 
 ---
 
