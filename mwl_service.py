@@ -20,15 +20,23 @@ import unidecode
 import sys
 import atexit
 import json
+from pathlib import Path
 
 from logging.handlers import TimedRotatingFileHandler
 from typing import List, Dict, Any, Tuple
 from datetime import datetime
+
+# Workaround for broken NumPy builds on some Windows/Python setups.
+# pydicom can operate without NumPy for this project's use cases.
+if os.environ.get('FLOWWORKLIST_DISABLE_NUMPY', '1') == '1':
+    sys.modules.setdefault('numpy', None)
+
 from pydicom.dataset import Dataset
 from pydicom.uid import generate_uid
 from pydicom.valuerep import PersonName
 from pynetdicom import AE, evt, StoragePresentationContexts
 from pynetdicom.sop_class import ModalityWorklistInformationFind
+from dicom_printer_service import DicomPrinterRuntime
 
 # --- LOCKFILE PARA EVITAR EXECUÇÃO DO CÓDIGO DUPLICADO ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -363,6 +371,10 @@ DB_USER = DB_CFG.get("user")
 DB_PASSWORD = DB_CFG.get("password")
 DB_DSN = DB_CFG.get("dsn")
 SQL_QUERY = DB_CFG.get("query")
+
+# --- VIRTUAL DICOM PRINTER CONFIG ---
+DICOM_PRINTER_CFG = config.get("dicom_printer", {}) if isinstance(config.get("dicom_printer"), dict) else {}
+DICOM_PRINTER_ENABLED = bool(DICOM_PRINTER_CFG.get("enabled", False))
 
 
 
@@ -772,10 +784,17 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
 
 # --- SETUP DO SERVIDOR DICOM AE ---
 def run_mwl_scp():
+    printer_runtime = None
+    if DICOM_PRINTER_ENABLED:
+        printer_runtime = DicomPrinterRuntime(Path(BASE_DIR), DICOM_PRINTER_CFG)
+        printer_runtime.start()
+
     worklist_provider = WorklistProvider()
     if not worklist_provider.connect():
-        msg = TR.get('db_connect_error', {}).get(LANG, 'Failed to connect to database. MWL Server not started.')
+        msg = t('db_connect_error', db=DB_TYPE, err='connection failed')
         logging.error(msg)
+        if printer_runtime:
+            printer_runtime.stop()
         return
 
     ae = AE(ae_title=MWL_AE_TITLE)
@@ -795,7 +814,11 @@ def run_mwl_scp():
     print(t('server_waiting'))
     print("-" * 50)
 
-    ae.start_server((MWL_HOST, MWL_PORT), block=True, evt_handlers=handlers)
+    try:
+        ae.start_server((MWL_HOST, MWL_PORT), block=True, evt_handlers=handlers)
+    finally:
+        if printer_runtime:
+            printer_runtime.stop()
 
 if __name__ == '__main__':
     run_mwl_scp()

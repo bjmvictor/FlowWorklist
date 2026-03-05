@@ -1,0 +1,27 @@
+# Install RECEIVER as service
+nssm install PRINTERSCU-Receiver "C:\dcmtk\bin\dcmprscp.exe" -c "C:\dicom-print\printer.cfg" -p PHILIPS_GATEWAY +d -v
+nssm set PRINTSCU-Receiver AppDirectory "C:\dicom-print"
+nssm set PRINTSCU-Receiver AppEnvironmentExtra "PATH=C:\dcmtk\bin;%PATH%"
+nssm set PRINTSCU-Receiver AppStdout "C:\dicom-print\logs\receiver.out.log"
+nssm set PRINTSCU-Receiver AppStderr "C:\dicom-print\logs\receiver.err.log"
+nssm set PRINTSCU-Receiver AppRotateFiles 1
+nssm set PRINTSCU-Receiver AppRotateOnline 1
+nssm set PRINTSCU-Receiver AppRotateSeconds 86400
+nssm set PRINTSCU-Receiver AppRotateBytes 10485760
+nssm set PRINTSCU-Receiver Start SERVICE_AUTO_START
+nssm set PRINTSCU-Receiver AppExit Default Restart
+nssm set PRINTSCU-Receiver AppRestartDelay 3000
+
+# Install WORKER as service
+nssm install PRINTSCU-Worker "C:\Program Files\Python312\python.exe" "C:\dicom-print\worker_print.py"
+nssm set PRINTSCU-Worker AppDirectory "C:\dicom-print"
+nssm set PRINTSCU-Worker AppEnvironmentExtra "PATH=C:\dcmtk\bin;C:\Program Files\Python312;%PATH%"
+nssm set PRINTSCU-Worker AppStdout "C:\dicom-print\logs\worker.out.log"
+nssm set PRINTSCU-Worker AppStderr "C:\dicom-print\logs\worker.err.log"
+nssm set PRINTSCU-Worker AppRotateFiles 1
+nssm set PRINTSCU-Worker AppRotateOnline 1
+nssm set PRINTSCU-Worker AppRotateSeconds 86400
+nssm set PRINTSCU-Worker AppRotateBytes 10485760
+nssm set PRINTSCU-Worker Start SERVICE_AUTO_START
+nssm set PRINTSCU-Worker AppExit Default Restart
+nssm set PRINTSCU-Worker AppRestartDelay 3000

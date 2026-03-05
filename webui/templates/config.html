@@ -1,6 +1,45 @@
 {% extends "base.html" %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<style>
+  .sql-editor-shell {
+    border: 2px solid #374151;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #111827;
+  }
+  .sql-editor-shell .CodeMirror {
+    height: 360px;
+    font-size: 13px;
+    color: #f9fafb;
+    background: #111827;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  .sql-editor-shell .CodeMirror-gutters {
+    background: #0b1220;
+    border-right: 1px solid #334155;
+  }
+  .sql-editor-shell .CodeMirror-linenumber {
+    color: #93c5fd;
+  }
+  .sql-editor-shell .CodeMirror-cursor {
+    border-left: 1px solid #f9fafb;
+  }
+  .sql-editor-shell .cm-s-material-darker .cm-keyword { color: #f472b6; font-weight: 700; }
+  .sql-editor-shell .cm-s-material-darker .cm-operator { color: #22d3ee; }
+  .sql-editor-shell .cm-s-material-darker .cm-string { color: #fde047; }
+  .sql-editor-shell .cm-s-material-darker .cm-number { color: #86efac; }
+  .sql-editor-shell .cm-s-material-darker .cm-variable { color: #f8fafc; }
+  .sql-editor-shell .cm-s-material-darker .cm-comment { color: #a3a3a3; font-style: italic; }
+  .sql-editor-dragbar {
+    height: 12px;
+    cursor: ns-resize;
+    background: linear-gradient(90deg, #1f2937, #6b7280);
+    border-top: 1px solid #6b7280;
+  }
+</style>
 <div class="space-y-8">
   <!-- Notification Alert -->
   {% if notice %}
@@ -173,12 +212,17 @@
             <i class="fas fa-code text-green-500 mr-2"></i>
             <span data-i18n="database_query">Query</span>
           </label>
-          <textarea 
+          <textarea
+            id="database-query-editor"
             name="database_query" 
-            rows="8"
+            rows="14"
             placeholder="SELECT ... FROM ..."
             class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition font-mono text-sm"
           >{{ cfg.get('database', {}).get('query', '') }}</textarea>
+          <div id="sql-editor-wrapper" class="sql-editor-shell hidden mt-2">
+            <div id="sql-editor"></div>
+            <div id="sql-editor-dragbar" class="sql-editor-dragbar" title="Drag to resize"></div>
+          </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="sql_hint">Consulta SQL que retorna os itens da Worklist</p>
 
           <!-- Guia de colunas esperadas -->
@@ -233,6 +277,50 @@
 </div>
 
 <script>
+  let sqlEditor = null;
+
+  function initSqlEditor() {
+    const textarea = document.getElementById('database-query-editor');
+    const wrapper = document.getElementById('sql-editor-wrapper');
+    const dragbar = document.getElementById('sql-editor-dragbar');
+    if (!textarea || !wrapper || typeof CodeMirror === 'undefined') return;
+
+    sqlEditor = CodeMirror.fromTextArea(textarea, {
+      mode: 'text/x-sql',
+      theme: 'material-darker',
+      lineNumbers: true,
+      indentUnit: 2,
+      tabSize: 2,
+      lineWrapping: false,
+      matchBrackets: true,
+      autoCloseBrackets: true,
+      viewportMargin: Infinity,
+    });
+    wrapper.classList.remove('hidden');
+    const cmEl = sqlEditor.getWrapperElement();
+    cmEl.parentNode.insertBefore(wrapper, cmEl);
+    wrapper.insertBefore(cmEl, dragbar);
+
+    // Drag to resize editor height
+    let startY = 0;
+    let startH = 0;
+    const onMove = (e) => {
+      const dy = e.clientY - startY;
+      const next = Math.max(220, startH + dy);
+      sqlEditor.setSize(null, next);
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    dragbar.addEventListener('mousedown', (e) => {
+      startY = e.clientY;
+      startH = sqlEditor.getWrapperElement().offsetHeight;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  }
+
   function closeNotification() {
     const notif = document.getElementById('notification');
     if (notif) {
@@ -244,6 +332,7 @@
   function onConfigSubmit() {
     // Show loading bar when saving config via form submit
     try {
+      if (sqlEditor) sqlEditor.save();
       window._showLoadingBar = true;
       if (typeof showLoadingBar === 'function') { showLoadingBar(); }
     } catch(e) {}
@@ -255,5 +344,19 @@
   {% if notice %}
   setTimeout(closeNotification, 5000);
   {% endif %}
+
+  // Lazy-load CodeMirror assets for SQL editor
+  (function loadSqlEditorAssets() {
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/';
+    const s1 = document.createElement('script');
+    s1.src = base + 'codemirror.min.js';
+    s1.onload = function() {
+      const s2 = document.createElement('script');
+      s2.src = base + 'mode/sql/sql.min.js';
+      s2.onload = initSqlEditor;
+      document.body.appendChild(s2);
+    };
+    document.body.appendChild(s1);
+  })();
 </script>
 {% endblock %}

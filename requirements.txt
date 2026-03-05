@@ -3,3 +3,4 @@ PyDICOM>=3.0
 pynetdicom>=3.0
 Unidecode>=1.4.0
 psutil>=5.9.0
+reportlab>=4.0

@@ -116,6 +116,30 @@
       </div>
     </div>
 
+    {% if printer_enabled %}
+    <!-- Virtual DICOM Printer Test -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <i class="fas fa-print text-3xl text-indigo-500"></i>
+        <h3 class="text-2xl font-bold">Virtual DICOM Printer Test</h3>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400 mb-6">
+        Copy sample files from <code>dicom-printer/test/5x7</code> to configured database folder and validate conversion output.
+      </p>
+      <button
+        onclick="runTest('printer')"
+        id="btn-printer"
+        class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+      >
+        <i class="fas fa-print"></i>
+        <span>Run Printer Pipeline Test</span>
+      </button>
+      <div id="result-printer" class="mt-4 hidden">
+        <div class="p-4 rounded-lg text-white" id="result-printer-box"></div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Service Availability Test -->
      <!--
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">

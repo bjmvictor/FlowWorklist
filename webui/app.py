@@ -8,9 +8,16 @@ import subprocess
 import socket
 import sys
 import json
+import os
+import time
 import importlib.util
 import logging
 from datetime import datetime
+
+# Workaround for broken NumPy builds on some Windows/Python setups.
+# pydicom is used in tests and can run without NumPy for these flows.
+if os.environ.get('FLOWWORKLIST_DISABLE_NUMPY', '1') == '1':
+    sys.modules.setdefault('numpy', None)
 
 # Ensure project root on sys.path before importing local modules
 ROOT = Path(__file__).parent.parent  # Parent of webui/
@@ -44,6 +51,7 @@ logging.basicConfig(
     ]
 )
 app_logger = logging.getLogger('flowworklist.app')
+DCMTK_MANUAL_URL = "https://dicom.offis.de/en/dcmtk/dcmtk-tools/"
 
 def log_action(action, details="", user_ip=None):
     """Log user actions in the application."""
@@ -54,6 +62,66 @@ def log_action(action, details="", user_ip=None):
         # Outside request context
         user_ip = "system"
     app_logger.info(f"[{user_ip}] {action} | {details}")
+
+
+def _to_bool(value, default=False):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    return str(value).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _to_int(value, default):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _to_float(value, default):
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def default_printer_config():
+    base = ROOT / "dicom-printer"
+    return {
+        "enabled": False,
+        "receiver": {
+            "aet": "VPRINTSCP",
+            "profile": "FLOWWORKLIST_PRINTER",
+            "port": 4100,
+            "target_host": "127.0.0.1",
+            "dcmtk_bin": r"C:\dcmtk\bin",
+        },
+        "worker": {
+            "database_dir": str(base / "database"),
+            "spool_dir": str(base / "spool"),
+            "out_dir": str(base / "out"),
+            "sumatra_path": r"C:\Program Files\SumatraPDF\SumatraPDF.exe",
+            "printer_name": "",
+            "paper_size": "A3",
+            "print_settings": "fit",
+            "delete_after_success": False,
+            "sp_time_window_seconds": 120,
+            "poll_interval_seconds": 1.0,
+        },
+    }
+
+
+def merge_printer_config(cfg):
+    base = default_printer_config()
+    incoming = cfg if isinstance(cfg, dict) else {}
+    receiver = incoming.get("receiver", {}) if isinstance(incoming.get("receiver"), dict) else {}
+    worker = incoming.get("worker", {}) if isinstance(incoming.get("worker"), dict) else {}
+
+    base["enabled"] = _to_bool(incoming.get("enabled"), base["enabled"])
+    base["receiver"].update(receiver)
+    base["worker"].update(worker)
+    return base
 
 
 def _load_module_from_venv(module_name):
@@ -132,9 +200,14 @@ def plugins_status():
         {'id': 'postgres', 'label': 'PostgreSQL (psycopg2)', 'module': 'psycopg2', 'package': 'psycopg2-binary'},
         {'id': 'mysql', 'label': 'MySQL (PyMySQL)', 'module': 'pymysql', 'package': 'PyMySQL'},
         {'id': 'pynetdicom', 'label': 'DICOM Worklist Support (pynetdicom)', 'module': 'pynetdicom', 'package': 'pynetdicom'},
+        {'id': 'dcmtk', 'label': 'DCMTK (System Tool)', 'module': 'dcmprscp/dcm2img', 'package': 'DCMTK.DCMTK', 'source': 'system'},
+        {'id': 'sumatra', 'label': 'SumatraPDF (System Tool)', 'module': 'SumatraPDF.exe', 'package': 'SumatraPDF.SumatraPDF', 'source': 'system'},
     ]
     _py, pip_exe = _venv_python_and_pip()
     for p in plugins:
+        if p.get('source') == 'system':
+            p['installed'] = is_system_tool_installed(p['id'])
+            continue
         try:
             res = subprocess.run([pip_exe, 'show', p['package']], capture_output=True, text=True)
             p['installed'] = (res.returncode == 0 and bool(res.stdout.strip()))
@@ -145,6 +218,276 @@ def plugins_status():
     cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
     db_type = (cfg.get('database', {}).get('type') or '').lower()
     return plugins, db_type
+
+
+def is_system_tool_installed(tool_name: str) -> bool:
+    name = (tool_name or '').strip().lower()
+    if os.name != 'nt':
+        return False
+
+    if name in ('sumatra', 'sumatrapdf'):
+        return detect_sumatra_path() is not None
+
+    # Fast path by common installation locations
+    if name == 'dcmtk':
+        known = [
+            Path(r"C:\dcmtk\bin\dcmprscp.exe"),
+            Path(r"C:\Program Files\dcmtk\bin\dcmprscp.exe"),
+            Path(r"C:\Program Files\DCMTK\bin\dcmprscp.exe"),
+        ]
+        if any(p.exists() for p in known):
+            return True
+
+    # Fallback to winget list
+    winget_ids = {
+        'dcmtk': ['DCMTK.DCMTK', 'OFFIS.DCMTK'],
+        'sumatra': ['SumatraPDF.SumatraPDF'],
+        'sumatrapdf': ['SumatraPDF.SumatraPDF'],
+    }.get(name)
+    if not winget_ids:
+        return False
+    for winget_id in winget_ids:
+        try:
+            res = subprocess.run(
+                ['winget', 'list', '--id', winget_id, '--exact', '--accept-source-agreements'],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=60
+            )
+            out = ((res.stdout or '') + '\n' + (res.stderr or '')).lower()
+            if (res.returncode == 0 and winget_id.lower() in out) or ('no installed package found' not in out and 'not installed' not in out and winget_id.lower() in out):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def detect_sumatra_path() -> str | None:
+    """Return detected SumatraPDF executable path, if available."""
+    candidates = [
+        Path(r"C:\Program Files\SumatraPDF\SumatraPDF.exe"),
+        Path(r"C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe"),
+        Path.home() / "AppData" / "Local" / "SumatraPDF" / "SumatraPDF.exe",
+        ROOT / "SumatraPDF" / "SumatraPDF.exe",
+    ]
+
+    # Prefer configured path when valid
+    try:
+        cfg_path = ROOT / "config.json"
+        if cfg_path.exists():
+            cfg = json.loads(cfg_path.read_text())
+            configured = (cfg.get('dicom_printer') or {}).get('worker', {}).get('sumatra_path')
+            if configured:
+                p = Path(str(configured))
+                if p.exists():
+                    return str(p)
+    except Exception:
+        pass
+
+    for p in candidates:
+        try:
+            if p.exists():
+                return str(p)
+        except Exception:
+            pass
+
+    try:
+        found = shutil.which('SumatraPDF.exe')
+        if found:
+            return str(Path(found))
+    except Exception:
+        pass
+    return None
+
+
+def _discover_winget_ids(query: str) -> list:
+    """Best-effort discovery of winget package IDs from `winget search` output."""
+    if os.name != 'nt':
+        return []
+    import re
+    try:
+        res = subprocess.run(
+            ['winget', 'search', '--query', query, '--source', 'winget', '--accept-source-agreements'],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            timeout=90
+        )
+        text = (res.stdout or '') + '\n' + (res.stderr or '')
+        candidates = []
+        seen = set()
+        for m in re.finditer(r'\b([A-Za-z0-9][A-Za-z0-9_.-]*\.[A-Za-z0-9_.-]+)\b', text):
+            pkg_id = m.group(1)
+            key = pkg_id.lower()
+            if key not in seen:
+                seen.add(key)
+                candidates.append(pkg_id)
+        return candidates
+    except Exception:
+        return []
+
+
+def install_system_tool(tool_name: str):
+    name = (tool_name or '').strip().lower()
+    if os.name != 'nt':
+        return False, 'Automatic tool install is only supported on Windows'
+
+    tools = {
+        'dcmtk': {'ids': ['DCMTK.DCMTK', 'OFFIS.DCMTK'], 'label': 'DCMTK'},
+        'sumatra': {'ids': ['SumatraPDF.SumatraPDF'], 'label': 'SumatraPDF'},
+        'sumatrapdf': {'ids': ['SumatraPDF.SumatraPDF'], 'label': 'SumatraPDF'},
+    }
+    tool = tools.get(name)
+    if not tool:
+        return False, f'Unknown tool: {tool_name}'
+
+    def _compact_reason(text: str) -> str:
+        if not text:
+            return ""
+        lines = [ln.strip() for ln in text.splitlines() if ln and ln.strip()]
+        skip_tokens = ("name ", "id ", "version ", "source ", "-----", "found ", "installing ")
+        useful = []
+        for ln in lines:
+            low = ln.lower()
+            if any(tok in low for tok in skip_tokens):
+                continue
+            useful.append(ln)
+        if not useful:
+            useful = lines
+        reason = " | ".join(useful[:3]).strip()
+        return reason[:260]
+
+    last_code = None
+    last_reason = ""
+    candidate_ids = list(tool['ids'])
+    if name == 'dcmtk':
+        for discovered in _discover_winget_ids('dcmtk'):
+            if discovered.lower() not in [x.lower() for x in candidate_ids]:
+                candidate_ids.append(discovered)
+
+    for winget_id in candidate_ids:
+        cmd = [
+            'winget',
+            'install',
+            '--id', winget_id,
+            '--exact',
+            '--source', 'winget',
+            '--disable-interactivity',
+            '--silent',
+            '--accept-package-agreements',
+            '--accept-source-agreements',
+        ]
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=900)
+            output = ((res.stdout or '') + '\n' + (res.stderr or '')).lower()
+            last_code = res.returncode
+            if res.returncode == 0:
+                return True, f"{tool['label']} installed successfully via winget"
+            if 'already installed' in output or 'no applicable update found' in output:
+                return True, f"{tool['label']} is already installed"
+            if 'no package found' in output or 'no package matched' in output or 'no package found matching input criteria' in output:
+                last_reason = _compact_reason(output)
+                continue
+            last_reason = _compact_reason(output)
+            # Unknown failure with this id: keep trying next id if any
+        except FileNotFoundError:
+            return False, 'winget not found. Install App Installer from Microsoft Store'
+        except subprocess.TimeoutExpired:
+            return False, f"Timeout installing {tool['label']} via winget"
+        except Exception as e:
+            return False, f"Install error for {tool['label']}: {e}"
+
+    try:
+        if is_system_tool_installed(name):
+            return True, f"{tool['label']} is already installed"
+    except Exception:
+        pass
+    if name == 'dcmtk' and (last_code == 2316632084 or 'nenhum pacote encontrou os critérios de entrada correspondentes' in (last_reason or '').lower()):
+        return False, "Failed to install DCMTK: package not found in winget source on this machine. Update sources (`winget source update`) or install DCMTK manually."
+    reason_txt = f" Reason: {last_reason}" if last_reason else ""
+    return False, f"Failed to install {tool['label']} (winget code {last_code}).{reason_txt}"
+
+
+def uninstall_system_tool(tool_name: str):
+    name = (tool_name or '').strip().lower()
+    if os.name != 'nt':
+        return False, 'Automatic tool uninstall is only supported on Windows'
+
+    tools = {
+        'dcmtk': {'ids': ['DCMTK.DCMTK', 'OFFIS.DCMTK'], 'label': 'DCMTK'},
+        'sumatra': {'ids': ['SumatraPDF.SumatraPDF'], 'label': 'SumatraPDF'},
+        'sumatrapdf': {'ids': ['SumatraPDF.SumatraPDF'], 'label': 'SumatraPDF'},
+    }
+    tool = tools.get(name)
+    if not tool:
+        return False, f'Unknown tool: {tool_name}'
+
+    def _compact_reason(text: str) -> str:
+        if not text:
+            return ""
+        lines = [ln.strip() for ln in text.splitlines() if ln and ln.strip()]
+        skip_tokens = ("name ", "id ", "version ", "source ", "-----", "found ", "uninstalling ")
+        useful = []
+        for ln in lines:
+            low = ln.lower()
+            if any(tok in low for tok in skip_tokens):
+                continue
+            useful.append(ln)
+        if not useful:
+            useful = lines
+        reason = " | ".join(useful[:3]).strip()
+        return reason[:260]
+
+    last_code = None
+    last_reason = ""
+    found_any = False
+    for winget_id in tool['ids']:
+        try:
+            check = subprocess.run(
+                ['winget', 'list', '--id', winget_id, '--exact', '--accept-source-agreements'],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=60
+            )
+            check_out = ((check.stdout or '') + '\n' + (check.stderr or '')).lower()
+            if winget_id.lower() not in check_out:
+                continue
+            found_any = True
+
+            cmd = [
+                'winget',
+                'uninstall',
+                '--id', winget_id,
+                '--exact',
+                '--silent',
+                '--accept-source-agreements',
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=900)
+            out = ((res.stdout or '') + '\n' + (res.stderr or '')).lower()
+            last_code = res.returncode
+            if res.returncode == 0:
+                return True, f"{tool['label']} uninstalled successfully via winget"
+            if 'no installed package found' in out or 'not installed' in out:
+                last_reason = _compact_reason(out)
+                continue
+            last_reason = _compact_reason(out)
+        except FileNotFoundError:
+            return False, 'winget not found. Install App Installer from Microsoft Store'
+        except subprocess.TimeoutExpired:
+            return False, f"Timeout uninstalling {tool['label']} via winget"
+        except Exception as e:
+            return False, f"Uninstall error for {tool['label']}: {e}"
+
+    if not found_any:
+        if not is_system_tool_installed(name):
+            return True, f"{tool['label']} is already uninstalled"
+    reason_txt = f" Reason: {last_reason}" if last_reason else ""
+    return False, f"Failed to uninstall {tool['label']} (winget code {last_code}).{reason_txt}"
 
 
 @app.route('/')
@@ -171,6 +514,12 @@ def _validate_config():
         # Check for critical sections
         if not cfg.get("server") and not cfg.get("database"):
             return False, "Configuration is incomplete (missing server and database sections)"
+
+        # Detect unresolved placeholders that would break startup/runtime tests
+        placeholder_tokens = ["<DB_HOST>", "<DB_USER>", "<DB_PASSWORD>", "<DB_NAME>", "<DB_DSN>"]
+        text = json.dumps(cfg)
+        if any(tok in text for tok in placeholder_tokens):
+            return False, "Configuration contains placeholders (e.g., <DB_HOST>, <DB_USER>, <DB_PASSWORD>). Replace them with real values"
         
         return True, "Configuration valid"
     except json.JSONDecodeError as e:
@@ -336,6 +685,82 @@ def config():
         return render_template('config.html', cfg=cfg, notice=notice, status=status)
 
 
+@app.route('/printer-config', methods=['GET', 'POST'])
+def printer_config():
+    cfg_path = ROOT / "config.json"
+
+    if request.method == 'POST':
+        log_action("Virtual printer config update", "User updated virtual DICOM printer configuration")
+        if cfg_path.exists():
+            try:
+                config_data = json.loads(cfg_path.read_text())
+            except Exception:
+                config_data = {"server": {}, "database": {}}
+        else:
+            config_data = {"server": {}, "database": {}}
+
+        config_data["dicom_printer"] = {
+            "enabled": bool(request.form.get("enabled")),
+            "receiver": {
+                "aet": request.form.get("receiver_aet", "VPRINTSCP").strip() or "VPRINTSCP",
+                "profile": request.form.get("receiver_profile", "FLOWWORKLIST_PRINTER").strip() or "FLOWWORKLIST_PRINTER",
+                "port": _to_int(request.form.get("receiver_port"), 4100),
+                "target_host": request.form.get("receiver_target_host", "127.0.0.1").strip() or "127.0.0.1",
+                "dcmtk_bin": request.form.get("receiver_dcmtk_bin", r"C:\dcmtk\bin").strip() or r"C:\dcmtk\bin",
+            },
+            "worker": {
+                "database_dir": request.form.get("worker_database_dir", str(ROOT / "dicom-printer" / "database")).strip(),
+                "spool_dir": request.form.get("worker_spool_dir", str(ROOT / "dicom-printer" / "spool")).strip(),
+                "out_dir": request.form.get("worker_out_dir", str(ROOT / "dicom-printer" / "out")).strip(),
+                "sumatra_path": request.form.get("worker_sumatra_path", r"C:\Program Files\SumatraPDF\SumatraPDF.exe").strip() or r"C:\Program Files\SumatraPDF\SumatraPDF.exe",
+                "printer_name": request.form.get("worker_printer_name", "").strip(),
+                "paper_size": request.form.get("worker_paper_size", "A3").strip().upper() or "A3",
+                "print_settings": request.form.get("worker_print_settings", "fit").strip() or "fit",
+                "delete_after_success": bool(request.form.get("worker_delete_after_success")),
+                "sp_time_window_seconds": _to_int(request.form.get("worker_sp_time_window_seconds"), 120),
+                "poll_interval_seconds": _to_float(request.form.get("worker_poll_interval_seconds"), 1.0),
+            },
+        }
+
+        try:
+            cfg_path.write_text(json.dumps(config_data, indent=2))
+            log_action("Virtual printer config saved", "Virtual DICOM printer settings saved successfully")
+            return redirect(url_for('printer_config', notice='config_saved', status='success'))
+        except Exception as e:
+            log_action("Virtual printer config save failed", str(e))
+            return redirect(url_for('printer_config', notice=f'config_save_error: {str(e)}', status='error'))
+
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            cfg = {"server": {}, "database": {}}
+    else:
+        cfg = {"server": {}, "database": {}}
+
+    printer_cfg = merge_printer_config(cfg.get("dicom_printer"))
+    detected_sumatra = detect_sumatra_path()
+    if detected_sumatra:
+        worker_cfg = printer_cfg.get("worker") or {}
+        current_sumatra = str(worker_cfg.get("sumatra_path") or "").strip()
+        if not current_sumatra or not Path(current_sumatra).exists():
+            worker_cfg["sumatra_path"] = detected_sumatra
+            printer_cfg["worker"] = worker_cfg
+    notice = request.args.get('notice')
+    status = request.args.get('status')
+    dcmtk_installed = is_system_tool_installed('dcmtk')
+    sumatra_installed = is_system_tool_installed('sumatra')
+    return render_template(
+        'printer_config.html',
+        cfg=cfg,
+        printer_cfg=printer_cfg,
+        notice=notice,
+        status=status,
+        dcmtk_installed=dcmtk_installed,
+        sumatra_installed=sumatra_installed
+    )
+
+
 @app.route('/tests')
 def tests():
     notice = request.args.get('notice')
@@ -345,7 +770,8 @@ def tests():
     cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
     db_type = (cfg.get('database', {}).get('type') or 'oracle').lower()
     plugin_installed = is_db_plugin_installed(db_type)
-    return render_template('tests.html', notice=notice, status=status, db_type=db_type, plugin_installed=plugin_installed)
+    printer_enabled = bool((cfg.get('dicom_printer') or {}).get('enabled'))
+    return render_template('tests.html', notice=notice, status=status, db_type=db_type, plugin_installed=plugin_installed, printer_enabled=printer_enabled)
 
 
 @app.route('/plugins')
@@ -353,7 +779,8 @@ def plugins_page():
     items, current = plugins_status()
     notice = request.args.get('notice')
     status = request.args.get('status')
-    return render_template('plugins.html', plugins=items, current=current, notice=notice, status=status)
+    manual_url = request.args.get('manual_url')
+    return render_template('plugins.html', plugins=items, current=current, notice=notice, status=status, manual_url=manual_url)
 
 
 @app.route('/plugin/install/<name>', methods=['POST'])
@@ -375,6 +802,39 @@ def plugin_install(name):
         return redirect(url_for('plugins_page', notice=f'Installed {pkg}', status='success'))
     except subprocess.CalledProcessError as e:
         return redirect(url_for('plugins_page', notice=f'Install failed: {e}', status='error'))
+
+
+@app.route('/printer-config/install-tool/<name>', methods=['POST'])
+def install_printer_tool(name):
+    log_action("Printer tool install", f"Requested install for tool={name}")
+    ok, msg = install_system_tool(name)
+    if not ok and (name or '').lower() == 'dcmtk':
+        return redirect(url_for('plugins_page', notice=msg, status='error', manual_url=DCMTK_MANUAL_URL))
+    if ok and (name or '').lower() in ('sumatra', 'sumatrapdf'):
+        detected_sumatra = detect_sumatra_path()
+        if detected_sumatra:
+            cfg_path = ROOT / "config.json"
+            try:
+                cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+            except Exception:
+                cfg = {}
+            dp = cfg.get('dicom_printer') or {}
+            worker = dp.get('worker') or {}
+            worker['sumatra_path'] = detected_sumatra
+            dp['worker'] = worker
+            cfg['dicom_printer'] = dp
+            try:
+                cfg_path.write_text(json.dumps(cfg, indent=2))
+            except Exception:
+                pass
+    return redirect(url_for('plugins_page', notice=msg, status='success' if ok else 'error'))
+
+
+@app.route('/printer-config/uninstall-tool/<name>', methods=['POST'])
+def uninstall_printer_tool(name):
+    log_action("Printer tool uninstall", f"Requested uninstall for tool={name}")
+    ok, msg = uninstall_system_tool(name)
+    return redirect(url_for('plugins_page', notice=msg, status='success' if ok else 'error'))
 
 
 @app.route('/plugin/uninstall/<name>', methods=['POST'])
@@ -952,6 +1412,106 @@ def test_find():
         return jsonify({
             'ok': False,
             'message': f'DICOM C-FIND test failed: {str(e)}',
+            'error': str(e)
+        })
+
+
+@app.route('/test/printer', methods=['POST'])
+def test_printer():
+    """Test virtual DICOM printer flow by sending sample DICOM files to configured database folder."""
+    log_action("Test: Virtual DICOM Printer", "Running virtual printer pipeline test")
+    try:
+        cfg_path = ROOT / "config.json"
+        cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+        printer_cfg = cfg.get('dicom_printer') or {}
+        if not printer_cfg.get('enabled'):
+            return jsonify({
+                'ok': False,
+                'message': 'Virtual DICOM printer is disabled',
+                'error': 'Enable dicom_printer.enabled in settings'
+            })
+
+        worker_cfg = printer_cfg.get('worker') or {}
+        database_dir = Path(worker_cfg.get('database_dir') or (ROOT / 'dicom-printer' / 'database'))
+        out_dir = Path(worker_cfg.get('out_dir') or (ROOT / 'dicom-printer' / 'out'))
+        sample_dir = ROOT / 'dicom-printer' / 'test' / '5x7'
+
+        if not sample_dir.exists():
+            return jsonify({
+                'ok': False,
+                'message': 'Sample test folder not found',
+                'error': f'Missing folder: {sample_dir}'
+            })
+
+        database_dir.mkdir(parents=True, exist_ok=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        pre_out_times = {str(p): p.stat().st_mtime for p in out_dir.glob('*') if p.is_file()}
+        ts = datetime.now().strftime('%Y%m%d%H%M%S%f')
+        copied = []
+
+        for src in sorted(sample_dir.glob('*.dcm')):
+            name = src.name
+            if name.upper().startswith('HG_'):
+                dst_name = f'HG_TEST_{ts}_{src.stem}.dcm'
+            elif name.upper().startswith('SP_'):
+                dst_name = f'SP_TEST_{ts}_{src.stem}.dcm'
+            else:
+                dst_name = f'TEST_{ts}_{src.stem}.dcm'
+            dst = database_dir / dst_name
+            shutil.copy2(src, dst)
+            copied.append(str(dst))
+
+        if not copied:
+            return jsonify({
+                'ok': False,
+                'message': 'No sample DICOM files found in test folder',
+                'error': f'Folder is empty: {sample_dir}'
+            })
+
+        # Wait for worker to pick up files and generate output artifacts
+        timeout_seconds = 30
+        start = time.time()
+        generated = []
+        while time.time() - start < timeout_seconds:
+            for p in out_dir.glob('*'):
+                if not p.is_file():
+                    continue
+                old_mtime = pre_out_times.get(str(p))
+                if old_mtime is None or p.stat().st_mtime > old_mtime:
+                    generated.append(str(p))
+            if generated:
+                break
+            time.sleep(1)
+
+        if generated:
+            return jsonify({
+                'ok': True,
+                'message': 'Virtual printer test triggered successfully. New converted output detected.',
+                'details': {
+                    'sample_folder': str(sample_dir),
+                    'database_dir': str(database_dir),
+                    'out_dir': str(out_dir),
+                    'copied_files': copied,
+                    'generated_files': generated[:10]
+                }
+            })
+
+        return jsonify({
+            'ok': False,
+            'message': 'Test files copied, but no new converted output detected within timeout',
+            'error': 'Check if service is running and virtual printer worker is active',
+            'details': {
+                'sample_folder': str(sample_dir),
+                'database_dir': str(database_dir),
+                'out_dir': str(out_dir),
+                'copied_files': copied
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'message': f'Virtual printer test failed: {str(e)}',
             'error': str(e)
         })
 

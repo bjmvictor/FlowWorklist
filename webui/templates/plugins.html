@@ -2,7 +2,30 @@
 
 {% block content %}
 <div class="space-y-8">
-  <!-- Header -->
+  {% if notice %}
+  <div class="notification notification-enter top-20" id="notification">
+    <div class="{% if status == 'success' %}bg-green-100 border-green-500 text-green-900 dark:bg-green-900 dark:text-green-100{% else %}bg-red-100 border-red-500 text-red-900 dark:bg-red-900 dark:text-red-100{% endif %} border-l-4 p-4 rounded shadow-lg flex items-start gap-3">
+      <i class="fas {% if status == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} text-2xl mt-0.5"></i>
+      <div class="flex-1">
+        <p class="font-bold break-words">{{ notice }}</p>
+      </div>
+      <button onclick="closeNotification()" class="text-2xl opacity-50 hover:opacity-100 leading-none">&times;</button>
+    </div>
+  </div>
+  {% endif %}
+  {% if manual_url %}
+  <div class="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 p-4 rounded shadow-lg flex items-center justify-between gap-4">
+    <div>
+      <p class="font-bold">Winget falhou para DCMTK</p>
+      <p class="text-sm">Use o download manual oficial para instalar o DCMTK.</p>
+    </div>
+    <a href="{{ manual_url }}" target="_blank" rel="noopener noreferrer" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+      <i class="fas fa-external-link-alt"></i>
+      Download Manual DCMTK
+    </a>
+  </div>
+  {% endif %}
+
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-3">
       <i class="fas fa-plug text-3xl text-indigo-500"></i>
@@ -14,20 +37,18 @@
     </a>
   </div>
 
-  <!-- Description -->
   <p class="text-gray-600 dark:text-gray-400">
     <span data-i18n="plugins_desc">Install or remove optional plugins that extend functionality (e.g., database drivers). Current DB type:</span>
     <span class="font-semibold"> {{ current|upper if current else 'N/A' }}</span>.
   </p>
 
-  <!-- Plugins List -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     {% for p in plugins %}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
           <div class="text-xl font-semibold">{{ p.label }}</div>
-          <div class="text-sm text-gray-500"><span data-i18n="module">Module</span>: <code>{{ p.module }}</code> • <span data-i18n="package">Package</span>: <code>{{ p.package }}</code></div>
+          <div class="text-sm text-gray-500"><span data-i18n="module">Module</span>: <code>{{ p.module }}</code> - <span data-i18n="package">Package</span>: <code>{{ p.package }}</code></div>
         </div>
         <span class="px-3 py-1 rounded-full text-xs font-bold {{ 'bg-green-100 text-green-700' if p.installed else 'bg-red-100 text-red-700' }}">
           <span data-i18n="installed" class="{{ '' if p.installed else 'hidden' }}">Installed</span>
@@ -35,20 +56,38 @@
         </span>
       </div>
       <div class="flex items-center gap-3">
-        {% if p.installed %}
-          <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('uninstall_confirm')">
-            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
-              <i class="fas fa-trash"></i>
-              <span data-i18n="uninstall">Uninstall</span>
-            </button>
-          </form>
+        {% if p.source == 'system' %}
+          {% if p.installed %}
+            <form action="/printer-config/uninstall-tool/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('uninstall_confirm')">
+              <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+                <i class="fas fa-trash"></i>
+                <span data-i18n="uninstall">Uninstall</span>
+              </button>
+            </form>
+          {% else %}
+            <form action="/printer-config/install-tool/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit()">
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+                <i class="fas fa-download"></i>
+                <span data-i18n="install">Install</span>
+              </button>
+            </form>
+          {% endif %}
         {% else %}
-          <form action="/plugin/install/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit()">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
-              <i class="fas fa-download"></i>
-              <span data-i18n="install">Install</span>
-            </button>
-          </form>
+          {% if p.installed %}
+            <form action="/plugin/uninstall/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit('uninstall_confirm')">
+              <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+                <i class="fas fa-trash"></i>
+                <span data-i18n="uninstall">Uninstall</span>
+              </button>
+            </form>
+          {% else %}
+            <form action="/plugin/install/{{ p.id }}" method="POST" onsubmit="return pluginFormSubmit()">
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+                <i class="fas fa-download"></i>
+                <span data-i18n="install">Install</span>
+              </button>
+            </form>
+          {% endif %}
         {% endif %}
       </div>
     </div>
@@ -56,10 +95,18 @@
   </div>
 </div>
 <script>
+  function closeNotification() {
+    const notif = document.getElementById('notification');
+    if (notif) {
+      notif.classList.remove('notification-enter');
+      notif.classList.add('notification-exit');
+      setTimeout(() => notif.remove(), 300);
+    }
+  }
+
   function pluginFormSubmit(translationKey) {
     try {
       if (translationKey) {
-        // translationKey is a key like 'uninstall_confirm', resolve it using the t() function
         const message = typeof t === 'function' ? t(translationKey) : translationKey;
         const ok = confirm(message);
         if (!ok) return false;
@@ -69,5 +116,9 @@
     } catch(e) {}
     return true;
   }
+
+  {% if notice %}
+  setTimeout(closeNotification, 12000);
+  {% endif %}
 </script>
 {% endblock %}

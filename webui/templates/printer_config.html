@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+  {% if notice %}
+  <div class="notification notification-enter top-20" id="notification">
+    <div class="{% if status == 'success' %}bg-green-100 border-green-500 text-green-900 dark:bg-green-900 dark:text-green-100{% else %}bg-red-100 border-red-500 text-red-900 dark:bg-red-900 dark:text-red-100{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3">
+      <i class="fas {% if status == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} text-2xl"></i>
+      <div class="flex-1">
+        <p class="font-bold" data-i18n="{{ notice }}">{{ notice }}</p>
+      </div>
+      <button onclick="closeNotification()" class="text-2xl opacity-50 hover:opacity-100">&times;</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex items-center gap-3 mb-4">
+    <i class="fas fa-print text-3xl text-indigo-500"></i>
+    <h2 class="text-4xl font-bold" data-i18n="printer_page_title">Impressora Virtual DICOM</h2>
+    <div class="relative group">
+      <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-help">?</span>
+      <div class="absolute left-9 top-0 w-96 z-10 rounded-lg bg-gray-900 text-white text-sm p-3 shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition" data-i18n="printer_title_help">
+        Esta funcionalidade sobe um listener DICOM Print (AET/porta proprios), recebe os arquivos no spool/database, converte para PDF e envia para a impressora Windows configurada com o formato escolhido.
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-3">
+    {% if not dcmtk_installed %}
+      <form method="post" action="{{ url_for('install_printer_tool', name='dcmtk') }}">
+        <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
+          <i class="fas fa-download"></i>
+          <span data-i18n="printer_install_dcmtk_btn">Instalar DCMTK e ir para Plugins</span>
+        </button>
+      </form>
+    {% else %}
+      <button type="button" disabled class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 opacity-80 cursor-default">
+        <i class="fas fa-check"></i>
+        <span data-i18n="printer_dcmtk_installed">DCMTK instalado</span>
+      </button>
+    {% endif %}
+    {% if not sumatra_installed %}
+      <form method="post" action="{{ url_for('install_printer_tool', name='sumatra') }}">
+        <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
+          <i class="fas fa-download"></i>
+          <span data-i18n="printer_install_sumatra_btn">Instalar SumatraPDF e ir para Plugins</span>
+        </button>
+      </form>
+    {% else %}
+      <button type="button" disabled class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 opacity-80 cursor-default">
+        <i class="fas fa-check"></i>
+        <span data-i18n="printer_sumatra_installed">SumatraPDF instalado</span>
+      </button>
+    {% endif %}
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+    <form method="post" class="space-y-8">
+      <div class="border-b dark:border-gray-700 pb-8">
+        <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+          <i class="fas fa-toggle-on text-indigo-500"></i>
+          <span data-i18n="printer_control_section">Controle</span>
+        </h3>
+        <div class="flex items-center gap-4">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="enabled" class="sr-only peer" {% if printer_cfg.get('enabled') %}checked{% endif %}>
+            <div class="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:bg-green-500 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-6"></div>
+          </label>
+          <span class="text-lg font-semibold" data-i18n="printer_enable_label">Habilitar impressora virtual</span>
+        </div>
+      </div>
+
+      <div class="border-b dark:border-gray-700 pb-8">
+        <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+          <i class="fas fa-satellite-dish text-indigo-500"></i>
+          <span data-i18n="printer_listener_section">Listener DICOM Print</span>
+          <div class="relative group">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold cursor-help">?</span>
+            <div class="absolute left-8 top-0 w-96 z-10 rounded-lg bg-gray-900 text-white text-sm p-3 shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition" data-i18n="printer_listener_help">
+              As informacoes abaixo devem ser configuradas no console/modalidade que fara o envio da imagem para esta impressora virtual.
+            </div>
+          </div>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_receiver_aet_label">AE Title</label>
+            <input type="text" name="receiver_aet" value="{{ printer_cfg.get('receiver', {}).get('aet', 'VPRINTSCP') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_receiver_aet_desc">Nome da Application Entity da impressora virtual. Exemplo: VPRINTSCP.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_receiver_port_label">Porta do listener</label>
+            <input type="number" name="receiver_port" value="{{ printer_cfg.get('receiver', {}).get('port', 4100) }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_receiver_port_desc">Porta TCP onde a modalidade vai conectar para DICOM Print. Exemplo: 4100.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_receiver_profile_label">Perfil dcmprscp</label>
+            <input type="text" name="receiver_profile" value="{{ printer_cfg.get('receiver', {}).get('profile', 'FLOWWORKLIST_PRINTER') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_receiver_profile_desc">Nome do perfil no arquivo de configuracao gerado para o DCMTK.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_receiver_dcmtk_label">Pasta bin do DCMTK</label>
+            <input type="text" name="receiver_dcmtk_bin" value="{{ printer_cfg.get('receiver', {}).get('dcmtk_bin', 'C:\\dcmtk\\bin') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_receiver_dcmtk_desc">Diretorio que contem dcmprscp.exe e dcm2img.exe. Exemplo: C:\dcmtk\bin.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_receiver_target_host_label">Host alvo (LOCALPRINTER)</label>
+            <input type="text" name="receiver_target_host" value="{{ printer_cfg.get('receiver', {}).get('target_host', '127.0.0.1') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_receiver_target_host_desc">Endereco usado pelo perfil LOCALPRINTER do DCMTK. Exemplo: 127.0.0.1.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-b dark:border-gray-700 pb-8">
+        <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+          <i class="fas fa-gears text-indigo-500"></i>
+          <span data-i18n="printer_worker_section">Worker de Conversao e Impressao</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_database_label">Pasta database (entrada DICOM)</label>
+            <input type="text" name="worker_database_dir" value="{{ printer_cfg.get('worker', {}).get('database_dir', '') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_database_desc">Pasta monitorada para arquivos HG_*.dcm.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_spool_label">Pasta spool</label>
+            <input type="text" name="worker_spool_dir" value="{{ printer_cfg.get('worker', {}).get('spool_dir', '') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_spool_desc">Pasta de spool usada pelo receptor DICOM Print.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_out_label">Pasta de saida (PNG/PDF)</label>
+            <input type="text" name="worker_out_dir" value="{{ printer_cfg.get('worker', {}).get('out_dir', '') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_out_desc">Pasta usada para arquivos temporarios convertidos para impressao.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_sumatra_label">Caminho do SumatraPDF.exe</label>
+            <input type="text" name="worker_sumatra_path" value="{{ printer_cfg.get('worker', {}).get('sumatra_path', '') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_sumatra_desc">Executavel usado para enviar PDF para impressora Windows. Exemplo: C:\Program Files\SumatraPDF\SumatraPDF.exe.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_printer_name_label">Impressora Windows</label>
+            <input type="text" name="worker_printer_name" value="{{ printer_cfg.get('worker', {}).get('printer_name', '') }}" placeholder="XEROX" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_printer_name_desc">Nome da impressora exatamente como aparece no Windows.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_paper_size_label">Formato do papel</label>
+            <select name="worker_paper_size" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              {% set paper = printer_cfg.get('worker', {}).get('paper_size', 'A3') %}
+              <option value="A3" {% if paper == 'A3' %}selected{% endif %}>A3</option>
+              <option value="A4" {% if paper == 'A4' %}selected{% endif %}>A4</option>
+              <option value="LETTER" {% if paper == 'LETTER' %}selected{% endif %}>LETTER</option>
+              <option value="LEGAL" {% if paper == 'LEGAL' %}selected{% endif %}>LEGAL</option>
+            </select>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_paper_size_desc">Tamanho de pagina do PDF gerado para impressao.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_print_settings_label">Print settings (Sumatra)</label>
+            <input type="text" name="worker_print_settings" value="{{ printer_cfg.get('worker', {}).get('print_settings', 'fit') }}" placeholder="fit, noscale, shrink..." class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_print_settings_desc">Parametros usados no -print-settings. Exemplo: fit.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_sp_window_label">Janela SP relacionada (segundos)</label>
+            <input type="number" name="worker_sp_time_window_seconds" value="{{ printer_cfg.get('worker', {}).get('sp_time_window_seconds', 120) }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_sp_window_desc">Ao limpar SP relacionado, usa diferenca de tempo em segundos. Exemplo: 120.</p>
+          </div>
+          <div>
+            <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_polling_label">Intervalo de polling (segundos)</label>
+            <input type="number" step="0.1" name="worker_poll_interval_seconds" value="{{ printer_cfg.get('worker', {}).get('poll_interval_seconds', 1.0) }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_polling_desc">Tempo entre verificacoes da pasta de entrada. Exemplo: 1.0.</p>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <label class="inline-flex items-center gap-3 text-base font-semibold">
+            <input
+              type="checkbox"
+              name="worker_delete_after_success"
+              {% if printer_cfg.get('worker', {}).get('delete_after_success') %}checked{% endif %}
+              class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            >
+            <span data-i18n="printer_worker_delete_label">Apagar arquivos apos impressao com sucesso</span>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_delete_desc">Se habilitado, remove HG/SP/PNG/PDF apos processar.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 justify-end pt-6">
+        <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition flex items-center gap-2">
+          <i class="fas fa-times"></i>
+          <span data-i18n="back">Voltar</span>
+        </a>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition flex items-center gap-2">
+          <i class="fas fa-save"></i>
+          <span data-i18n="save">Salvar</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function closeNotification() {
+    const notif = document.getElementById('notification');
+    if (notif) {
+      notif.classList.remove('notification-enter');
+      notif.classList.add('notification-exit');
+      setTimeout(() => notif.remove(), 300);
+    }
+  }
+
+  // Translations for all languages available in FlowWorklist
+  (function () {
+    if (typeof translations === 'undefined') return;
+    const pt = {
+      printer_page_title: 'Impressora Virtual DICOM',
+      printer_title_help: 'Esta funcionalidade sobe um listener DICOM Print (AET/porta proprios), recebe os arquivos no spool/database, converte para PDF e envia para a impressora Windows configurada com o formato escolhido.',
+      printer_install_dcmtk_btn: 'Instalar DCMTK e ir para Plugins',
+      printer_install_sumatra_btn: 'Instalar SumatraPDF e ir para Plugins',
+      printer_dcmtk_installed: 'DCMTK instalado',
+      printer_sumatra_installed: 'SumatraPDF instalado',
+      printer_control_section: 'Controle',
+      printer_enable_label: 'Habilitar impressora virtual',
+      printer_listener_section: 'Listener DICOM Print',
+      printer_listener_help: 'As informacoes abaixo devem ser configuradas no console/modalidade que fara o envio da imagem para esta impressora virtual.',
+      printer_receiver_aet_label: 'AE Title',
+      printer_receiver_aet_desc: 'Nome da Application Entity da impressora virtual. Exemplo: VPRINTSCP.',
+      printer_receiver_port_label: 'Porta do listener',
+      printer_receiver_port_desc: 'Porta TCP onde a modalidade vai conectar para DICOM Print. Exemplo: 4100.',
+      printer_receiver_profile_label: 'Perfil dcmprscp',
+      printer_receiver_profile_desc: 'Nome do perfil no arquivo de configuracao gerado para o DCMTK.',
+      printer_receiver_dcmtk_label: 'Pasta bin do DCMTK',
+      printer_receiver_dcmtk_desc: 'Diretorio que contem dcmprscp.exe e dcm2img.exe. Exemplo: C:\\dcmtk\\bin.',
+      printer_receiver_target_host_label: 'Host alvo (LOCALPRINTER)',
+      printer_receiver_target_host_desc: 'Endereco usado pelo perfil LOCALPRINTER do DCMTK. Exemplo: 127.0.0.1.',
+      printer_worker_section: 'Worker de Conversao e Impressao',
+      printer_worker_database_label: 'Pasta database (entrada DICOM)',
+      printer_worker_database_desc: 'Pasta monitorada para arquivos HG_*.dcm.',
+      printer_worker_spool_label: 'Pasta spool',
+      printer_worker_spool_desc: 'Pasta de spool usada pelo receptor DICOM Print.',
+      printer_worker_out_label: 'Pasta de saida (PNG/PDF)',
+      printer_worker_out_desc: 'Pasta usada para arquivos temporarios convertidos para impressao.',
+      printer_worker_sumatra_label: 'Caminho do SumatraPDF.exe',
+      printer_worker_sumatra_desc: 'Executavel usado para enviar PDF para impressora Windows.',
+      printer_worker_printer_name_label: 'Impressora Windows',
+      printer_worker_printer_name_desc: 'Nome da impressora exatamente como aparece no Windows.',
+      printer_worker_paper_size_label: 'Formato do papel',
+      printer_worker_paper_size_desc: 'Tamanho de pagina do PDF gerado para impressao.',
+      printer_worker_print_settings_label: 'Print settings (Sumatra)',
+      printer_worker_print_settings_desc: 'Parametros usados no -print-settings. Exemplo: fit.',
+      printer_worker_sp_window_label: 'Janela SP relacionada (segundos)',
+      printer_worker_sp_window_desc: 'Ao limpar SP relacionado, usa diferenca de tempo em segundos. Exemplo: 120.',
+      printer_worker_polling_label: 'Intervalo de polling (segundos)',
+      printer_worker_polling_desc: 'Tempo entre verificacoes da pasta de entrada. Exemplo: 1.0.',
+      printer_worker_delete_label: 'Apagar arquivos apos impressao com sucesso',
+      printer_worker_delete_desc: 'Se habilitado, remove HG/SP/PNG/PDF apos processar.'
+    };
+
+    const en = {
+      printer_page_title: 'Virtual DICOM Printer',
+      printer_title_help: 'This feature starts a DICOM Print listener (separate AET/port), receives files in spool/database, converts to PDF, and sends to the configured Windows printer.',
+      printer_install_dcmtk_btn: 'Install DCMTK and go to Plugins',
+      printer_install_sumatra_btn: 'Install SumatraPDF and go to Plugins',
+      printer_dcmtk_installed: 'DCMTK installed',
+      printer_sumatra_installed: 'SumatraPDF installed',
+      printer_control_section: 'Control',
+      printer_enable_label: 'Enable virtual printer',
+      printer_listener_section: 'DICOM Print Listener',
+      printer_listener_help: 'The settings below must also be configured on the console/modality that will send the image.',
+      printer_receiver_aet_label: 'AE Title',
+      printer_receiver_aet_desc: 'Application Entity name of the virtual printer. Example: VPRINTSCP.',
+      printer_receiver_port_label: 'Listener port',
+      printer_receiver_port_desc: 'TCP port where modality connects for DICOM Print. Example: 4100.',
+      printer_receiver_profile_label: 'dcmprscp profile',
+      printer_receiver_profile_desc: 'Profile name in generated DCMTK config file.',
+      printer_receiver_dcmtk_label: 'DCMTK bin folder',
+      printer_receiver_dcmtk_desc: 'Directory containing dcmprscp.exe and dcm2img.exe.',
+      printer_receiver_target_host_label: 'Target host (LOCALPRINTER)',
+      printer_receiver_target_host_desc: 'Address used by DCMTK LOCALPRINTER profile.',
+      printer_worker_section: 'Conversion and Printing Worker',
+      printer_worker_database_label: 'Database folder (DICOM input)',
+      printer_worker_database_desc: 'Monitored folder for HG_*.dcm files.',
+      printer_worker_spool_label: 'Spool folder',
+      printer_worker_spool_desc: 'Spool folder used by DICOM Print receiver.',
+      printer_worker_out_label: 'Output folder (PNG/PDF)',
+      printer_worker_out_desc: 'Folder for temporary converted files.',
+      printer_worker_sumatra_label: 'SumatraPDF.exe path',
+      printer_worker_sumatra_desc: 'Executable used to send PDF to Windows printer.',
+      printer_worker_printer_name_label: 'Windows printer',
+      printer_worker_printer_name_desc: 'Printer name exactly as shown in Windows.',
+      printer_worker_paper_size_label: 'Paper format',
+      printer_worker_paper_size_desc: 'PDF page size used before printing.',
+      printer_worker_print_settings_label: 'Print settings (Sumatra)',
+      printer_worker_print_settings_desc: 'Options used in -print-settings. Example: fit.',
+      printer_worker_sp_window_label: 'Related SP window (seconds)',
+      printer_worker_sp_window_desc: 'Time window used to clean related SP files.',
+      printer_worker_polling_label: 'Polling interval (seconds)',
+      printer_worker_polling_desc: 'Time between input folder checks.',
+      printer_worker_delete_label: 'Delete files after successful print',
+      printer_worker_delete_desc: 'If enabled, removes HG/SP/PNG/PDF after processing.'
+    };
+
+    const langs = ['pt', 'en', 'fr', 'es', 'zh', 'ru', 'ja', 'it', 'tr', 'fil'];
+    langs.forEach((lang) => {
+      const base = lang === 'pt' ? pt : en;
+      translations[lang] = Object.assign({}, translations[lang] || {}, base);
+    });
+  })();
+
+  {% if notice %}
+  setTimeout(closeNotification, 5000);
+  {% endif %}
+</script>
+{% endblock %}
