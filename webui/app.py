@@ -1226,11 +1226,16 @@ def test_worklist():
                     'error': 'Association failed - ensure DICOM server is running'
                 })
             
-            # Create a simple C-FIND query for worklist
+            # Create a MWL C-FIND query identifier (avoid implicit modality filtering)
             ds = Dataset()
             ds.PatientName = '*'
             ds.PatientID = ''
-            ds.QueryRetrieveLevel = 'PATIENT'
+            ds.AccessionNumber = ''
+            ds.Modality = ''
+            sps = Dataset()
+            sps.Modality = ''
+            sps.ScheduledStationAETitle = ''
+            ds.ScheduledProcedureStepSequence = [sps]
             
             # Send C-FIND request
             responses = assoc.send_c_find(ds, ModalityWorklistInformationFind)
@@ -1271,15 +1276,31 @@ def test_worklist():
             assoc.release()
             
             if results:
+                # Build modality summary across all returned items.
+                modality_counts = {}
+                for item in results:
+                    mod = item.get('Modality')
+                    if not mod:
+                        try:
+                            sps = item.get('ScheduledProcedureStepSequence') or []
+                            if sps and isinstance(sps[0], dict):
+                                mod = sps[0].get('Modality')
+                        except Exception:
+                            mod = None
+                    mod = (str(mod).strip().upper() if mod else 'UNKNOWN')
+                    modality_counts[mod] = modality_counts.get(mod, 0) + 1
+
                 return jsonify({
                     'ok': True,
                     'message': f'Received {len(results)} worklist item(s) from DICOM server',
                     'details': {
                         'count': len(results),
-                        'items': results[:10],  # Show first 10
+                        'modalities': modality_counts,
+                        'items': results,
                         'host': host,
                         'port': port,
-                        'aet': aet
+                        'aet': aet,
+                        'query_profile': 'mwl_v2_full'
                     }
                 })
             else:
