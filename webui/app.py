@@ -25,6 +25,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import flow as manager
+from mpps_actions import (
+    merge_mpps_config,
+    execute_mpps_actions,
+    list_action_files,
+    load_action_file,
+    save_action_file,
+    delete_action_file,
+)
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -52,6 +60,7 @@ logging.basicConfig(
 )
 app_logger = logging.getLogger('flowworklist.app')
 DCMTK_MANUAL_URL = "https://dicom.offis.de/en/dcmtk/dcmtk-tools/"
+ORACLE_PY_PACKAGES = ['oracledb', 'cx_Oracle']
 
 def log_action(action, details="", user_ip=None):
     """Log user actions in the application."""
@@ -154,9 +163,45 @@ def _venv_python_and_pip():
     return py_path, pip_path
 
 
+def _pip_show_installed(pip_exe: str, package: str) -> bool:
+    try:
+        res = subprocess.run([pip_exe, 'show', package], capture_output=True, text=True)
+        return res.returncode == 0 and bool((res.stdout or '').strip())
+    except Exception:
+        return False
+
+
+def _run_pip_command(pip_exe: str, args):
+    """Run pip command and return (ok, message) with useful stderr/stdout details."""
+    cmd = [pip_exe] + list(args)
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    except Exception as e:
+        return False, f"Failed to run pip command {' '.join(args)}: {e}"
+
+    if res.returncode == 0:
+        return True, (res.stdout or '').strip() or f"pip {' '.join(args)} succeeded"
+
+    details = (res.stderr or '').strip() or (res.stdout or '').strip() or f"exit code {res.returncode}"
+    detail_lines = [line.strip() for line in details.splitlines() if line.strip()]
+    tail = ' | '.join(detail_lines[-3:]) if detail_lines else f"exit code {res.returncode}"
+    return False, f"pip {' '.join(args)} failed (code {res.returncode}): {tail}"
+
+
+def _install_oracle_driver(pip_exe: str):
+    """Prefer python-oracledb, fallback to cx_Oracle for legacy environments."""
+    errors = []
+    for pkg in ORACLE_PY_PACKAGES:
+        ok, msg = _run_pip_command(pip_exe, ['install', pkg])
+        if ok and _pip_show_installed(pip_exe, pkg):
+            return True, f"Installed Oracle driver: {pkg}"
+        errors.append(f"{pkg}: {msg}")
+    return False, f"Oracle driver install failed. {' ; '.join(errors)}"
+
+
 def install_db_driver(db_type: str):
     pkg_map = {
-        'oracle': ['cx_Oracle'],
+        'oracle': ORACLE_PY_PACKAGES,
         'postgres': ['psycopg2-binary'],
         'postgresql': ['psycopg2-binary'],
         'mysql': ['PyMySQL'],
@@ -166,11 +211,15 @@ def install_db_driver(db_type: str):
     if not packages:
         return False, f"Unknown DB type: {db_type}"
     _py, pip_exe = _venv_python_and_pip()
+    if (db_type or '').lower() == 'oracle':
+        return _install_oracle_driver(pip_exe)
     try:
         for pkg in packages:
-            subprocess.run([pip_exe, 'install', pkg], check=True)
+            ok, msg = _run_pip_command(pip_exe, ['install', pkg])
+            if not ok:
+                return False, f"Install failed for {pkg}: {msg}"
         return True, f"Installed: {', '.join(packages)}"
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         return False, f"Install failed: {e}"
 
 
@@ -178,7 +227,7 @@ def is_db_plugin_installed(db_type: str) -> bool:
     """Check plugin installed using pip show for reliability (handles loaded modules cache)."""
     dt = (db_type or '').lower()
     pkg_map = {
-        'oracle': 'cx_Oracle',
+        'oracle': ORACLE_PY_PACKAGES,
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -187,16 +236,14 @@ def is_db_plugin_installed(db_type: str) -> bool:
     if not pkg:
         return False
     _py, pip_exe = _venv_python_and_pip()
-    try:
-        res = subprocess.run([pip_exe, 'show', pkg], capture_output=True, text=True)
-        return res.returncode == 0 and bool(res.stdout.strip())
-    except Exception:
-        return False
+    if isinstance(pkg, list):
+        return any(_pip_show_installed(pip_exe, p) for p in pkg)
+    return _pip_show_installed(pip_exe, pkg)
 
 
 def plugins_status():
     plugins = [
-        {'id': 'oracle', 'label': 'Oracle (cx_Oracle)', 'module': 'cx_Oracle', 'package': 'cx_Oracle'},
+        {'id': 'oracle', 'label': 'Oracle (oracledb/cx_Oracle)', 'module': 'oracledb|cx_Oracle', 'package': 'oracledb|cx_Oracle'},
         {'id': 'postgres', 'label': 'PostgreSQL (psycopg2)', 'module': 'psycopg2', 'package': 'psycopg2-binary'},
         {'id': 'mysql', 'label': 'MySQL (PyMySQL)', 'module': 'pymysql', 'package': 'PyMySQL'},
         {'id': 'pynetdicom', 'label': 'DICOM Worklist Support (pynetdicom)', 'module': 'pynetdicom', 'package': 'pynetdicom'},
@@ -207,6 +254,9 @@ def plugins_status():
     for p in plugins:
         if p.get('source') == 'system':
             p['installed'] = is_system_tool_installed(p['id'])
+            continue
+        if p['id'] == 'oracle':
+            p['installed'] = is_db_plugin_installed('oracle')
             continue
         try:
             res = subprocess.run([pip_exe, 'show', p['package']], capture_output=True, text=True)
@@ -578,12 +628,39 @@ def action(cmd):
         }), 500
 
 
+@app.route('/action/mpps/<cmd>', methods=['POST'])
+def action_mpps(cmd):
+    log_action(f"MPPS action: {cmd}", f"User requested {cmd} MPPS service")
+    cfg = str(ROOT / "config.json")
+    try:
+        if cmd == 'start':
+            r = manager.start_mpps_service(config_path=cfg)
+        elif cmd == 'stop':
+            r = manager.stop_mpps_service()
+        elif cmd == 'restart':
+            r = manager.restart_mpps_service(config_path=cfg)
+        else:
+            r = {"ok": False, "msg": "unknown command", "error_type": "unknown_command"}
+        if not r.get('ok'):
+            r.setdefault('error_type', 'execution_error')
+            r.setdefault('error_detail', r.get('msg', 'unknown error'))
+        return jsonify(r)
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'msg': f'Unexpected MPPS error: {e}',
+            'error_type': 'server_error',
+            'error_detail': str(e)
+        }), 500
+
+
 @app.route('/status')
 def status():
     # Provide backward-compatible, simplified status payload with detailed info
     st = manager.status()
     svc = st.get('service') or {}
     app_status = st.get('app') or {}
+    mpps_status = st.get('mpps') or {}
     return jsonify({
         'running': bool(svc.get('running')),
         'pid': svc.get('pid'),
@@ -592,6 +669,7 @@ def status():
         'instance_id': svc.get('instance_id') or app_status.get('instance_id'),
         'service': svc,
         'app': app_status,
+        'mpps': mpps_status,
         'message': 'Service is running' if svc.get('running') else 'Service is stopped'
     })
 
@@ -761,6 +839,120 @@ def printer_config():
     )
 
 
+@app.route('/mpps-config', methods=['GET', 'POST'])
+def mpps_config():
+    cfg_path = ROOT / "config.json"
+    if request.method == 'POST':
+        log_action("MPPS config update", "User updated MPPS configuration")
+        if cfg_path.exists():
+            try:
+                config_data = json.loads(cfg_path.read_text())
+            except Exception:
+                config_data = {"server": {}, "database": {}}
+        else:
+            config_data = {"server": {}, "database": {}}
+        config_data["mpps"] = {
+            "enabled": _to_bool(request.form.get("enabled")),
+            "start_with_worklist": _to_bool(request.form.get("start_with_worklist")),
+            "debug_output": _to_bool(request.form.get("debug_output")),
+            "listener": {
+                "aet": request.form.get("listener_aet", "FLOWMPPS").strip() or "FLOWMPPS",
+                "host": request.form.get("listener_host", "0.0.0.0").strip() or "0.0.0.0",
+                "port": _to_int(request.form.get("listener_port"), 4101),
+                "accept_any_calling_aet": _to_bool(request.form.get("listener_accept_any_calling_aet"), True),
+                "calling_aet": request.form.get("listener_calling_aet", "").strip(),
+            },
+            "test_payload_json": request.form.get("test_payload_json", "{}"),
+        }
+        try:
+            cfg_path.write_text(json.dumps(config_data, indent=2))
+            return redirect(url_for('mpps_config', notice='config_saved', status='success'))
+        except Exception as e:
+            return redirect(url_for('mpps_config', notice=f'config_save_error: {str(e)}', status='error'))
+
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            cfg = {"server": {}, "database": {}}
+    else:
+        cfg = {"server": {}, "database": {}}
+
+    merged = merge_mpps_config(cfg.get("mpps"), ROOT)
+    actions = list_action_files(ROOT)
+    selected_action_id = request.args.get('action_id', '')
+    selected_action = load_action_file(ROOT, selected_action_id) if selected_action_id else None
+    if not selected_action and actions:
+        selected_action = actions[0]
+        selected_action_id = selected_action.get('id', '')
+    notice = request.args.get('notice')
+    status = request.args.get('status')
+    st = manager.status()
+    return render_template(
+        'mpps_config.html',
+        cfg=cfg,
+        mpps_cfg=merged,
+        mpps_actions=actions,
+        selected_action=selected_action,
+        selected_action_id=selected_action_id,
+        mpps_status=(st.get('mpps') or {}),
+        notice=notice,
+        status=status
+    )
+
+
+@app.route('/mpps-action/get/<action_id>')
+def mpps_action_get(action_id):
+    action = load_action_file(ROOT, action_id)
+    if not action:
+        return jsonify({'ok': False, 'message': f'Action not found: {action_id}'}), 404
+    return jsonify({'ok': True, 'action': action})
+
+
+@app.route('/mpps-action/save', methods=['POST'])
+def mpps_action_save():
+    try:
+        action_id = (request.form.get('action_id') or '').strip()
+        action_name = (request.form.get('action_name') or '').strip()
+        action_cfg = {
+            'id': action_id or action_name,
+            'name': action_name,
+            'enabled': bool(request.form.get('action_enabled')),
+            'mode': (request.form.get('action_mode') or 'none').strip().lower(),
+            'trigger_events': [str(x).strip().upper() for x in request.form.getlist('action_trigger_events') if str(x).strip()],
+            'trigger_statuses': [str(s).strip().upper() for s in request.form.getlist('action_trigger_statuses') if str(s).strip()],
+            'modality_filter_mode': (request.form.get('action_modality_filter_mode') or 'ANY').strip().upper(),
+            'trigger_modalities': [str(s).strip().upper() for s in (request.form.get('action_trigger_modalities', '') or '').split(',') if str(s).strip()],
+            'include_raw_dataset': bool(request.form.get('action_include_raw_dataset')),
+            'api': {
+                'url': request.form.get('action_api_url', '').strip(),
+                'method': (request.form.get('action_api_method') or 'POST').strip().upper(),
+                'headers_json': request.form.get('action_api_headers_json', '{}'),
+                'timeout_seconds': _to_int(request.form.get('action_api_timeout_seconds'), 10),
+                'payload_template_json': request.form.get('action_api_payload_template_json', '{}'),
+            },
+            'sql': {
+                'on_n_create': request.form.get('action_sql_on_n_create', '').strip(),
+                'on_n_set': request.form.get('action_sql_on_n_set', '').strip(),
+            },
+        }
+        saved = save_action_file(ROOT, action_cfg)
+        return redirect(url_for('mpps_config', notice=f"action_saved:{saved.get('id')}", status='success', action_id=saved.get('id')))
+    except Exception as e:
+        return redirect(url_for('mpps_config', notice=f'action_save_error:{e}', status='error'))
+
+
+@app.route('/mpps-action/delete/<action_id>', methods=['POST'])
+def mpps_action_delete(action_id):
+    try:
+        ok = delete_action_file(ROOT, action_id)
+        if ok:
+            return redirect(url_for('mpps_config', notice=f'action_deleted:{action_id}', status='success'))
+        return redirect(url_for('mpps_config', notice=f'action_not_found:{action_id}', status='error'))
+    except Exception as e:
+        return redirect(url_for('mpps_config', notice=f'action_delete_error:{e}', status='error'))
+
+
 @app.route('/tests')
 def tests():
     notice = request.args.get('notice')
@@ -771,7 +963,16 @@ def tests():
     db_type = (cfg.get('database', {}).get('type') or 'oracle').lower()
     plugin_installed = is_db_plugin_installed(db_type)
     printer_enabled = bool((cfg.get('dicom_printer') or {}).get('enabled'))
-    return render_template('tests.html', notice=notice, status=status, db_type=db_type, plugin_installed=plugin_installed, printer_enabled=printer_enabled)
+    mpps_enabled = bool((cfg.get('mpps') or {}).get('enabled'))
+    return render_template(
+        'tests.html',
+        notice=notice,
+        status=status,
+        db_type=db_type,
+        plugin_installed=plugin_installed,
+        printer_enabled=printer_enabled,
+        mpps_enabled=mpps_enabled
+    )
 
 
 @app.route('/plugins')
@@ -787,7 +988,7 @@ def plugins_page():
 def plugin_install(name):
     name = (name or '').lower()
     mapping = {
-        'oracle': 'cx_Oracle',
+        'oracle': ORACLE_PY_PACKAGES,
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -797,11 +998,13 @@ def plugin_install(name):
     if not pkg:
         return redirect(url_for('plugins_page', notice=f'Unknown plugin {name}', status='error'))
     _py, pip_exe = _venv_python_and_pip()
-    try:
-        subprocess.run([pip_exe, 'install', pkg], check=True)
+    if name == 'oracle':
+        ok, msg = _install_oracle_driver(pip_exe)
+        return redirect(url_for('plugins_page', notice=msg, status='success' if ok else 'error'))
+    ok, msg = _run_pip_command(pip_exe, ['install', pkg])
+    if ok:
         return redirect(url_for('plugins_page', notice=f'Installed {pkg}', status='success'))
-    except subprocess.CalledProcessError as e:
-        return redirect(url_for('plugins_page', notice=f'Install failed: {e}', status='error'))
+    return redirect(url_for('plugins_page', notice=f'Install failed: {msg}', status='error'))
 
 
 @app.route('/printer-config/install-tool/<name>', methods=['POST'])
@@ -841,7 +1044,7 @@ def uninstall_printer_tool(name):
 def plugin_uninstall(name):
     name = (name or '').lower()
     mapping = {
-        'oracle': 'cx_Oracle',
+        'oracle': ORACLE_PY_PACKAGES,
         'postgres': 'psycopg2-binary',
         'postgresql': 'psycopg2-binary',
         'mysql': 'PyMySQL',
@@ -851,11 +1054,22 @@ def plugin_uninstall(name):
     if not pkg:
         return redirect(url_for('plugins_page', notice=f'Unknown plugin {name}', status='error'))
     _py, pip_exe = _venv_python_and_pip()
-    try:
-        subprocess.run([pip_exe, 'uninstall', '-y', pkg], check=True)
-        return redirect(url_for('plugins_page', notice=f'Uninstalled {pkg}', status='success'))
-    except subprocess.CalledProcessError as e:
-        return redirect(url_for('plugins_page', notice=f'Uninstall failed: {e}', status='error'))
+    pkgs = pkg if isinstance(pkg, list) else [pkg]
+    errors = []
+    removed = []
+    for one_pkg in pkgs:
+        if not _pip_show_installed(pip_exe, one_pkg):
+            continue
+        ok, msg = _run_pip_command(pip_exe, ['uninstall', '-y', one_pkg])
+        if ok:
+            removed.append(one_pkg)
+        else:
+            errors.append(f"{one_pkg}: {msg}")
+    if errors:
+        return redirect(url_for('plugins_page', notice=f"Uninstall failed: {' ; '.join(errors)}", status='error'))
+    if removed:
+        return redirect(url_for('plugins_page', notice=f"Uninstalled {', '.join(removed)}", status='success'))
+    return redirect(url_for('plugins_page', notice='Plugin not installed', status='success'))
 
 
 @app.route('/test/status', methods=['POST'])
@@ -955,19 +1169,52 @@ def test_db():
         # Attempt connection based on database type
         try:
             if db_type == 'oracle':
-                # Use cx_Oracle driver
+                # Prefer modern python-oracledb; fallback to cx_Oracle.
+                oracle_driver = None
+                driver_name = ''
                 try:
-                    import cx_Oracle
+                    import oracledb  # type: ignore
+                    oracle_driver = oracledb
+                    driver_name = 'oracledb'
                 except ImportError:
-                    return jsonify({
-                        'ok': False,
-                        'message': 'No Oracle driver available',
-                        'error': 'cx_Oracle is not installed'
-                    })
+                    try:
+                        import cx_Oracle  # type: ignore
+                        oracle_driver = cx_Oracle
+                        driver_name = 'cx_Oracle'
+                    except ImportError:
+                        return jsonify({
+                            'ok': False,
+                            'message': 'No Oracle driver available',
+                            'error': 'Install python-oracledb or cx_Oracle'
+                        })
 
-                # Set connection timeout to avoid long waits
-                conn = cx_Oracle.connect(user=user, password=pwd, dsn=dsn, timeout=10)
-                driver_name = 'cx_Oracle'
+                # Connect with detected Oracle driver.
+                if driver_name == 'oracledb':
+                    try:
+                        conn = oracle_driver.connect(user=user, password=pwd, dsn=dsn)
+                    except Exception as e:
+                        if 'DPY-3015' not in str(e):
+                            raise
+                        lib_dir = (db_cfg.get('oracle_client_lib_dir') or os.environ.get('ORACLE_CLIENT_LIB_DIR') or '').strip()
+                        if not lib_dir:
+                            return jsonify({
+                                'ok': False,
+                                'message': 'Oracle thin mode is not compatible with current password verifier',
+                                'error': "DPY-3015. Configure database.oracle_client_lib_dir or ORACLE_CLIENT_LIB_DIR"
+                            })
+                        try:
+                            oracle_driver.init_oracle_client(lib_dir=lib_dir)
+                        except Exception as init_err:
+                            init_msg = str(init_err).lower()
+                            if 'already initialized' not in init_msg:
+                                return jsonify({
+                                    'ok': False,
+                                    'message': 'Failed to initialize Oracle thick mode',
+                                    'error': str(init_err)
+                                })
+                        conn = oracle_driver.connect(user=user, password=pwd, dsn=dsn)
+                else:
+                    conn = oracle_driver.connect(user=user, password=pwd, dsn=dsn)
                 test_sql = "SELECT 1 FROM dual"
 
             elif db_type == 'postgres':
@@ -1533,6 +1780,74 @@ def test_printer():
         return jsonify({
             'ok': False,
             'message': f'Virtual printer test failed: {str(e)}',
+            'error': str(e)
+        })
+
+
+@app.route('/test/mpps', methods=['POST'])
+def test_mpps():
+    """Test MPPS configured actions (API/SQL) using synthetic payload."""
+    log_action("Test: MPPS", "Running MPPS action test")
+    try:
+        cfg_path = ROOT / "config.json"
+        cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+        mpps_cfg = merge_mpps_config(cfg.get("mpps"), ROOT)
+        if not mpps_cfg.get("enabled"):
+            return jsonify({
+                'ok': False,
+                'message': 'MPPS is disabled',
+                'error': 'Enable mpps.enabled in settings'
+            })
+
+        test_payload_raw = (mpps_cfg.get("test_payload_json") or "{}")
+        try:
+            test_payload = json.loads(test_payload_raw) if str(test_payload_raw).strip() else {}
+            if not isinstance(test_payload, dict):
+                test_payload = {}
+        except Exception:
+            test_payload = {}
+
+        defaults = {
+            "PerformedProcedureStepStatus": "COMPLETED",
+            "PerformedProcedureStepID": "MPPS_TEST_001",
+            "PatientID": "TEST123",
+            "AccessionNumber": "ACC_TEST_001",
+            "StudyInstanceUID": "1.2.826.0.1.3680043.8.498.999.1",
+            "calling_ae": "TESTSCU"
+        }
+        defaults.update(test_payload)
+        event_type = request.args.get("event", "N-SET").upper()
+        if event_type not in ("N-CREATE", "N-SET"):
+            event_type = "N-SET"
+
+        result = execute_mpps_actions(
+            mpps_cfg=mpps_cfg,
+            db_cfg=(cfg.get("database") or {}),
+            event_type=event_type,
+            payload=defaults,
+            dataset_obj=None,
+            root_dir=ROOT
+        )
+        if result.get("ok"):
+            return jsonify({
+                'ok': True,
+                'message': f'MPPS test executed ({event_type})',
+                'details': {
+                    'event': event_type,
+                    'payload': defaults,
+                    'result': result
+                }
+            })
+        return jsonify({
+            'ok': False,
+            'message': 'MPPS test executed with errors',
+            'error': json.dumps(result, ensure_ascii=False),
+            'details': {'event': event_type, 'payload': defaults, 'result': result}
+        })
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'message': f'MPPS test failed: {str(e)}',
             'error': str(e)
         })
 

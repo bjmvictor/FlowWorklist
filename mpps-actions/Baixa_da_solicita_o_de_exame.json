@@ -1,0 +1,26 @@
+{
+  "id": "Baixa_da_solicita_o_de_exame",
+  "name": "Baixa da solicita\u00e7\u00e3o de exame",
+  "enabled": true,
+  "mode": "sql",
+  "trigger_events": [
+    "N-SET"
+  ],
+  "trigger_statuses": [
+    "COMPLETED"
+  ],
+  "modality_filter_mode": "CT",
+  "trigger_modalities": [],
+  "include_raw_dataset": true,
+  "api": {
+    "url": "",
+    "method": "POST",
+    "headers_json": "{}",
+    "timeout_seconds": 10,
+    "payload_template_json": "{}"
+  },
+  "sql": {
+    "on_n_create": "",
+    "on_n_set": "UPDATE PED_RX SET CD_TECNICO = (\r\n                                    SELECT MAX(p.cd_prestador)\r\n                                    FROM prestador p\r\n                                    WHERE p.nm_prestador LIKE '%' || REGEXP_SUBSTR(:OperatorsName, '[^ ]+', 1, 2) || '%'\r\n                                      AND p.cd_prestador IN (\r\n                                          SELECT em.cd_prestador\r\n                                          FROM esp_med em\r\n                                          WHERE em.cd_especialid = 70\r\n                                      )\r\n                                  )\r\nWHERE CD_PED_RX = :AccessionNumber"
+  }
+}

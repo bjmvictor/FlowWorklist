@@ -1,0 +1,26 @@
+{
+  "id": "Baixa_no_controle_de_sala",
+  "name": "Baixa no controle de sala",
+  "enabled": true,
+  "mode": "sql",
+  "trigger_events": [
+    "N-SET"
+  ],
+  "trigger_statuses": [
+    "COMPLETED"
+  ],
+  "modality_filter_mode": "ANY",
+  "trigger_modalities": [],
+  "include_raw_dataset": true,
+  "api": {
+    "url": "",
+    "method": "POST",
+    "headers_json": "",
+    "timeout_seconds": 10,
+    "payload_template_json": ""
+  },
+  "sql": {
+    "on_n_create": "",
+    "on_n_set": "UPDATE SACR_PENDENCIA_SALA \r\nSET TP_SITUACAO = 'FINAL'\r\nWHERE CD_PENDENCIA_SALA IN (\r\n                            SELECT S.CD_PENDENCIA_SALA\r\n                            FROM SACR_PENDENCIA_SALA S\r\n                            JOIN PED_RX P\r\n                              ON TO_NUMBER(TRIM(SUBSTR(S.DS_PENDENCIA_SALA, INSTR(S.DS_PENDENCIA_SALA, ':') + 1))) = P.CD_PRE_MED\r\n                            WHERE P.CD_PED_RX = :AccessionNumber\r\n                            )"
+  }
+}

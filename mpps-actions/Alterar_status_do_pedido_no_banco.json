@@ -1,0 +1,28 @@
+{
+  "id": "Alterar_status_do_pedido_no_banco",
+  "name": "Alterar status do pedido no banco",
+  "enabled": true,
+  "mode": "sql",
+  "trigger_events": [
+    "N-CREATE",
+    "N-SET"
+  ],
+  "trigger_statuses": [
+    "IN PROGRESS",
+    "COMPLETED"
+  ],
+  "modality_filter_mode": "ANY",
+  "trigger_modalities": [],
+  "include_raw_dataset": true,
+  "api": {
+    "url": "",
+    "method": "POST",
+    "headers_json": "{}",
+    "timeout_seconds": 10,
+    "payload_template_json": "{}"
+  },
+  "sql": {
+    "on_n_create": "INSERT INTO PED_RX_STATUS (CD_PED_RX, CD_TP_STATUS )VALUES (:AccessionNumber , 'I')",
+    "on_n_set": "UPDATE PED_RX_STATUS\r\nSET CD_TP_STATUS = DECODE(:PerformedProcedureStepStatus, 'IN PROGRESS', 'I', 'COMPLETED', 'F')\r\nWHERE CD_PED_RX = :AccessionNumber"
+  }
+}

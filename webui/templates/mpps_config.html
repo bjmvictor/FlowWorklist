@@ -1,0 +1,455 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+  {% if notice %}
+  <div class="notification notification-enter top-20" id="notification">
+    <div class="{% if status == 'success' %}bg-green-100 border-green-500 text-green-900 dark:bg-green-900 dark:text-green-100{% else %}bg-red-100 border-red-500 text-red-900 dark:bg-red-900 dark:text-red-100{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3">
+      <i class="fas {% if status == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} text-2xl"></i>
+      <div class="flex-1"><p class="font-bold">{{ notice }}</p></div>
+      <button onclick="closeNotification()" class="text-2xl opacity-50 hover:opacity-100">&times;</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex items-center gap-3 mb-8">
+    <i class="fas fa-notes-medical text-3xl text-emerald-500"></i>
+    <h2 class="text-4xl font-bold flex items-center gap-2">
+      <span>MPPS Configuration</span>
+      <span
+        class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm cursor-help"
+        title="Para executar ações de UPDATE, o usuário do banco configurado nas configurações deve possuir permissão de escrita/UPDATE."
+      >?</span>
+    </h2>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+    <div class="mb-6 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <p class="text-sm text-gray-700 dark:text-gray-300"><strong>Status:</strong>
+        {% if mpps_status.get('running') %}
+          <span class="text-green-600 dark:text-green-400">Running (PID {{ mpps_status.get('pid') }})</span>
+        {% else %}
+          <span class="text-red-600 dark:text-red-400">Stopped</span>
+        {% endif %}
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button type="button" onclick="mppsAction('start')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold">Start MPPS</button>
+        <button type="button" onclick="mppsAction('stop')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold">Stop MPPS</button>
+        <button type="button" onclick="mppsAction('restart')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">Restart MPPS</button>
+      </div>
+    </div>
+
+    <form method="post" class="space-y-8" onsubmit="window._showLoadingBar=true; if(typeof showLoadingBar==='function'){showLoadingBar();}">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-lg font-semibold mb-2">Enable MPPS</label>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="enabled" class="sr-only peer" {% if mpps_cfg.get('enabled') %}checked{% endif %}>
+            <div class="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Turn MPPS listener and actions on/off.</p>
+        </div>
+        <div>
+          <label class="block text-lg font-semibold mb-2">Start with Worklist</label>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="start_with_worklist" class="sr-only peer" {% if mpps_cfg.get('start_with_worklist') %}checked{% endif %}>
+            <div class="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">When enabled, MPPS starts automatically on MWL start/restart.</p>
+        </div>
+        <div>
+          <label class="block text-lg font-semibold mb-2">Debug Output</label>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="debug_output" class="sr-only peer" {% if mpps_cfg.get('debug_output') %}checked{% endif %}>
+            <div class="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Logs payload recebido, dataset MPPS e SQL final no console/log para diagnóstico.</p>
+        </div>
+      </div>
+
+      <div class="border-t dark:border-gray-700 pt-8">
+        <h3 class="text-2xl font-bold mb-6">Listener</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block font-semibold mb-2">MPPS AE Title</label>
+            <input type="text" name="listener_aet" value="{{ mpps_cfg.get('listener', {}).get('aet', 'FLOWMPPS') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">Host</label>
+            <input type="text" name="listener_host" value="{{ mpps_cfg.get('listener', {}).get('host', '0.0.0.0') }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">Port</label>
+            <input type="number" name="listener_port" value="{{ mpps_cfg.get('listener', {}).get('port', 4101) }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">Calling AE Filter</label>
+            <div class="flex items-center gap-3 mb-2">
+              <input type="checkbox" name="listener_accept_any_calling_aet" {% if mpps_cfg.get('listener', {}).get('accept_any_calling_aet', True) %}checked{% endif %}>
+              <span class="text-sm">Accept any calling AE</span>
+            </div>
+            <input type="text" name="listener_calling_aet" value="{{ mpps_cfg.get('listener', {}).get('calling_aet', '') }}" placeholder="CONSOLE_AE" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <label class="block font-semibold mb-2">Test Payload JSON</label>
+          <textarea name="test_payload_json" rows="6" placeholder='{\n  "PerformedProcedureStepStatus": "COMPLETED",\n  "PerformedProcedureStepID": "MPPS_TEST_001",\n  "PatientID": "123456",\n  "AccessionNumber": "ACC-20260313-001",\n  "StudyInstanceUID": "1.2.826.0.1.3680043.8.498.999.1",\n  "calling_ae": "MODALITY_AE"\n}' class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm">{{ mpps_cfg.get('test_payload_json', '{}') }}</textarea>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Used by MPPS test in the Tests page.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 justify-end pt-6">
+        <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancel</a>
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition">Save MPPS Settings</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-2xl font-bold">MPPS Actions</h3>
+    </div>
+
+    <div class="mb-6">
+      <label class="block font-semibold mb-2">Select Action</label>
+      <div class="flex items-center gap-2">
+        <select id="action-selector" class="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" onchange="loadActionFromSelect()">
+          <option value="">-- Select an action --</option>
+          {% for a in mpps_actions %}
+          <option value="{{ a.get('id') }}" {% if selected_action_id == a.get('id') %}selected{% endif %}>[{{ 'ON' if a.get('enabled') else 'OFF' }}] {{ a.get('name') }} ({{ a.get('id') }})</option>
+          {% endfor %}
+        </select>
+        <button type="button" onclick="newAction()" class="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-lg font-bold text-xl">+</button>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Indicator: [ON] action enabled, [OFF] action disabled. All enabled actions execute simultaneously.</p>
+    </div>
+
+    <form method="post" action="/mpps-action/save" id="action-form" class="space-y-6">
+      <input type="hidden" name="action_id" id="action_id" value="{{ selected_action.get('id', '') if selected_action else '' }}">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block font-semibold mb-2">Action Name</label>
+          <input type="text" name="action_name" id="action_name" value="{{ selected_action.get('name', '') if selected_action else '' }}" placeholder="Update RIS on COMPLETED" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" required>
+        </div>
+        <div>
+          <label class="block font-semibold mb-2">Mode</label>
+          {% set action_mode = selected_action.get('mode', 'none') if selected_action else 'none' %}
+          <select name="action_mode" id="action_mode" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <option value="none" {% if action_mode == 'none' %}selected{% endif %}>none</option>
+            <option value="api" {% if action_mode == 'api' %}selected{% endif %}>api</option>
+            <option value="sql" {% if action_mode == 'sql' %}selected{% endif %}>sql</option>
+            <option value="both" {% if action_mode == 'both' %}selected{% endif %}>both</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex items-center gap-3 mt-2">
+          <input type="checkbox" name="action_enabled" id="action_enabled" {% if selected_action and selected_action.get('enabled', True) %}checked{% elif not selected_action %}checked{% endif %}>
+          <label for="action_enabled" class="font-semibold">Enable this action</label>
+        </div>
+        <div class="flex items-center gap-3 mt-2">
+          <input type="checkbox" name="action_include_raw_dataset" id="action_include_raw_dataset" {% if selected_action and selected_action.get('include_raw_dataset', True) %}checked{% elif not selected_action %}checked{% endif %}>
+          <label for="action_include_raw_dataset" class="font-semibold">Include raw dataset</label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% set action_triggers = selected_action.get('trigger_events', ['N-CREATE','N-SET']) if selected_action else ['N-CREATE','N-SET'] %}
+        <div>
+          <label class="block font-semibold mb-2">Trigger Events</label>
+          <div class="flex gap-6 items-center h-[52px]">
+            <label class="inline-flex items-center gap-2"><input type="checkbox" name="action_trigger_events" value="N-CREATE" {% if 'N-CREATE' in action_triggers %}checked{% endif %}>N-CREATE</label>
+            <label class="inline-flex items-center gap-2"><input type="checkbox" name="action_trigger_events" value="N-SET" {% if 'N-SET' in action_triggers %}checked{% endif %}>N-SET</label>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            N-CREATE: primeira criação do MPPS pelo equipamento. N-SET: atualizações de status/dados do MPPS já criado.
+          </p>
+        </div>
+        <div>
+          <label class="block font-semibold mb-2">Trigger Statuses</label>
+          {% set selected_statuses = selected_action.get('trigger_statuses', []) if selected_action else [] %}
+          <select name="action_trigger_statuses" id="action_trigger_statuses" multiple class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-h-[120px]">
+            <option value="IN PROGRESS" {% if 'IN PROGRESS' in selected_statuses %}selected{% endif %}>IN PROGRESS</option>
+            <option value="COMPLETED" {% if 'COMPLETED' in selected_statuses %}selected{% endif %}>COMPLETED</option>
+            <option value="DISCONTINUED" {% if 'DISCONTINUED' in selected_statuses %}selected{% endif %}>DISCONTINUED</option>
+          </select>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Hold Ctrl (or Cmd) to select multiple statuses.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block font-semibold mb-2">Exam Type Filter</label>
+          {% set modality_mode = selected_action.get('modality_filter_mode', 'ANY') if selected_action else 'ANY' %}
+          <select name="action_modality_filter_mode" id="action_modality_filter_mode" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+            <option value="ANY" {% if modality_mode == 'ANY' %}selected{% endif %}>ANY (any modality)</option>
+            <option value="CT" {% if modality_mode == 'CT' %}selected{% endif %}>CT</option>
+            <option value="CR" {% if modality_mode == 'CR' %}selected{% endif %}>CR</option>
+            <option value="CUSTOM" {% if modality_mode == 'CUSTOM' %}selected{% endif %}>CUSTOM</option>
+          </select>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Filter execution by DICOM Modality tag.</p>
+        </div>
+        <div id="custom-modalities-wrap">
+          <label class="block font-semibold mb-2">Custom Modalities (CSV)</label>
+          <input
+            type="text"
+            name="action_trigger_modalities"
+            id="action_trigger_modalities"
+            value="{{ (selected_action.get('trigger_modalities', []) | join(', ')) if selected_action else '' }}"
+            placeholder="MR, US, XA"
+            class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+          >
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Used only when filter mode is CUSTOM.</p>
+        </div>
+      </div>
+
+      <div id="api-settings-block" class="border-t dark:border-gray-700 pt-6">
+        <h4 class="text-xl font-bold mb-4">API Settings</h4>
+        {% set api_cfg = selected_action.get('api', {}) if selected_action else {} %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block font-semibold mb-2">API URL</label>
+            <input type="text" name="action_api_url" id="action_api_url" value="{{ api_cfg.get('url', '') }}" placeholder="https://example.local/mpps" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">API Method</label>
+            {% set api_method = api_cfg.get('method', 'POST') %}
+            <select name="action_api_method" id="action_api_method" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option value="POST" {% if api_method == 'POST' %}selected{% endif %}>POST</option>
+              <option value="PUT" {% if api_method == 'PUT' %}selected{% endif %}>PUT</option>
+              <option value="PATCH" {% if api_method == 'PATCH' %}selected{% endif %}>PATCH</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">API Timeout (seconds)</label>
+            <input type="number" name="action_api_timeout_seconds" id="action_api_timeout_seconds" value="{{ api_cfg.get('timeout_seconds', 10) }}" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">API Headers (JSON)</label>
+            <textarea name="action_api_headers_json" id="action_api_headers_json" rows="4" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm">{{ api_cfg.get('headers_json', '{}') }}</textarea>
+          </div>
+        </div>
+        <div class="mt-6">
+          <label class="block font-semibold mb-2">API Payload Template (JSON)</label>
+          <textarea name="action_api_payload_template_json" id="action_api_payload_template_json" rows="6" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm">{{ api_cfg.get('payload_template_json', '{}') }}</textarea>
+        </div>
+      </div>
+
+      <div id="sql-settings-block" class="border-t dark:border-gray-700 pt-6">
+        <h4 class="text-xl font-bold mb-4">SQL Settings</h4>
+        <div class="mb-4 p-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-sm text-blue-900 dark:text-blue-100">
+          <p class="font-semibold mb-2">Placeholders de tags MPPS para SQL</p>
+          <p class="mb-2">
+            Você pode usar chaves dinâmicas no SQL em dois formatos:
+            <code class="px-1 rounded bg-white/60 dark:bg-black/30">:PatientID</code> ou
+            <code class="px-1 rounded bg-white/60 dark:bg-black/30">{{'{{PatientID}}'}}</code>.
+          </p>
+          <p class="mb-2">
+            Exemplos comuns: <code>:PatientID</code>, <code>:AccessionNumber</code>, <code>:PerformedProcedureStepStatus</code>,
+            <code>:PerformedProcedureStepID</code>, <code>:StudyInstanceUID</code>, <code>:Modality</code>, <code>:calling_ae</code>,
+            <code>:called_ae</code>, <code>:affected_sop_instance_uid</code>, <code>:_event_type</code>.
+          </p>
+          <p>
+            A substituição é aplicada antes da execução da query, então funciona da mesma forma para Oracle, MySQL e PostgreSQL.
+          </p>
+        </div>
+        {% set sql_cfg = selected_action.get('sql', {}) if selected_action else {} %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block font-semibold mb-2">SQL on N-CREATE</label>
+            <textarea name="action_sql_on_n_create" id="action_sql_on_n_create" rows="7" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm">{{ sql_cfg.get('on_n_create', '') }}</textarea>
+          </div>
+          <div>
+            <label class="block font-semibold mb-2">SQL on N-SET</label>
+            <textarea name="action_sql_on_n_set" id="action_sql_on_n_set" rows="7" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm">{{ sql_cfg.get('on_n_set', '') }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4 justify-end pt-4">
+        <button type="button" onclick="newAction()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">New</button>
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition">Save Action</button>
+      </div>
+    </form>
+
+    <div class="mt-4 flex justify-end">
+      <form id="delete-action-form" method="post" action="/mpps-action/delete/{{ selected_action_id or '' }}" onsubmit="return confirmDeleteAction();">
+        <button type="submit" id="delete-action-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition" {% if not selected_action_id %}disabled{% endif %}>Delete Action</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function mppsAction(cmd) {
+    try {
+      window._showLoadingBar = true;
+      if (typeof showLoadingBar === 'function') { showLoadingBar(); }
+      const resp = await fetch(`/action/mpps/${cmd}`, { method: 'POST' });
+      const data = await resp.json();
+      if (data.ok) {
+        showNotification(data.msg || `MPPS ${cmd} success`, 'success', 5000);
+      } else {
+        showNotification(data.msg || `MPPS ${cmd} failed`, 'error', 7000);
+      }
+      setTimeout(() => window.location.reload(), 900);
+    } catch (e) {
+      showNotification(`MPPS ${cmd} error: ${e.message}`, 'error', 7000);
+    } finally {
+      if (typeof hideLoadingBar === 'function') { hideLoadingBar(); }
+      window._showLoadingBar = false;
+    }
+  }
+
+  function confirmDeleteAction() {
+    const actionId = document.getElementById('action_id').value;
+    if (!actionId) {
+      showNotification('Select an action first.', 'error', 4000);
+      return false;
+    }
+    return confirm(`Delete action "${actionId}"?`);
+  }
+
+  function newAction() {
+    const ids = [
+      'action_id', 'action_name', 'action_api_url',
+      'action_api_headers_json', 'action_api_payload_template_json',
+      'action_sql_on_n_create', 'action_sql_on_n_set'
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    const mode = document.getElementById('action_mode');
+    if (mode) mode.value = 'none';
+
+    const apiMethod = document.getElementById('action_api_method');
+    if (apiMethod) apiMethod.value = 'POST';
+
+    const timeout = document.getElementById('action_api_timeout_seconds');
+    if (timeout) timeout.value = '10';
+
+    const modalityMode = document.getElementById('action_modality_filter_mode');
+    if (modalityMode) modalityMode.value = 'ANY';
+
+    const customModalities = document.getElementById('action_trigger_modalities');
+    if (customModalities) customModalities.value = '';
+
+    const includeRaw = document.getElementById('action_include_raw_dataset');
+    if (includeRaw) includeRaw.checked = true;
+
+    const enabled = document.getElementById('action_enabled');
+    if (enabled) enabled.checked = true;
+
+    document.querySelectorAll('input[name="action_trigger_events"]').forEach(ch => {
+      ch.checked = true;
+    });
+    const statusSelect = document.getElementById('action_trigger_statuses');
+    if (statusSelect) {
+      Array.from(statusSelect.options).forEach(opt => { opt.selected = false; });
+    }
+
+    const selector = document.getElementById('action-selector');
+    if (selector) selector.value = '';
+
+    const deleteForm = document.getElementById('delete-action-form');
+    if (deleteForm) deleteForm.action = '/mpps-action/delete/';
+    const deleteBtn = document.getElementById('delete-action-btn');
+    if (deleteBtn) deleteBtn.disabled = true;
+    applyActionModeVisibility();
+    applyModalityFilterVisibility();
+  }
+
+  async function loadActionFromSelect() {
+    const selector = document.getElementById('action-selector');
+    const actionId = selector ? selector.value : '';
+    if (!actionId) {
+      newAction();
+      return;
+    }
+
+    try {
+      if (typeof showLoadingBar === 'function') { showLoadingBar(); }
+      const resp = await fetch(`/mpps-action/get/${encodeURIComponent(actionId)}`);
+      const data = await resp.json();
+      if (!data.ok) {
+        showNotification(data.message || 'Action load failed', 'error', 5000);
+        return;
+      }
+      const a = data.action || {};
+      document.getElementById('action_id').value = a.id || '';
+      document.getElementById('action_name').value = a.name || '';
+      document.getElementById('action_mode').value = a.mode || 'none';
+      document.getElementById('action_enabled').checked = !!a.enabled;
+      document.getElementById('action_include_raw_dataset').checked = (a.include_raw_dataset !== false);
+      const statusSelect = document.getElementById('action_trigger_statuses');
+      const statusList = (a.trigger_statuses || []);
+      if (statusSelect) {
+        Array.from(statusSelect.options).forEach(opt => {
+          opt.selected = statusList.includes(opt.value);
+        });
+      }
+
+    const triggerEvents = (a.trigger_events || []);
+      document.querySelectorAll('input[name="action_trigger_events"]').forEach(ch => {
+        ch.checked = triggerEvents.includes(ch.value);
+      });
+
+      const api = a.api || {};
+      document.getElementById('action_api_url').value = api.url || '';
+      document.getElementById('action_api_method').value = api.method || 'POST';
+      document.getElementById('action_api_timeout_seconds').value = api.timeout_seconds || 10;
+      document.getElementById('action_api_headers_json').value = api.headers_json || '{}';
+      document.getElementById('action_api_payload_template_json').value = api.payload_template_json || '{}';
+
+      document.getElementById('action_modality_filter_mode').value = a.modality_filter_mode || 'ANY';
+      document.getElementById('action_trigger_modalities').value = (a.trigger_modalities || []).join(', ');
+
+      const sql = a.sql || {};
+      document.getElementById('action_sql_on_n_create').value = sql.on_n_create || '';
+      document.getElementById('action_sql_on_n_set').value = sql.on_n_set || '';
+
+      const deleteForm = document.getElementById('delete-action-form');
+      if (deleteForm) deleteForm.action = `/mpps-action/delete/${encodeURIComponent(a.id || actionId)}`;
+      const deleteBtn = document.getElementById('delete-action-btn');
+      if (deleteBtn) deleteBtn.disabled = false;
+      applyActionModeVisibility();
+      applyModalityFilterVisibility();
+    } catch (e) {
+      showNotification(`Action load error: ${e.message}`, 'error', 5000);
+    } finally {
+      if (typeof hideLoadingBar === 'function') { hideLoadingBar(); }
+    }
+  }
+
+  function applyActionModeVisibility() {
+    const mode = (document.getElementById('action_mode')?.value || 'none').toLowerCase();
+    const apiBlock = document.getElementById('api-settings-block');
+    const sqlBlock = document.getElementById('sql-settings-block');
+    if (apiBlock) apiBlock.classList.toggle('hidden', !(mode === 'api' || mode === 'both'));
+    if (sqlBlock) sqlBlock.classList.toggle('hidden', !(mode === 'sql' || mode === 'both'));
+  }
+
+  function applyModalityFilterVisibility() {
+    const mode = (document.getElementById('action_modality_filter_mode')?.value || 'ANY').toUpperCase();
+    const wrap = document.getElementById('custom-modalities-wrap');
+    if (wrap) wrap.classList.toggle('hidden', mode !== 'CUSTOM');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const mode = document.getElementById('action_mode');
+    if (mode) {
+      mode.addEventListener('change', applyActionModeVisibility);
+    }
+    const modalityMode = document.getElementById('action_modality_filter_mode');
+    if (modalityMode) {
+      modalityMode.addEventListener('change', applyModalityFilterVisibility);
+    }
+    applyActionModeVisibility();
+    applyModalityFilterVisibility();
+  });
+</script>
+{% endblock %}

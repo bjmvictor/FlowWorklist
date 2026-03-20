@@ -155,7 +155,7 @@
           <div>
             <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_print_settings_label">Print settings (Sumatra)</label>
             <input type="text" name="worker_print_settings" value="{{ printer_cfg.get('worker', {}).get('print_settings', 'fit') }}" placeholder="fit, noscale, shrink..." class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_print_settings_desc">Parametros usados no -print-settings. Exemplo: fit.</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_worker_print_settings_desc">Parametros usados no -print-settings. Exemplo: fit, shrink, noscale.</p>
           </div>
           <div>
             <label class="block text-lg font-semibold mb-3" data-i18n="printer_worker_sp_window_label">Janela SP relacionada (segundos)</label>
@@ -245,7 +245,7 @@
       printer_worker_paper_size_label: 'Formato do papel',
       printer_worker_paper_size_desc: 'Tamanho de pagina do PDF gerado para impressao.',
       printer_worker_print_settings_label: 'Print settings (Sumatra)',
-      printer_worker_print_settings_desc: 'Parametros usados no -print-settings. Exemplo: fit.',
+      printer_worker_print_settings_desc: 'Parametros usados no -print-settings. Exemplo: fit , shrink, noscale.',
       printer_worker_sp_window_label: 'Janela SP relacionada (segundos)',
       printer_worker_sp_window_desc: 'Ao limpar SP relacionado, usa diferenca de tempo em segundos. Exemplo: 120.',
       printer_worker_polling_label: 'Intervalo de polling (segundos)',

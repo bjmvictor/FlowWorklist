@@ -16,6 +16,9 @@ APP_LOCK = ROOT / "app.lock"
 SERVICE_PID = ROOT / "service.pid"
 SERVICE_LOCK = ROOT / "service.lock"
 SERVICE_STATE = ROOT / "service_state.json"
+MPPS_PID = ROOT / "mpps.pid"
+MPPS_LOCK = ROOT / "mpps.lock"
+MPPS_STATE = ROOT / "mpps_state.json"
 SERVICE_LOG_DIR = ROOT / "service_logs"
 
 SERVICE_LOG_DIR.mkdir(exist_ok=True)
@@ -95,6 +98,9 @@ APP_LOCK = INSTANCE_DIR / "app.lock"
 SERVICE_PID = INSTANCE_DIR / "service.pid"
 SERVICE_LOCK = INSTANCE_DIR / "service.lock"
 SERVICE_STATE = INSTANCE_DIR / "service_state.json"
+MPPS_PID = INSTANCE_DIR / "mpps.pid"
+MPPS_LOCK = INSTANCE_DIR / "mpps.lock"
+MPPS_STATE = INSTANCE_DIR / "mpps_state.json"
 
 
 def _find_pids_by_id(script_name: str, instance_id: str) -> list[int]:
@@ -373,8 +379,179 @@ def stopall():
     print("Stopping Service...")
     stopservice()
     time.sleep(1)
+    print("Stopping MPPS...")
+    stop_mpps_service()
+    time.sleep(1)
     print("Stopping App...")
     stopapp()
+
+
+def _load_config_file(config_path: str | None = None) -> dict:
+    cfg_file = Path(config_path) if config_path else (ROOT / "config.json")
+    if not cfg_file.exists():
+        return {}
+    try:
+        return json.loads(cfg_file.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _mpps_should_start_with_worklist(config_path: str | None = None) -> bool:
+    cfg = _load_config_file(config_path)
+    mpps = cfg.get("mpps") if isinstance(cfg.get("mpps"), dict) else {}
+    enabled = bool(mpps.get("enabled"))
+    start_with_worklist = bool(mpps.get("start_with_worklist", True))
+    return enabled and start_with_worklist
+
+
+def start_mpps_service(config_path: str | None = None):
+    """Start MPPS service in background."""
+    cfg = _load_config_file(config_path)
+    mpps_cfg = cfg.get("mpps") if isinstance(cfg.get("mpps"), dict) else {}
+    if not bool(mpps_cfg.get("enabled")):
+        msg = "MPPS is disabled in config.json"
+        print(f"[INFO] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "disabled"}
+
+    _cleanup_stale_lock(MPPS_LOCK, MPPS_PID, 'mpps_service.py')
+    iid = _instance_id()
+    existing = _find_pids_by_id('mpps_service.py', iid)
+    if existing:
+        pid = existing[0]
+        msg = f"MPPS already running for {iid} (PID {pid})"
+        print(f"[INFO] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "already_running", "pid": pid}
+
+    lock_data = _read_lock_file(MPPS_LOCK)
+    if lock_data:
+        pid = lock_data.get('pid')
+        if pid and _is_process_alive(pid, 'mpps_service.py'):
+            msg = f"MPPS already running (PID {pid})"
+            print(f"[INFO] {msg}")
+            return {"ok": False, "msg": msg, "error_type": "already_running", "pid": pid}
+
+    script = ROOT / "mpps_service.py"
+    if not script.exists():
+        msg = f"MPPS script not found: {script}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "script_not_found", "error_detail": msg}
+
+    if config_path and not Path(config_path).exists():
+        msg = f"Configuration file not found: {config_path}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "config_not_found", "error_detail": msg}
+
+    python_path = _venv_python()
+    ts = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    log_path = SERVICE_LOG_DIR / f"mpps_{ts}.log"
+    try:
+        with open(log_path, "ab") as out:
+            args = [python_path, str(script), '--instance-id', iid]
+            if config_path:
+                args += ["--config", config_path]
+            creationflags = 0
+            startupinfo = None
+            if os.name == 'nt':
+                creationflags = 0x08000000
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0
+            proc = subprocess.Popen(
+                args,
+                stdout=out,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=creationflags,
+                startupinfo=startupinfo
+            )
+    except Exception as e:
+        msg = f"Failed to start MPPS process: {e}"
+        print(f"[ERROR] {msg}")
+        return {"ok": False, "msg": msg, "error_type": "process_start_failed", "error_detail": str(e)}
+
+    MPPS_PID.write_text(str(proc.pid))
+    state = {"pid": proc.pid, "log": str(log_path), "started_at": datetime.datetime.now().isoformat()}
+    MPPS_STATE.write_text(json.dumps(state, indent=2))
+    _write_lock_file(MPPS_LOCK, proc.pid, {'type': 'mpps', 'log': str(log_path), 'instance_id': iid})
+
+    time.sleep(1)
+    if not _is_process_alive(proc.pid, 'mpps_service.py'):
+        msg = f"MPPS process died immediately after start (PID {proc.pid})"
+        print(f"[ERROR] {msg}")
+        MPPS_PID.unlink(missing_ok=True)
+        MPPS_LOCK.unlink(missing_ok=True)
+        MPPS_STATE.unlink(missing_ok=True)
+        return {"ok": False, "msg": msg, "error_type": "process_died", "log_path": str(log_path)}
+
+    msg = f"[OK] MPPS started successfully (PID {proc.pid}). Log: {log_path}"
+    print(msg)
+    return {"ok": True, **state, "msg": msg}
+
+
+def stop_mpps_service():
+    """Stop MPPS service."""
+    iid = _instance_id()
+    found_pids = _find_pids_by_id('mpps_service.py', iid)
+    lock_data = _read_lock_file(MPPS_LOCK)
+    pid = None
+    if lock_data:
+        pid = lock_data.get('pid')
+    elif MPPS_PID.exists():
+        try:
+            pid = int(MPPS_PID.read_text().strip())
+        except Exception:
+            pid = None
+
+    if found_pids and (not pid or pid not in found_pids):
+        pid = found_pids[0]
+
+    if not pid:
+        _cleanup_stale_lock(MPPS_LOCK, MPPS_PID, 'mpps_service.py')
+        MPPS_STATE.unlink(missing_ok=True)
+        return {"ok": False, "msg": "[INFO] No MPPS running or PID file found."}
+
+    if not _is_process_alive(pid, 'mpps_service.py'):
+        MPPS_PID.unlink(missing_ok=True)
+        MPPS_LOCK.unlink(missing_ok=True)
+        MPPS_STATE.unlink(missing_ok=True)
+        return {"ok": False, "msg": f"[INFO] MPPS not running (stale PID {pid}).", "pid": pid}
+
+    try:
+        proc = psutil.Process(pid)
+        children = proc.children(recursive=True)
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+            msg = f"[OK] MPPS stopped gracefully (PID {pid})"
+        except psutil.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            msg = f"[OK] MPPS force-killed (PID {pid})"
+        for child in children:
+            try:
+                child.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        MPPS_PID.unlink(missing_ok=True)
+        MPPS_LOCK.unlink(missing_ok=True)
+        MPPS_STATE.unlink(missing_ok=True)
+        return {"ok": True, "msg": msg, "pid": pid}
+    except psutil.NoSuchProcess:
+        MPPS_PID.unlink(missing_ok=True)
+        MPPS_LOCK.unlink(missing_ok=True)
+        MPPS_STATE.unlink(missing_ok=True)
+        return {"ok": True, "msg": f"[INFO] MPPS process {pid} already terminated.", "pid": pid}
+    except Exception as e:
+        return {"ok": False, "msg": f"[ERROR] Error stopping MPPS (PID {pid}): {e}"}
+
+
+def restart_mpps_service(config_path: str | None = None):
+    stop_res = stop_mpps_service()
+    time.sleep(1)
+    start_res = start_mpps_service(config_path=config_path)
+    if start_res.get('ok'):
+        return {"ok": True, "msg": f"[OK] MPPS restarted successfully (PID {start_res.get('pid')})", **start_res}
+    return {"ok": False, "msg": start_res.get('msg', 'MPPS restart failed'), "stop": stop_res, **start_res}
 
 
 def startservice(config_path: str | None = None):
@@ -482,11 +659,43 @@ def startservice(config_path: str | None = None):
     
     msg = f"[OK] Service started successfully (PID {proc.pid}). Log: {log_path}"
     print(msg)
-    return {"ok": True, **state, "msg": msg}
+    result = {"ok": True, **state, "msg": msg}
+
+    # Start MPPS together when configured, but never fail MWL startup because of MPPS.
+    try:
+        if _mpps_should_start_with_worklist(config_path=config_path):
+            mpps_res = start_mpps_service(config_path=config_path)
+            result["mpps"] = mpps_res
+            if not mpps_res.get("ok"):
+                result["warning"] = f"MWL started, but MPPS did not start: {mpps_res.get('msg')}"
+    except Exception as e:
+        result["mpps"] = {"ok": False, "msg": f"Unhandled MPPS start error: {e}"}
+        result["warning"] = f"MWL started, but MPPS start raised exception: {e}"
+
+    return result
 
 
 def stopservice():
     """Stop MWL service."""
+    # Always stop MPPS first to avoid auxiliary orphan processes.
+    try:
+        stop_mpps_service()
+    except Exception:
+        pass
+    # Also stop orphan virtual printer receiver process if present.
+    try:
+        for orphan_pid in find_printer_receiver_pids():
+            try:
+                if os.name == 'nt':
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(orphan_pid)], check=False,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                else:
+                    os.kill(orphan_pid, 9)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     iid = _instance_id()
     # First, try to find any running mwl_service.py processes
     found_pids = []
@@ -651,6 +860,7 @@ def status():
     # Clean up any stale locks first
     _cleanup_stale_lock(APP_LOCK, APP_PID, 'app.py')
     _cleanup_stale_lock(SERVICE_LOCK, SERVICE_PID, 'mwl_service.py')
+    _cleanup_stale_lock(MPPS_LOCK, MPPS_PID, 'mpps_service.py')
     iid = _instance_id()
     
     # Check App status
@@ -722,10 +932,49 @@ def status():
                             service_status["timestamp"] = state.get('started_at')
                     except Exception:
                         pass
+
+    # Check MPPS status
+    mpps_status = {
+        "running": False,
+        "pid": None,
+        "timestamp": None,
+        "log": None
+    }
+    mpps_pids = _find_pids_by_id('mpps_service.py', iid)
+    if mpps_pids:
+        pid = mpps_pids[0]
+        mpps_status["running"] = True
+        mpps_status["pid"] = pid
+        if MPPS_STATE.exists():
+            try:
+                state = json.loads(MPPS_STATE.read_text())
+                mpps_status["log"] = state.get('log')
+                mpps_status["timestamp"] = state.get('started_at')
+            except Exception:
+                pass
+    else:
+        lock_data = _read_lock_file(MPPS_LOCK)
+        if lock_data:
+            pid = lock_data.get('pid')
+            if pid and _is_process_alive(pid, 'mpps_service.py'):
+                mpps_status["running"] = True
+                mpps_status["pid"] = pid
+                mpps_status["timestamp"] = lock_data.get('timestamp')
+                mpps_status["log"] = lock_data.get('log')
+                if MPPS_STATE.exists():
+                    try:
+                        state = json.loads(MPPS_STATE.read_text())
+                        if not mpps_status["log"]:
+                            mpps_status["log"] = state.get('log')
+                        if not mpps_status["timestamp"]:
+                            mpps_status["timestamp"] = state.get('started_at')
+                    except Exception:
+                        pass
     
     app_status["instance_id"] = iid
     service_status["instance_id"] = iid
-    return {"app": app_status, "service": service_status}
+    mpps_status["instance_id"] = iid
+    return {"app": app_status, "service": service_status, "mpps": mpps_status}
 
 
 def _find_service_pids_windows() -> list[int]:
@@ -793,6 +1042,83 @@ def find_service_pids() -> list[int]:
     return list(sorted(pids))
 
 
+def _find_mpps_pids_windows() -> list[int]:
+    pids: list[int] = []
+    try:
+        cmd = [
+            'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+            'Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*mpps_service.py*" } | Select-Object -ExpandProperty ProcessId'
+        ]
+        out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in out.stdout.splitlines():
+            try:
+                pid = int(line.strip())
+                if pid > 0:
+                    pids.append(pid)
+            except Exception:
+                pass
+        if not pids:
+            cmd = ['wmic', 'process', 'where', "CommandLine like '%mpps_service.py%'", 'get', 'ProcessId']
+            out = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            for tok in out.stdout.replace('\r', '').split():
+                if tok.isdigit():
+                    pids.append(int(tok))
+    except Exception:
+        pass
+    return list(sorted(set(pids)))
+
+
+def _find_mpps_pids_unix() -> list[int]:
+    pids: list[int] = []
+    try:
+        out = subprocess.run(['sh', '-lc', "ps -eo pid,command | grep -v grep | grep mpps_service.py | awk '{print $1}'"],
+                             check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in out.stdout.splitlines():
+            try:
+                pid = int(line.strip())
+                if pid > 0:
+                    pids.append(pid)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return list(sorted(set(pids)))
+
+
+def find_mpps_pids() -> list[int]:
+    pids: set[int] = set()
+    if MPPS_PID.exists():
+        try:
+            pid = int(MPPS_PID.read_text().strip())
+            if _is_process_alive(pid, 'mpps_service.py'):
+                pids.add(pid)
+        except Exception:
+            pass
+    scan = _find_mpps_pids_windows() if os.name == 'nt' else _find_mpps_pids_unix()
+    for pid in scan:
+        if _is_process_alive(pid, 'mpps_service.py'):
+            pids.add(pid)
+    return list(sorted(pids))
+
+
+def find_printer_receiver_pids() -> list[int]:
+    """Find orphan dcmprscp processes started by FlowWorklist virtual printer."""
+    pids: set[int] = set()
+    marker = str((ROOT / "dicom-printer" / "runtime_printer.cfg")).lower().replace("\\", "/")
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline_list = proc.info.get('cmdline') or []
+                cmd = ' '.join(cmdline_list).lower().replace("\\", "/")
+                if ('dcmprscp' in cmd or 'dcmprscp.exe' in cmd) and (marker in cmd or 'flowworklist_printer' in cmd):
+                    pids.add(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+    return list(sorted(pids))
+
+
 def kill_orphan_services():
     """Locate and kill any running mwl_service.py processes; cleanup pid/lock files.
 
@@ -800,7 +1126,7 @@ def kill_orphan_services():
     """
     killed: list[int] = []
     errors: list[str] = []
-    candidates = find_service_pids()
+    candidates = find_service_pids() + find_mpps_pids() + find_printer_receiver_pids()
     for pid in candidates:
         try:
             if os.name == 'nt':
@@ -816,9 +1142,34 @@ def kill_orphan_services():
         SERVICE_PID.unlink(missing_ok=True)
     except Exception:
         pass
+    try:
+        MPPS_PID.unlink(missing_ok=True)
+    except Exception:
+        pass
+    try:
+        SERVICE_LOCK.unlink(missing_ok=True)
+    except Exception:
+        pass
+    try:
+        MPPS_LOCK.unlink(missing_ok=True)
+    except Exception:
+        pass
+    try:
+        SERVICE_STATE.unlink(missing_ok=True)
+    except Exception:
+        pass
+    try:
+        MPPS_STATE.unlink(missing_ok=True)
+    except Exception:
+        pass
     lock_file = ROOT / "mwl_server.lock"
     try:
         lock_file.unlink(missing_ok=True)
+    except Exception:
+        pass
+    mpps_lock = ROOT / "mpps_server.lock"
+    try:
+        mpps_lock.unlink(missing_ok=True)
     except Exception:
         pass
     ok = len(errors) == 0
@@ -828,7 +1179,7 @@ def kill_orphan_services():
 def _collect_other_instance_pids() -> dict:
     """Collect PIDs for app/service processes that belong to other instances.
 
-    Returns a dict: { 'app': [pids], 'service': [pids] }
+    Returns a dict: { 'app': [pids], 'service': [pids], 'mpps': [pids] }
     """
     current_id = INSTANCE_ID.lower()
     root_str = str(ROOT).lower().replace('\\', '/')
@@ -847,7 +1198,7 @@ def _collect_other_instance_pids() -> dict:
         # No instance-id: if command line doesn't include our repo root, consider it other
         return root_str not in c
 
-    pids = {'app': [], 'service': []}
+    pids = {'app': [], 'service': [], 'mpps': []}
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
@@ -862,6 +1213,9 @@ def _collect_other_instance_pids() -> dict:
                 elif 'mwl_service.py' in cl:
                     if is_other_instance(cmd):
                         pids['service'].append(proc.info['pid'])
+                elif 'mpps_service.py' in cl:
+                    if is_other_instance(cmd):
+                        pids['mpps'].append(proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
     except Exception:
@@ -879,11 +1233,12 @@ def kill_other_instances(target: str = 'both'):
     pids = _collect_other_instance_pids()
     to_kill = {
         'app': pids['app'] if target in ('app', 'both') else [],
-        'service': pids['service'] if target in ('service', 'both') else []
+        'service': pids['service'] if target in ('service', 'both') else [],
+        'mpps': pids['mpps'] if target in ('service', 'both') else [],
     }
-    killed = {'app': [], 'service': []}
+    killed = {'app': [], 'service': [], 'mpps': []}
     errors = []
-    for kind in ('app', 'service'):
+    for kind in ('app', 'service', 'mpps'):
         for pid in to_kill[kind]:
             try:
                 if os.name == 'nt':
@@ -1131,6 +1486,20 @@ def print_status():
             print(f"  Started:    {service.get('timestamp')}")
         if service.get('log'):
             print(f"  Log:        {service.get('log')}")
+    else:
+        print(f"  Status:     ✗ Stopped")
+
+    # MPPS status
+    mpps = st.get('mpps', {})
+    print("\n🧾 MPPS Service")
+    print("-" * 60)
+    if mpps.get('running'):
+        print(f"  Status:     ✓ Running")
+        print(f"  PID:        {mpps.get('pid')}")
+        if mpps.get('timestamp'):
+            print(f"  Started:    {mpps.get('timestamp')}")
+        if mpps.get('log'):
+            print(f"  Log:        {mpps.get('log')}")
     else:
         print(f"  Status:     ✗ Stopped")
     

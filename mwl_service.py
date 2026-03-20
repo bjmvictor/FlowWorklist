@@ -389,6 +389,39 @@ def _parse_dsn_ip_port_db(dsn_str: str, default_port: int) -> Tuple[str, int, st
         return None, None, None
 
 
+def _connect_oracle_with_fallback(user: str, password: str, dsn: str):
+    """Connect to Oracle and fallback to thick mode for DPY-3015 when needed."""
+    if ORACLE_DB_MODULE is None:
+        raise RuntimeError("Oracle driver is not available")
+
+    # cx_Oracle is thick mode by nature.
+    if ORACLE_DRIVER_NAME == 'cx_Oracle':
+        return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
+
+    # python-oracledb: try thin first
+    try:
+        return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
+    except Exception as first_err:
+        if 'DPY-3015' not in str(first_err):
+            raise
+
+        lib_dir = (DB_CFG.get('oracle_client_lib_dir') or os.environ.get('ORACLE_CLIENT_LIB_DIR') or '').strip()
+        if not lib_dir:
+            raise RuntimeError(
+                "DPY-3015: thin mode unsupported password verifier. "
+                "Set database.oracle_client_lib_dir in config.json or ORACLE_CLIENT_LIB_DIR env var."
+            ) from first_err
+
+        try:
+            ORACLE_DB_MODULE.init_oracle_client(lib_dir=lib_dir)
+        except Exception as init_err:
+            init_msg = str(init_err).lower()
+            if 'already initialized' not in init_msg:
+                raise RuntimeError(f"Failed to initialize Oracle thick mode at '{lib_dir}': {init_err}") from first_err
+
+        return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
+
+
 def _translate_query_for_mysql(query: str) -> str:
     """Very small best-effort translation of common Oracle functions to MySQL equivalents."""
     if not query:
@@ -445,7 +478,7 @@ class WorklistProvider:
                     logging.error(t('db_driver_missing', db='Oracle'))
                     return False
                 
-                self.conn = ORACLE_DB_MODULE.connect(user=DB_USER, password=DB_PASSWORD, dsn=DB_DSN)
+                self.conn = _connect_oracle_with_fallback(DB_USER, DB_PASSWORD, DB_DSN)
                 self.driver = 'oracle'
             # Conexão Oracle estabelecida
                 return True
@@ -566,6 +599,27 @@ def sanitize_string(text):
     s = " ".join(s.split())
     return s.upper()
 
+
+def normalize_modality(value):
+    """Normalize modality aliases to standard DICOM modality codes."""
+    if value is None:
+        return ""
+    v = str(value).strip().upper()
+    # Common aliases seen in HIS/RIS integrations
+    alias_map = {
+        "TC": "CT",   # Tomografia Computadorizada -> CT
+        "TOMO": "CT",
+        "TAC": "CT",
+        "RM": "MR",   # Ressonancia Magnetica -> MR
+        "MMG": "MG",
+        "MAMO": "MG",
+        "USG": "US",
+        "ECO": "US",
+        "RX": "CR",
+        "RAIOX": "CR",
+    }
+    return alias_map.get(v, v)
+
 # --- HANDLER DICOM MWL FIND (C-FIND SCP) ---
 def handle_find_mwl(event, worklist_provider: WorklistProvider):
     # O 'identifier' contém os filtros DICOM enviados pelo cliente
@@ -580,6 +634,15 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     accession_number_filter = identifier.get('AccessionNumber', None)
     scheduled_date_filter = identifier.get('ScheduledProcedureStepStartDate', None)
     scheduled_time_filter = identifier.get('ScheduledProcedureStepStartTime', None)
+
+    # Many MWL clients send Modality inside ScheduledProcedureStepSequence.
+    if not modality_filter:
+        try:
+            sps_seq = identifier.get('ScheduledProcedureStepSequence', None)
+            if sps_seq and len(sps_seq) > 0:
+                modality_filter = sps_seq[0].get('Modality', None)
+        except Exception:
+            pass
 
     # Log dos filtros recebidos
     logging.info(f"Filtros recebidos: PatientName={patient_name_filter}, PatientID={patient_id_filter}, Modality={modality_filter}")
@@ -597,6 +660,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
     sex_filter = clean_filter(sex_filter)
     birth_date_filter = clean_filter(birth_date_filter)
     modality_filter = clean_filter(modality_filter)
+    modality_filter_norm = normalize_modality(modality_filter) if modality_filter else None
     accession_number_filter = clean_filter(accession_number_filter)
     scheduled_date_filter = clean_filter(scheduled_date_filter)
     scheduled_time_filter = clean_filter(scheduled_time_filter)
@@ -632,17 +696,21 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         yield (0x0000, None)
         return
 
-    # --- Agrupa linhas por 'exame_id' (cd_ped_rx) para que cada pedido vire 1 único item MWL ---
+    # --- Agrupa linhas por 'exame_id + modalidade' para não perder itens CT/CR no mesmo pedido ---
     from collections import defaultdict
     grouped = defaultdict(list)
     for row in worklist_rows:
-        key = str(row.get('exame_id', '')).strip()
+        row_modality_norm = normalize_modality(row.get('modalidade', ''))
+        # If modality filter exists, keep only matching rows before grouping
+        if modality_filter_norm and not matches_filter(row_modality_norm, modality_filter_norm):
+            continue
+        key = f"{str(row.get('exame_id', '')).strip()}::{row_modality_norm or 'UNK'}"
         grouped[key].append(row)
 
     response_count = 0
 
     # Itera por cada pedido (agregado)
-    for ped_id, itens in grouped.items():
+    for ped_key, itens in grouped.items():
         if not itens:
             continue
         # Usa a primeira linha como fonte para dados do nível raiz (Patient, Accession etc.)
@@ -654,6 +722,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         db_sex = str(primeira.get('tp_sexo', '')).strip()
         db_birth_date = str(primeira.get('nascimento', '')).strip()
         db_modality = str(primeira.get('modalidade', '')).strip()
+        db_modality_norm = normalize_modality(db_modality)
         db_accession_number = str(primeira.get('exame_id', '')).strip()
         db_scheduled_date = str(primeira.get('exame_data', '')).strip()
         db_scheduled_time = str(primeira.get('exame_hora', '')).strip()
@@ -674,8 +743,12 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         if birth_date_filter and db_birth_date != birth_date_filter:
             logging.debug(f"  BirthDate filter mismatch: '{db_birth_date}' != '{birth_date_filter}'")
             continue
-        if not matches_filter(db_modality, modality_filter):
-            logging.debug(f"  Modality filter mismatch: '{db_modality}' does not match '{modality_filter}'")
+        # Compare normalized modality to support aliases (e.g., TC<->CT, RM<->MR)
+        if modality_filter_norm and not matches_filter(db_modality_norm, modality_filter_norm):
+            logging.debug(
+                f"  Modality filter mismatch: raw='{db_modality}' normalized='{db_modality_norm}' "
+                f"does not match filter raw='{modality_filter}' normalized='{modality_filter_norm}'"
+            )
             continue
         if not matches_filter(db_accession_number, accession_number_filter):
             logging.debug(f"  AccessionNumber filter mismatch: '{db_accession_number}' does not match '{accession_number_filter}'")
@@ -699,7 +772,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         ds.PatientBirthDate = db_birth_date or ''
         ds.PatientSex = {'F': 'F', 'M': 'M'}.get(primeira.get('tp_sexo', 'O'), 'O')
         ds.AccessionNumber = db_accession_number
-        ds.Modality = db_modality or 'CR'
+        ds.Modality = db_modality_norm or 'CR'
         ds.RequestedProcedureDescription = sanitize_string(primeira.get('exame_descricao', ''))
         ds.SpecificCharacterSet = 'ISO_IR 192'
         ds.InstanceCreationDate = datetime.now().strftime('%Y%m%d')
@@ -748,9 +821,10 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
 
         # Scheduled Procedure Step Sequence (obrigatório ter pelo menos 1 item)
         sps = Dataset()
-        sps.Modality = db_modality or 'CR'
-        sps.RequestedProcedureID = str(primeira.get('exame_id', '')).strip() or ped_id
-        sps.ScheduledProcedureStepID = str(primeira.get('exame_id', '')).strip() or ped_id
+        sps.Modality = db_modality_norm or 'CR'
+        ped_id = str(primeira.get('exame_id', '')).strip() or ped_key.split('::', 1)[0]
+        sps.RequestedProcedureID = ped_id
+        sps.ScheduledProcedureStepID = ped_id
         sps.ScheduledProcedureStepDescription = sanitize_string(primeira.get('exame_descricao', ''))
         sps.ScheduledProcedureStepStartDate = db_scheduled_date or ''
         sps.ScheduledProcedureStepStartTime = db_scheduled_time or ''
@@ -771,7 +845,7 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
         ds.ScheduledProcedureStepSequence = [sps]
 
         # Extra: alguns consoles esperam que exista também RequestedProcedureID e RequestedProcedureDescription
-        ds.RequestedProcedureID = str(primeira.get('exame_id', '')).strip() or ped_id
+        ds.RequestedProcedureID = ped_id
         #ds.RequestedProcedureDescription = sanitize_string(primeira.get('exame_descricao', ''))
 
         # Logging e yield
@@ -786,8 +860,14 @@ def handle_find_mwl(event, worklist_provider: WorklistProvider):
 def run_mwl_scp():
     printer_runtime = None
     if DICOM_PRINTER_ENABLED:
-        printer_runtime = DicomPrinterRuntime(Path(BASE_DIR), DICOM_PRINTER_CFG)
-        printer_runtime.start()
+        try:
+            printer_runtime = DicomPrinterRuntime(Path(BASE_DIR), DICOM_PRINTER_CFG)
+            printer_runtime.start()
+            logging.info("Virtual DICOM printer started successfully.")
+        except Exception as printer_err:
+            # Printer must never block MWL startup.
+            printer_runtime = None
+            logging.error("Virtual DICOM printer failed to start (MWL will continue): %s", printer_err)
 
     worklist_provider = WorklistProvider()
     if not worklist_provider.connect():
@@ -816,9 +896,15 @@ def run_mwl_scp():
 
     try:
         ae.start_server((MWL_HOST, MWL_PORT), block=True, evt_handlers=handlers)
+    except Exception as scp_err:
+        logging.error("MWL server fatal error: %s", scp_err)
+        raise
     finally:
         if printer_runtime:
-            printer_runtime.stop()
+            try:
+                printer_runtime.stop()
+            except Exception as printer_stop_err:
+                logging.error("Error stopping virtual DICOM printer: %s", printer_stop_err)
 
 if __name__ == '__main__':
     run_mwl_scp()

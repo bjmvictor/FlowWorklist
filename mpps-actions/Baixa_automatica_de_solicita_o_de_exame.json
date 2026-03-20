@@ -1,0 +1,26 @@
+{
+  "id": "Baixa_automatica_de_solicita_o_de_exame",
+  "name": "Baixa automatica do item do pedido",
+  "enabled": true,
+  "mode": "sql",
+  "trigger_events": [
+    "N-SET"
+  ],
+  "trigger_statuses": [
+    "COMPLETED"
+  ],
+  "modality_filter_mode": "CT",
+  "trigger_modalities": [],
+  "include_raw_dataset": true,
+  "api": {
+    "url": "",
+    "method": "POST",
+    "headers_json": "{}",
+    "timeout_seconds": 10,
+    "payload_template_json": "{}"
+  },
+  "sql": {
+    "on_n_create": "",
+    "on_n_set": "UPDATE ITPED_RX SET DT_REALIZADO = SYSDATE, SN_REALIZADO = 'S',  CD_PRESTADOR = (                                                                                  SELECT MAX(p.cd_prestador)                                                                                  FROM prestador p                                                                                  WHERE p.nm_prestador LIKE '%' || REGEXP_SUBSTR(:OperatorsName, '[^ ]+', 1, 2) || '%'                                                                                    AND p.cd_prestador IN (                                                                                        SELECT em.cd_prestador                                                                                        FROM esp_med em                                                                                        WHERE em.cd_especialid = 70                                                                                    )                                                                                )\r\nWHERE CD_PED_RX = :AccessionNumber"
+  }
+}
