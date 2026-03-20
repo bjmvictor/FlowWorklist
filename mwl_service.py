@@ -407,17 +407,28 @@ def _connect_oracle_with_fallback(user: str, password: str, dsn: str):
 
         lib_dir = (DB_CFG.get('oracle_client_lib_dir') or os.environ.get('ORACLE_CLIENT_LIB_DIR') or '').strip()
         if not lib_dir:
-            raise RuntimeError(
-                "DPY-3015: thin mode unsupported password verifier. "
-                "Set database.oracle_client_lib_dir in config.json or ORACLE_CLIENT_LIB_DIR env var."
-            ) from first_err
+            # Last fallback: try cx_Oracle if available in this environment.
+            try:
+                import cx_Oracle  # type: ignore
+                return cx_Oracle.connect(user=user, password=password, dsn=dsn)
+            except Exception:
+                raise RuntimeError(
+                    "DPY-3015: thin mode unsupported password verifier. "
+                    "Set database.oracle_client_lib_dir in config.json or ORACLE_CLIENT_LIB_DIR env var, "
+                    "or install cx_Oracle with Oracle Instant Client."
+                ) from first_err
 
         try:
             ORACLE_DB_MODULE.init_oracle_client(lib_dir=lib_dir)
         except Exception as init_err:
             init_msg = str(init_err).lower()
             if 'already initialized' not in init_msg:
-                raise RuntimeError(f"Failed to initialize Oracle thick mode at '{lib_dir}': {init_err}") from first_err
+                # If thick init fails, still try cx_Oracle as final fallback.
+                try:
+                    import cx_Oracle  # type: ignore
+                    return cx_Oracle.connect(user=user, password=password, dsn=dsn)
+                except Exception:
+                    raise RuntimeError(f"Failed to initialize Oracle thick mode at '{lib_dir}': {init_err}") from first_err
 
         return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
 
