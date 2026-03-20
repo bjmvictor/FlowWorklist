@@ -405,32 +405,56 @@ def _connect_oracle_with_fallback(user: str, password: str, dsn: str):
         if 'DPY-3015' not in str(first_err):
             raise
 
-        lib_dir = (DB_CFG.get('oracle_client_lib_dir') or os.environ.get('ORACLE_CLIENT_LIB_DIR') or '').strip()
-        if not lib_dir:
-            # Last fallback: try cx_Oracle if available in this environment.
+        # Build candidate lib dirs for thick mode.
+        candidates = []
+        cfg_dir = (DB_CFG.get('oracle_client_lib_dir') or '').strip()
+        env_dir = (os.environ.get('ORACLE_CLIENT_LIB_DIR') or '').strip()
+        if cfg_dir:
+            candidates.append(cfg_dir)
+        if env_dir and env_dir not in candidates:
+            candidates.append(env_dir)
+
+        # Try PATH-based initialization without explicit lib_dir.
+        candidates.append("")
+
+        # Try common Windows folders if present.
+        for probe in (
+            r"C:\instantclient_21_14",
+            r"C:\instantclient_21_13",
+            r"C:\instantclient_19_22",
+            r"C:\oracle\instantclient_21_14",
+            r"C:\oracle\instantclient_21_13",
+            r"C:\oracle\instantclient_19_22",
+        ):
+            if probe not in candidates and os.path.isdir(probe):
+                candidates.append(probe)
+
+        for lib_dir in candidates:
             try:
-                import cx_Oracle  # type: ignore
-                return cx_Oracle.connect(user=user, password=password, dsn=dsn)
+                if lib_dir:
+                    ORACLE_DB_MODULE.init_oracle_client(lib_dir=lib_dir)
+                else:
+                    ORACLE_DB_MODULE.init_oracle_client()
+            except Exception as init_err:
+                init_msg = str(init_err).lower()
+                if 'already initialized' not in init_msg:
+                    continue
+            try:
+                return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
             except Exception:
-                raise RuntimeError(
-                    "DPY-3015: thin mode unsupported password verifier. "
-                    "Set database.oracle_client_lib_dir in config.json or ORACLE_CLIENT_LIB_DIR env var, "
-                    "or install cx_Oracle with Oracle Instant Client."
-                ) from first_err
+                continue
 
+        # Last fallback: try cx_Oracle if available in this environment.
         try:
-            ORACLE_DB_MODULE.init_oracle_client(lib_dir=lib_dir)
-        except Exception as init_err:
-            init_msg = str(init_err).lower()
-            if 'already initialized' not in init_msg:
-                # If thick init fails, still try cx_Oracle as final fallback.
-                try:
-                    import cx_Oracle  # type: ignore
-                    return cx_Oracle.connect(user=user, password=password, dsn=dsn)
-                except Exception:
-                    raise RuntimeError(f"Failed to initialize Oracle thick mode at '{lib_dir}': {init_err}") from first_err
-
-        return ORACLE_DB_MODULE.connect(user=user, password=password, dsn=dsn)
+            import cx_Oracle  # type: ignore
+            return cx_Oracle.connect(user=user, password=password, dsn=dsn)
+        except Exception:
+            raise RuntimeError(
+                "DPY-3015: thin mode unsupported password verifier. "
+                "Could not initialize Oracle thick mode automatically. "
+                "Set database.oracle_client_lib_dir (or ORACLE_CLIENT_LIB_DIR) to Instant Client path, "
+                "or install cx_Oracle with Oracle Instant Client."
+            ) from first_err
 
 
 def _translate_query_for_mysql(query: str) -> str:
