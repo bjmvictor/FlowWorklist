@@ -1,5 +1,6 @@
 ﻿import json
 import logging
+import os
 import re
 import urllib.error
 import urllib.request
@@ -424,29 +425,63 @@ def _db_connect(db_cfg: Dict[str, Any]):
     if db_type == "oracle":
         try:
             import oracledb  # type: ignore
-            try:
-                return "oracledb", oracledb.connect(user=user, password=password, dsn=dsn)
-            except Exception as e:
-                if "DPY-3015" not in str(e):
-                    raise
-                lib_dir = str(db_cfg.get("oracle_client_lib_dir") or "").strip()
-                if not lib_dir:
-                    raise RuntimeError(
-                        "DPY-3015: thin mode unsupported password verifier. "
-                        "Set database.oracle_client_lib_dir in config.json"
-                    ) from e
-                try:
-                    oracledb.init_oracle_client(lib_dir=lib_dir)
-                except Exception as init_err:
-                    init_msg = str(init_err).lower()
-                    if "already initialized" not in init_msg:
-                        raise RuntimeError(
-                            f"Failed to initialize Oracle thick mode at '{lib_dir}': {init_err}"
-                        ) from e
-                return "oracledb", oracledb.connect(user=user, password=password, dsn=dsn)
         except Exception:
             import cx_Oracle  # type: ignore
             return "cx_Oracle", cx_Oracle.connect(user=user, password=password, dsn=dsn)
+
+        try:
+            return "oracledb", oracledb.connect(user=user, password=password, dsn=dsn)
+        except Exception as e:
+            if "DPY-3015" not in str(e):
+                # For non-DPY-3015 errors, only fallback to cx_Oracle when available.
+                try:
+                    import cx_Oracle  # type: ignore
+                    return "cx_Oracle", cx_Oracle.connect(user=user, password=password, dsn=dsn)
+                except Exception:
+                    raise
+
+            candidates: List[str] = []
+            cfg_dir = str(db_cfg.get("oracle_client_lib_dir") or "").strip()
+            env_dir = str(os.environ.get("ORACLE_CLIENT_LIB_DIR") or "").strip()
+            if cfg_dir:
+                candidates.append(cfg_dir)
+            if env_dir and env_dir not in candidates:
+                candidates.append(env_dir)
+            candidates.append("")  # try PATH-based init_oracle_client()
+            for probe in (
+                r"C:\instantclient_21_14",
+                r"C:\instantclient_21_13",
+                r"C:\instantclient_19_22",
+                r"C:\oracle\instantclient_21_14",
+                r"C:\oracle\instantclient_21_13",
+                r"C:\oracle\instantclient_19_22",
+            ):
+                if probe not in candidates and os.path.isdir(probe):
+                    candidates.append(probe)
+
+            for lib_dir in candidates:
+                try:
+                    if lib_dir:
+                        oracledb.init_oracle_client(lib_dir=lib_dir)
+                    else:
+                        oracledb.init_oracle_client()
+                except Exception as init_err:
+                    init_msg = str(init_err).lower()
+                    if "already initialized" not in init_msg:
+                        continue
+                try:
+                    return "oracledb", oracledb.connect(user=user, password=password, dsn=dsn)
+                except Exception:
+                    continue
+
+            try:
+                import cx_Oracle  # type: ignore
+                return "cx_Oracle", cx_Oracle.connect(user=user, password=password, dsn=dsn)
+            except Exception:
+                raise RuntimeError(
+                    "DPY-3015: thin mode unsupported password verifier. "
+                    "Could not initialize Oracle thick mode automatically and cx_Oracle is unavailable."
+                ) from e
 
     if db_type in ("postgres", "postgresql"):
         import psycopg2  # type: ignore
@@ -684,3 +719,4 @@ def execute_mpps_actions(
         "mpps_enabled": normalized_mpps.get("enabled"),
         "debug_output": debug_output,
     }
+
