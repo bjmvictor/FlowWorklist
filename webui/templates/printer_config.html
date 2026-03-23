@@ -55,6 +55,22 @@
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+    <div class="mb-6 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <p class="text-sm text-gray-700 dark:text-gray-300"><strong data-i18n="status">Status</strong>:
+        {% if printer_status.get('running') %}
+          <span class="text-green-600 dark:text-green-400" data-i18n="running">Running</span> (PID {{ printer_status.get('pid') }})
+        {% else %}
+          <span class="text-red-600 dark:text-red-400" data-i18n="stopped">Stopped</span>
+        {% endif %}
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button type="button" onclick="printerAction('start')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold" data-i18n="printer_start_btn">Start Printer</button>
+        <button type="button" onclick="printerAction('stop')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold" data-i18n="printer_stop_btn">Stop Printer</button>
+        <button type="button" onclick="printerAction('restart')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold" data-i18n="printer_restart_btn">Restart Printer</button>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" data-i18n="printer_controls_desc">These controls manage the virtual printer receiver process (dcmprscp).</p>
+    </div>
+
     <form method="post" class="space-y-8">
       <div class="border-b dark:border-gray-700 pb-8">
         <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
@@ -198,6 +214,26 @@
 </div>
 
 <script>
+  async function printerAction(cmd) {
+    try {
+      window._showLoadingBar = true;
+      if (typeof showLoadingBar === 'function') { showLoadingBar(); }
+      const resp = await fetch(`/action/printer/${cmd}`, { method: 'POST' });
+      const data = await resp.json();
+      if (data.ok) {
+        showNotification(data.msg || `${t('printer_page_title')} ${cmd} ${t('action_success')}`, 'success', 5000);
+      } else {
+        showNotification(data.msg || `${t('printer_page_title')} ${cmd} ${t('action_failed')}`, 'error', 7000);
+      }
+      setTimeout(() => window.location.reload(), 900);
+    } catch (e) {
+      showNotification(`${t('printer_page_title')} ${cmd} ${t('action_error')}: ${e.message}`, 'error', 7000);
+    } finally {
+      if (typeof hideLoadingBar === 'function') { hideLoadingBar(); }
+      window._showLoadingBar = false;
+    }
+  }
+
   function closeNotification() {
     const notif = document.getElementById('notification');
     if (notif) {
@@ -219,6 +255,10 @@
       printer_sumatra_installed: 'SumatraPDF instalado',
       printer_control_section: 'Controle',
       printer_enable_label: 'Habilitar impressora virtual',
+      printer_start_btn: 'Iniciar impressora',
+      printer_stop_btn: 'Parar impressora',
+      printer_restart_btn: 'Reiniciar impressora',
+      printer_controls_desc: 'Esses controles gerenciam o processo receiver da impressora virtual (dcmprscp).',
       printer_listener_section: 'Listener DICOM Print',
       printer_listener_help: 'As informacoes abaixo devem ser configuradas no console/modalidade que fara o envio da imagem para esta impressora virtual.',
       printer_receiver_aet_label: 'AE Title',
@@ -263,6 +303,10 @@
       printer_sumatra_installed: 'SumatraPDF installed',
       printer_control_section: 'Control',
       printer_enable_label: 'Enable virtual printer',
+      printer_start_btn: 'Start printer',
+      printer_stop_btn: 'Stop printer',
+      printer_restart_btn: 'Restart printer',
+      printer_controls_desc: 'These controls manage the virtual printer receiver process (dcmprscp).',
       printer_listener_section: 'DICOM Print Listener',
       printer_listener_help: 'The settings below must also be configured on the console/modality that will send the image.',
       printer_receiver_aet_label: 'AE Title',

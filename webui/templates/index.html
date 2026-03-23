@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block content %}
 <div class="space-y-8">
@@ -53,7 +53,7 @@
       <!-- Arrow-only trigger INSIDE the button (top-right corner) -->
       <span class="absolute top-2 right-2 group" onclick="event.stopPropagation();">
         <span
-          title="Menu de ações do serviço"
+          title="Menu de aÃ§Ãµes do serviÃ§o"
           data-i18n-title="service_menu_tooltip"
           class="text-white/80 hover:text-white p-1"
         >
@@ -61,6 +61,28 @@
         </span>
         <!-- Dropdown Panel -->
         <span class="absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
+          <span 
+            role="button"
+            tabindex="0"
+            onclick="executeScopedAction('mpps', 'stop', 'MPPS'); event.stopPropagation();"
+            class="block w-full text-left px-4 py-3 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm transition"
+          >
+            <i class="fas fa-notes-medical text-emerald-500 mr-2"></i>
+            <span data-i18n="stop_mpps_only">Stop MPPS</span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="stop_mpps_only_desc">Stops only MPPS service</span>
+          </span>
+          {% if printer_enabled %}
+          <span 
+            role="button"
+            tabindex="0"
+            onclick="executeScopedAction('printer', 'stop', 'DICOM Printer'); event.stopPropagation();"
+            class="block w-full text-left px-4 py-3 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm transition"
+          >
+            <i class="fas fa-print text-indigo-500 mr-2"></i>
+            <span data-i18n="stop_printer_only">Stop DICOM Printer</span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="stop_printer_only_desc">Stops only virtual printer receiver</span>
+          </span>
+          {% endif %}
           <span 
             role="button"
             tabindex="0"
@@ -78,8 +100,8 @@
             class="block w-full text-left px-4 py-3 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm transition"
           >
             <i class="fas fa-broom text-purple-500 mr-2"></i>
-            <span>Limpar outras instâncias</span>
-            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">Encerra processos de outras cópias/instâncias</span>
+            <span data-i18n="scan_kill_others_title">Limpar outras instâncias</span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1" data-i18n="scan_kill_others_desc">Encerra processos de outras cópias/instâncias</span>
           </span>
         </span>
       </span>
@@ -105,7 +127,7 @@
     <div id="logs-container" class="space-y-3 max-h-96 overflow-y-auto">
       <div class="text-center py-8">
         <i class="fas fa-spinner text-2xl text-blue-500 animate-spin mb-2"></i>
-        <p class="text-gray-500 dark:text-gray-400">Loading logs...</p>
+        <p class="text-gray-500 dark:text-gray-400" data-i18n="loading_logs">Loading logs...</p>
       </div>
     </div>
   </div>
@@ -155,7 +177,7 @@
       container.innerHTML = `
         <p class="text-red-500 text-center py-8">
           <i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>
-          Error loading logs
+          ${t('error_loading_logs')}
         </p>
       `;
     }
@@ -211,5 +233,36 @@
 
   // Update status every 2 seconds
   setInterval(updateStatus, 2000);
+
+  async function executeScopedAction(scope, action, label) {
+    const scopeLabel = scope === 'mpps' ? t('label_mpps') : t('label_printer');
+    try {
+      window._showLoadingBar = true;
+      if (typeof showLoadingBar === 'function') {
+        showLoadingBar();
+      }
+      showNotification(`${t(action)} ${scopeLabel}...`, 'info', 2500, false);
+      const resp = await fetch(`/action/${scope}/${action}`, { method: 'POST' });
+      const data = await resp.json();
+      if (data.ok) {
+        showNotification(data.msg || `${scopeLabel} ${action} ${t('action_success')}`, 'success', 5000, false);
+      } else {
+        showNotification(data.msg || `${scopeLabel} ${action} ${t('action_failed')}`, 'error', 7000);
+      }
+      if (typeof updateStatus === 'function') {
+        setTimeout(updateStatus, 700);
+      }
+    } catch (err) {
+      showNotification(`${scopeLabel} ${action} ${t('action_error')}: ${err.message}`, 'error', 7000);
+    } finally {
+      if (typeof hideLoadingBar === 'function') {
+        hideLoadingBar();
+      }
+      window._showLoadingBar = false;
+    }
+  }
 </script>
 {% endblock %}
+
+
+

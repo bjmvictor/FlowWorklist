@@ -548,7 +548,17 @@ def index():
     # logs = manager.logs(limit=10)
     # Pass only service status to template to match expected keys
     service_status = (st.get('service') or {})
-    return render_template('index.html', status=service_status, logs=[])
+    printer_status = (st.get('printer') or {})
+    cfg_path = ROOT / "config.json"
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            cfg = {}
+    else:
+        cfg = {}
+    printer_enabled = bool((cfg.get('dicom_printer') or {}).get('enabled'))
+    return render_template('index.html', status=service_status, printer_status=printer_status, printer_enabled=printer_enabled, logs=[])
 
 
 def _validate_config():
@@ -655,6 +665,32 @@ def action_mpps(cmd):
         }), 500
 
 
+@app.route('/action/printer/<cmd>', methods=['POST'])
+def action_printer(cmd):
+    log_action(f"Printer action: {cmd}", f"User requested {cmd} virtual printer receiver")
+    cfg = str(ROOT / "config.json")
+    try:
+        if cmd == 'start':
+            r = manager.start_printer_service(config_path=cfg)
+        elif cmd == 'stop':
+            r = manager.stop_printer_service()
+        elif cmd == 'restart':
+            r = manager.restart_printer_service(config_path=cfg)
+        else:
+            r = {"ok": False, "msg": "unknown command", "error_type": "unknown_command"}
+        if not r.get('ok'):
+            r.setdefault('error_type', 'execution_error')
+            r.setdefault('error_detail', r.get('msg', 'unknown error'))
+        return jsonify(r)
+    except Exception as e:
+        return jsonify({
+            'ok': False,
+            'msg': f'Unexpected printer error: {e}',
+            'error_type': 'server_error',
+            'error_detail': str(e)
+        }), 500
+
+
 @app.route('/status')
 def status():
     # Provide backward-compatible, simplified status payload with detailed info
@@ -662,6 +698,7 @@ def status():
     svc = st.get('service') or {}
     app_status = st.get('app') or {}
     mpps_status = st.get('mpps') or {}
+    printer_status = st.get('printer') or {}
     return jsonify({
         'running': bool(svc.get('running')),
         'pid': svc.get('pid'),
@@ -671,6 +708,7 @@ def status():
         'service': svc,
         'app': app_status,
         'mpps': mpps_status,
+        'printer': printer_status,
         'message': 'Service is running' if svc.get('running') else 'Service is stopped'
     })
 
@@ -829,10 +867,13 @@ def printer_config():
     status = request.args.get('status')
     dcmtk_installed = is_system_tool_installed('dcmtk')
     sumatra_installed = is_system_tool_installed('sumatra')
+    st = manager.status()
+    printer_status = st.get('printer') or {}
     return render_template(
         'printer_config.html',
         cfg=cfg,
         printer_cfg=printer_cfg,
+        printer_status=printer_status,
         notice=notice,
         status=status,
         dcmtk_installed=dcmtk_installed,
