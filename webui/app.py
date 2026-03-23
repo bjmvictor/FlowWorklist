@@ -13,6 +13,7 @@ import time
 import importlib.util
 import logging
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 # Workaround for broken NumPy builds on some Windows/Python setups.
 # pydicom is used in tests and can run without NumPy for these flows.
@@ -54,7 +55,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(str(log_file), encoding='utf-8'),
+        RotatingFileHandler(str(log_file), maxBytes=50 * 1024 * 1024, backupCount=1, encoding='utf-8'),
         logging.StreamHandler()
     ]
 )

@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict
 
@@ -30,11 +31,23 @@ def _configure_logging():
     log_dir = BASE_DIR / "logs"
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "mpps_service.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler(log_file, encoding="utf-8"), logging.StreamHandler()],
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=50 * 1024 * 1024,
+        backupCount=1,
+        encoding="utf-8",
     )
+    file_handler.setFormatter(formatter)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
 
 
 def _write_lock():

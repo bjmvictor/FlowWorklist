@@ -22,7 +22,7 @@ import atexit
 import json
 from pathlib import Path
 
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from typing import List, Dict, Any, Tuple
 from datetime import datetime
 
@@ -110,15 +110,12 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 # File handler - UM ARQUIVO POR DIA, mantém os últimos 5
-file_handler = TimedRotatingFileHandler(
+file_handler = RotatingFileHandler(
     filename=LOG_FILENAME,
-    when="midnight",
-    interval=1,
-    backupCount=5,
+    maxBytes=50 * 1024 * 1024,
+    backupCount=1,
     encoding='utf-8'
 )
-
-file_handler.suffix = "%Y-%m-%d"
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
