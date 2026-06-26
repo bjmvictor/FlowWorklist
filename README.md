@@ -112,6 +112,7 @@ Optional (Windows, System PATH): run terminal as Administrator then `python flow
 - Deployment guide → [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - Quick reference card → [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)
 - Build executable (Windows) → [BUILD_GUIDE.md](docs/BUILD_GUIDE.md)
+- To use ORACLE db is recommended to place: "oracle_client_lib_dir": "C:\\oracle\\instantclient_23_9", inside database config on config.json replacing with your oracle instant client directory
 
 ---
 
