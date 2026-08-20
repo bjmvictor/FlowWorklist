@@ -20,5 +20,3 @@ FlowWorklist is a DICOM Modality Worklist server with a web dashboard for config
 | Print SCP | 4100 | Modality network |
 
 > The institution must validate the system before clinical use. It does not replace a certified RIS/PACS.
-
-Copy these files to the `<project>.wiki.git` repository to publish them as a GitHub Wiki. They also work directly under `docs/`.

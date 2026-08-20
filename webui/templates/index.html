@@ -163,7 +163,7 @@
                 <i class="fas fa-file-alt text-gray-500"></i>
                 <div>
                   <p class="font-semibold">${log.name}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">${log.size} bytes</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">${log.size_human || `${log.size} B`}</p>
                 </div>
               </div>
               <i class="fas fa-chevron-right text-gray-400"></i>

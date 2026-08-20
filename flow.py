@@ -1491,16 +1491,34 @@ def kill_other_instances(target: str = 'both'):
     return {"ok": len(errors) == 0, "killed": killed, "errors": errors, "instance_id": INSTANCE_ID}
 
 
+def format_file_size(size_bytes: int) -> str:
+    """Format a byte count using compact binary units for display."""
+    size = max(0, int(size_bytes or 0))
+    value = float(size)
+    units = ("B", "KB", "MB", "GB", "TB")
+    unit = units[0]
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            break
+        value /= 1024
+    if unit == "B":
+        return f"{size} B"
+    precision = 0 if value >= 100 else (1 if value >= 10 else 2)
+    return f"{value:.{precision}f} {unit}"
+
+
 def logs(limit: int = 20):
     """List recent log files from both service_logs and logs directories."""
     # Service logs
     service_files = sorted(SERVICE_LOG_DIR.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
     service_logs = []
     for p in service_files[:limit]:
+        size = p.stat().st_size
         service_logs.append({
             "name": p.name, 
             "path": str(p), 
-            "size": p.stat().st_size, 
+            "size": size,
+            "size_human": format_file_size(size),
             "mtime": p.stat().st_mtime,
             "type": "service"
         })
@@ -1511,10 +1529,12 @@ def logs(limit: int = 20):
     if app_log_dir.exists():
         app_files = sorted(app_log_dir.glob('*.log'), key=lambda p: p.stat().st_mtime, reverse=True)
         for p in app_files[:limit]:
+            size = p.stat().st_size
             app_logs.append({
                 "name": p.name,
                 "path": str(p),
-                "size": p.stat().st_size,
+                "size": size,
+                "size_human": format_file_size(size),
                 "mtime": p.stat().st_mtime,
                 "type": "app"
             })

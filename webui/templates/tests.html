@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .test-result-scroll {
+    max-height: min(24rem, 50vh);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    white-space: pre;
+  }
+</style>
 <div class="space-y-8">
   <!-- Tests Header -->
   <div class="flex items-center gap-3 mb-8">
@@ -230,6 +239,15 @@
     document.getElementById('test-console').innerHTML = '<div class="text-gray-500">$ Cleared...</div>';
   }
 
+  function escapeTestOutput(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
   async function runTest(testType) {
     const button = document.getElementById(`btn-${testType}`);
     const resultDiv = document.getElementById(`result-${testType}`);
@@ -255,8 +273,8 @@
             <i class="fas fa-check-circle text-2xl"></i>
             <span class="font-bold text-lg" data-i18n="test_success">SUCCESS</span>
           </div>
-          <p class="mb-3">${data.message || 'Test passed'}</p>
-          ${data.details ? `<pre class="bg-black bg-opacity-30 p-3 rounded text-xs overflow-x-auto">${JSON.stringify(data.details, null, 2)}</pre>` : ''}
+          <p class="mb-3">${escapeTestOutput(data.message || 'Test passed')}</p>
+          ${data.details ? `<pre class="test-result-scroll bg-black bg-opacity-30 p-3 rounded text-xs" tabindex="0" aria-label="Test response details">${escapeTestOutput(JSON.stringify(data.details, null, 2))}</pre>` : ''}
         `;
         logToConsole(data.message || 'Test passed!', 'success');
       } else {
@@ -266,8 +284,8 @@
             <i class="fas fa-times-circle text-2xl"></i>
             <span class="font-bold text-lg" data-i18n="test_failed">FAILED</span>
           </div>
-          <p class="mb-3">${data.message || 'Test failed'}</p>
-          ${data.error ? `<pre class="bg-black bg-opacity-30 p-3 rounded text-xs overflow-x-auto">${data.error}</pre>` : ''}
+          <p class="mb-3">${escapeTestOutput(data.message || 'Test failed')}</p>
+          ${data.error ? `<pre class="test-result-scroll bg-black bg-opacity-30 p-3 rounded text-xs" tabindex="0" aria-label="Test error details">${escapeTestOutput(data.error)}</pre>` : ''}
           ${data.canInstall ? `<div class='mt-3'><form action='/plugin/install/pynetdicom' method='POST'><button type='submit' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2'><i class="fas fa-download"></i><span data-i18n="install_pynetdicom_plugin">Install pynetdicom Plugin</span></button></form></div>` : ''}
         `;
         logToConsole(data.message || 'Test failed!', 'error');
@@ -279,7 +297,7 @@
           <i class="fas fa-exclamation-circle text-2xl"></i>
           <span class="font-bold text-lg" data-i18n="test_error">ERROR</span>
         </div>
-        <p>${err.message}</p>
+        <p>${escapeTestOutput(err.message)}</p>
       `;
       logToConsole(`Error: ${err.message}`, 'error');
     } finally {
