@@ -19,6 +19,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      .floating-back-button {
+        position: fixed;
+        top: 4.75rem;
+        right: 1rem;
+        z-index: 40;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.22);
+      }
+      @media (min-width: 768px) {
+        .floating-back-button { top: 5.75rem; right: 1.5rem; }
+      }
       .notification { position: fixed; right: 20px; z-index: 1000; max-width: 400px; transition: top 0.3s ease-out; }
       @keyframes slideIn { from { transform: translateX(450px); } to { transform: translateX(0); } }
       .notification-enter { animation: slideIn 0.3s ease-out; }
@@ -1201,25 +1211,41 @@
               <i class="fas fa-flask"></i>
               <span data-i18n="tests">Tests</span>
             </a>
+            <a href="/plugins" class="hidden lg:flex text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition items-center gap-2">
+              <i class="fas fa-plug"></i>
+              <span data-i18n="plugins">Plugins</span>
+            </a>
+            <a href="/printer-config" class="hidden xl:flex text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition items-center gap-2">
+              <i class="fas fa-print"></i>
+              <span>Dicom Printer</span>
+            </a>
+            <a href="/mpps-config" class="hidden 2xl:flex text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition items-center gap-2">
+              <i class="fas fa-notes-medical"></i>
+              <span>MPPS</span>
+            </a>
+            <a href="/logs" class="hidden 2xl:flex text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition items-center gap-2">
+              <i class="fas fa-file-alt"></i>
+              <span data-i18n="logs">Logs</span>
+            </a>
             <!-- Dropdown Menu -->
-            <div class="relative group">
+            <div class="relative group 2xl:hidden">
               <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
                 <i class="fas fa-chevron-down dropdown-chevron"></i>
               </button>
               <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
-                <a href="/plugins" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                <a href="/plugins" class="lg:hidden w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   <i class="fas fa-plug"></i>
                   <span data-i18n="plugins">Plugins</span>
                 </a>
-                <a href="/printer-config" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                <a href="/printer-config" class="xl:hidden w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   <i class="fas fa-print"></i>
                   <span>Dicom Printer</span>
                 </a>
-                <a href="/mpps-config" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                <a href="/mpps-config" class="2xl:hidden w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   <i class="fas fa-notes-medical"></i>
                   <span>MPPS</span>
                 </a>
-                <a href="/logs" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                <a href="/logs" class="2xl:hidden w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   <i class="fas fa-file-alt"></i>
                   <span data-i18n="logs">Logs</span>
                 </a>

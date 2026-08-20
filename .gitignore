@@ -1,72 +1,65 @@
-# Virtual Environment
+# Local configuration (may contain database credentials)
+config.json
+config.local.json
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+env/
 Include/
 Lib/
 Scripts/
 pyvenv.cfg
 
-# Python
+# Python/build/test artifacts
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# IDE / Editor
+# Runtime state and generated data
+logs/
+service_logs/
+mpps-actions/
+dicom-printer/database/
+dicom-printer/spool/
+dicom-printer/out/
+dicom-printer/runtime_printer.cfg
+*.log
+*.pid
+*.lock
+*_state.json
+
+# Generated local launchers
+flow.bat
+flow.ps1
+start_ui.bat
+start_ui.ps1
+
+# Local databases and temporary files
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.temp
+*.bak
+
+# Editors and operating systems
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
-
-# Application
-logs/
-service_logs/
-*.log
-service.pid
-app.pid
-mwl_server.lock
-service_state.json
-flow.bat
-flow.ps1
-start_ui.bat
-start_ui.ps1
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Configuration (local)
-config.local.json
-.env
-.env.local
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Temporary files
-*.tmp
-*.bak
-*.temp
-*~
+Thumbs.db

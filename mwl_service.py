@@ -416,6 +416,8 @@ def _connect_oracle_with_fallback(user: str, password: str, dsn: str):
 
         # Try common Windows folders if present.
         for probe in (
+            r"C:\oracle\instantclient_21_15",
+            r"C:\oracle\instantclient_23_0",
             r"C:\instantclient_21_14",
             r"C:\instantclient_21_13",
             r"C:\instantclient_19_22",

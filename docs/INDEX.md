@@ -1,5 +1,9 @@
 # FlowWorklist - Documentation Index
 
+## Guia operacional / GitHub Wiki
+
+Start with [wiki/Home.md](wiki/Home.md). It covers architecture, Windows installation, NSSM production deployment, configuration, validation, troubleshooting, and security.
+
 Complete guide to FlowWorklist documentation and setup.
 
 ## 📚 Documentation Files

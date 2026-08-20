@@ -11,7 +11,9 @@ import json
 import os
 import time
 import importlib.util
+import importlib.metadata
 import logging
+import threading
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
@@ -62,6 +64,37 @@ logging.basicConfig(
 app_logger = logging.getLogger('flowworklist.app')
 DCMTK_MANUAL_URL = "https://dicom.offis.de/en/dcmtk/dcmtk-tools/"
 ORACLE_PY_PACKAGES = ['oracledb', 'cx_Oracle']
+
+
+def detect_oracle_client_dirs(configured_path=""):
+    """Return existing Windows Oracle Client directories that contain oci.dll."""
+    candidates = []
+
+    def add(path_value):
+        if not path_value:
+            return
+        path = Path(str(path_value).strip()).expanduser()
+        if path.is_file() and path.name.lower() == "oci.dll":
+            path = path.parent
+        try:
+            if path.is_dir() and (path / "oci.dll").is_file():
+                resolved = str(path.resolve())
+                if resolved.lower() not in {item.lower() for item in candidates}:
+                    candidates.append(resolved)
+        except OSError:
+            pass
+
+    add(configured_path)
+    add(os.environ.get("ORACLE_CLIENT_LIB_DIR"))
+    for known_path in (
+        r"C:\oracle\instantclient_21_15",
+        r"C:\oracle\instantclient_23_0",
+        r"C:\instantclient_21_15",
+        r"C:\instantclient_23_0",
+        r"C:\ServidorWeb\OCI_19_6",
+    ):
+        add(known_path)
+    return candidates
 
 def log_action(action, details="", user_ip=None):
     """Log user actions in the application."""
@@ -164,6 +197,26 @@ def _venv_python_and_pip():
     return py_path, pip_path
 
 
+_PACKAGE_STATUS_CACHE = {}
+_PACKAGE_STATUS_CACHE_TTL = 30.0
+
+
+def _package_installed(package: str) -> bool:
+    """Check installed distributions without spawning a slow ``pip show`` process."""
+    key = package.lower()
+    now = time.monotonic()
+    cached = _PACKAGE_STATUS_CACHE.get(key)
+    if cached and now - cached[0] < _PACKAGE_STATUS_CACHE_TTL:
+        return cached[1]
+    try:
+        importlib.metadata.distribution(package)
+        installed = True
+    except importlib.metadata.PackageNotFoundError:
+        installed = False
+    _PACKAGE_STATUS_CACHE[key] = (now, installed)
+    return installed
+
+
 def _pip_show_installed(pip_exe: str, package: str) -> bool:
     try:
         res = subprocess.run([pip_exe, 'show', package], capture_output=True, text=True)
@@ -225,7 +278,7 @@ def install_db_driver(db_type: str):
 
 
 def is_db_plugin_installed(db_type: str) -> bool:
-    """Check plugin installed using pip show for reliability (handles loaded modules cache)."""
+    """Check plugin metadata in-process; this runs on normal page navigation."""
     dt = (db_type or '').lower()
     pkg_map = {
         'oracle': ORACLE_PY_PACKAGES,
@@ -236,10 +289,9 @@ def is_db_plugin_installed(db_type: str) -> bool:
     pkg = pkg_map.get(dt)
     if not pkg:
         return False
-    _py, pip_exe = _venv_python_and_pip()
     if isinstance(pkg, list):
-        return any(_pip_show_installed(pip_exe, p) for p in pkg)
-    return _pip_show_installed(pip_exe, pkg)
+        return any(_package_installed(p) for p in pkg)
+    return _package_installed(pkg)
 
 
 def plugins_status():
@@ -260,8 +312,7 @@ def plugins_status():
             p['installed'] = is_db_plugin_installed('oracle')
             continue
         try:
-            res = subprocess.run([pip_exe, 'show', p['package']], capture_output=True, text=True)
-            p['installed'] = (res.returncode == 0 and bool(res.stdout.strip()))
+            p['installed'] = _package_installed(p['package'])
         except Exception:
             p['installed'] = False
     # Current configured type
@@ -772,6 +823,21 @@ def config():
         config_data["database"]["password"] = request.form.get('database_password', '')
         config_data["database"]["dsn"] = request.form.get('database_dsn', '')
         config_data["database"]["query"] = request.form.get('database_query', '')
+        oracle_client_dir = request.form.get('database_oracle_client_lib_dir', '').strip()
+        if config_data["database"]["type"] == "oracle":
+            if oracle_client_dir:
+                client_path = Path(oracle_client_dir).expanduser()
+                if not client_path.is_dir() or not (client_path / "oci.dll").is_file():
+                    log_action("Config save failed", f"Invalid Oracle Client directory: {oracle_client_dir}")
+                    return redirect(url_for(
+                        'config',
+                        notice='Invalid Oracle Client directory. Select a folder that directly contains oci.dll.',
+                        status='error',
+                    ))
+            config_data["database"]["oracle_client_lib_dir"] = oracle_client_dir
+        else:
+            # Preserve an existing Oracle path when temporarily using another DB.
+            config_data["database"].setdefault("oracle_client_lib_dir", oracle_client_dir)
         
         # Remove column_mapping if present (moved to code)
         if "column_mapping" in config_data.get("database", {}):
@@ -799,7 +865,15 @@ def config():
         # Get notification parameters
         notice = request.args.get('notice')
         status = request.args.get('status')
-        return render_template('config.html', cfg=cfg, notice=notice, status=status)
+        configured_oracle_dir = (cfg.get("database", {}).get("oracle_client_lib_dir") or "").strip()
+        oracle_client_dirs = detect_oracle_client_dirs(configured_oracle_dir)
+        return render_template(
+            'config.html',
+            cfg=cfg,
+            notice=notice,
+            status=status,
+            oracle_client_dirs=oracle_client_dirs,
+        )
 
 
 @app.route('/printer-config', methods=['GET', 'POST'])
@@ -1954,4 +2028,24 @@ def service_scan_kill_others():
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    cfg_path = ROOT / "config.json"
+    cfg = {}
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
+    except Exception as exc:
+        app_logger.error("Could not read config.json during startup: %s", exc)
+
+    runtime_cfg = cfg.get("runtime") if isinstance(cfg.get("runtime"), dict) else {}
+    autostart = _to_bool(
+        os.environ.get("FLOWWORKLIST_AUTOSTART_SERVICES"),
+        _to_bool(runtime_cfg.get("autostart_services"), False),
+    )
+    if autostart:
+        result = manager.startservice(config_path=str(cfg_path))
+        if not result.get("ok") and result.get("error_type") != "already_running":
+            app_logger.error("Automatic service startup failed: %s", result.get("msg"))
+
+    host = os.environ.get("FLOWWORKLIST_UI_HOST", str(runtime_cfg.get("ui_host", "127.0.0.1")))
+    port = _to_int(os.environ.get("FLOWWORKLIST_UI_PORT", runtime_cfg.get("ui_port", 5000)), 5000)
+    debug = _to_bool(os.environ.get("FLOWWORKLIST_DEBUG"), _to_bool(runtime_cfg.get("debug"), False))
+    app.run(host=host, port=port, debug=debug, use_reloader=False)

@@ -2,6 +2,10 @@
 
 {% block content %}
 <div class="space-y-8">
+  <a href="/" class="floating-back-button bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-full transition flex items-center gap-2">
+    <i class="fas fa-arrow-left"></i>
+    <span data-i18n="back">Back</span>
+  </a>
   {% if notice %}
   <div class="notification notification-enter top-20" id="notification">
     <div class="{% if status == 'success' %}bg-green-100 border-green-500 text-green-900 dark:bg-green-900 dark:text-green-100{% else %}bg-red-100 border-red-500 text-red-900 dark:bg-red-900 dark:text-red-100{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3">
@@ -16,10 +20,12 @@
     <i class="fas fa-notes-medical text-3xl text-emerald-500"></i>
     <h2 class="text-4xl font-bold flex items-center gap-2">
       <span>MPPS Configuration</span>
-      <span
-        class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm cursor-help"
-        title="Para executar ações de UPDATE, o usuário do banco configurado nas configurações deve possuir permissão de escrita/UPDATE."
-      >?</span>
+      <span class="relative group">
+        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-help">?</span>
+        <span class="absolute left-9 top-0 w-96 z-10 rounded-lg bg-gray-900 text-white text-sm font-normal p-3 shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition">
+          To execute UPDATE actions, the configured database user must have write/UPDATE permission.
+        </span>
+      </span>
     </h2>
   </div>
 
@@ -39,7 +45,7 @@
       </div>
     </div>
 
-    <form method="post" class="space-y-8" onsubmit="window._showLoadingBar=true; if(typeof showLoadingBar==='function'){showLoadingBar();}">
+    <form method="post" id="mpps-settings-form" class="space-y-8" onsubmit="window._showLoadingBar=true; if(typeof showLoadingBar==='function'){showLoadingBar();}">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label class="block text-lg font-semibold mb-2">Enable MPPS</label>
@@ -63,7 +69,7 @@
             <input type="checkbox" name="debug_output" class="sr-only peer" {% if mpps_cfg.get('debug_output') %}checked{% endif %}>
             <div class="w-14 h-8 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-600"></div>
           </label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Logs payload recebido, dataset MPPS e SQL final no console/log para diagnóstico.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Logs the received payload, MPPS dataset, and final SQL for diagnostics.</p>
         </div>
       </div>
 
@@ -99,10 +105,10 @@
         </div>
       </div>
 
-      <div class="flex gap-4 justify-end pt-6">
-        <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancel</a>
-        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition">Save MPPS Settings</button>
-      </div>
+      <button type="submit" class="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-full shadow-2xl transition flex items-center gap-2">
+        <i class="fas fa-save"></i>
+        <span>Save MPPS Settings</span>
+      </button>
     </form>
   </div>
 
@@ -164,7 +170,7 @@
             <label class="inline-flex items-center gap-2"><input type="checkbox" name="action_trigger_events" value="N-SET" {% if 'N-SET' in action_triggers %}checked{% endif %}>N-SET</label>
           </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            N-CREATE: primeira criação do MPPS pelo equipamento. N-SET: atualizações de status/dados do MPPS já criado.
+            N-CREATE: initial MPPS creation by the modality. N-SET: status/data updates for an existing MPPS.
           </p>
         </div>
         <div>
@@ -269,7 +275,6 @@
       </div>
 
       <div class="flex gap-4 justify-end pt-4">
-        <button type="button" onclick="newAction()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">New</button>
         <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition">Save Action</button>
       </div>
     </form>

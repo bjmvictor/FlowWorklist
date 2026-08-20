@@ -1,154 +1,53 @@
-# Guia de Query SQL para Worklist DICOM
+# SQL Query Guide
 
-## Problema Identificado
+FlowWorklist expects every worklist query row to return exactly 17 columns in the order below. Column aliases are optional; position is authoritative.
 
-A query atual está usando `FROM DUAL` que retorna apenas valores literais (dummy data) e não dados reais do banco. Isso resulta em "0 itens encontrados" mesmo que a conexão funcione.
+| Position | Meaning | DICOM destination | Expected format |
+|---:|---|---|---|
+| 1 | Patient name | PatientName | Text; `FAMILY^GIVEN` preferred |
+| 2 | Patient ID | PatientID | Text |
+| 3 | Birth date | PatientBirthDate | `YYYYMMDD` |
+| 4 | Sex | PatientSex | `M`, `F`, or `O` |
+| 5 | Exam description | RequestedProcedureDescription | Text |
+| 6 | Exam/order ID | AccessionNumber | Text |
+| 7 | Scheduled date | ScheduledProcedureStepStartDate | `YYYYMMDD` |
+| 8 | Scheduled time | ScheduledProcedureStepStartTime | `HHMMSS` |
+| 9 | Physician | ScheduledPerformingPhysicianName | Text |
+| 10 | Modality | Modality | Standard DICOM code |
+| 11 | Priority | Priority | `HIGH`, `MEDIUM`, or `LOW` |
+| 12 | Encounter type | Internal context | Text |
+| 13 | Encounter ID | Internal context | Text |
+| 14 | Unit/location | ScheduledStationName | Text |
+| 15 | Procedure code | ScheduledProcedureStepID | Text |
+| 16 | Code meaning | ScheduledProtocolCodeSequence | Text |
+| 17 | Coding scheme | CodingSchemeDesignator | Text |
 
-## Estrutura Esperada
+## Oracle example
 
-A query SQL **DEVE** retornar exatamente **17 colunas** na seguinte ordem:
-
-| Posição | Nome Coluna | DICOM Field | Tipo | Exemplo |
-|---------|-------------|-------------|------|---------|
-| 1 | Patient Name | PatientName | VARCHAR2 | BENJAMIN SILVA (será convertido para SILVA^BENJAMIN) |
-| 2 | Patient ID | PatientID | VARCHAR2 | 12345678 |
-| 3 | Birth Date | PatientBirthDate | CHAR(8) YYYYMMDD | 20030201 |
-| 4 | Sex | PatientSex | CHAR(1) M/F/O | M |
-| 5 | Exam Description | RequestedProcedureDescription | VARCHAR2 | TORAX - PA |
-| 6 | Accession Number | AccessionNumber | VARCHAR2 | P102025 |
-| 7 | Exam Date | ScheduledProcedureStepStartDate | CHAR(8) YYYYMMDD | 20251216 |
-| 8 | Exam Time | ScheduledProcedureStepStartTime | CHAR(6) HH24MISS | 143000 |
-| 9 | Physician Name | ScheduledPerformingPhysicianName | VARCHAR2 | MARY JONES (será convertido para JONES^MARY) |
-| 10 | Modality | Modality | CHAR(2) | CR |
-| 11 | Priority | Priority Flag | VARCHAR2 | HIGH |
-| 12 | Encounter Type | Patient Type | VARCHAR2 | URGENCIA |
-| 13 | Encounter ID | StudyInstanceUID | VARCHAR2 | 456789 |
-| 14 | Unit/Location | Location | VARCHAR2 | EMERGENCY ROOM |
-| 15 | Procedure Code | ScheduledProcedureStepID | VARCHAR2 | FCR0101 |
-| 16 | Code Meaning | Code Meaning | VARCHAR2 | CHEST X-RAY |
-| 17 | Code Scheme | Code Scheme Designator | VARCHAR2 | CBR |
-
-## Exemplos de Queries Válidas
-
-### Exemplo 1: Query Simples (Teste com dados dummy)
 ```sql
-SELECT 
-  'BENJAMIN SILVA' AS col_patient_name,
-  '12345678' AS col_patient_id,
-  '20030201' AS col_birth_date,
-  'M' AS col_patient_sex,
-  'TORAX - PA' AS col_exam_description,
-  'P102025' AS col_accession_number,
-  '20251216' AS col_exam_date,
-  '143000' AS col_exam_time,
-  'MARY JONES' AS col_physician_name,
-  'CR' AS col_modality,
-  'HIGH' AS col_priority,
-  'URGENCIA' AS col_encounter_type,
-  '456789' AS col_encounter_id,
-  'EMERGENCY ROOM' AS col_unit_name,
-  'FCR0101' AS col_procedure_code,
-  'CHEST X-RAY' AS col_code_meaning,
-  'CBR' AS col_code_scheme
-FROM DUAL
+SELECT
+  p.patient_name,
+  p.patient_id,
+  TO_CHAR(p.birth_date, 'YYYYMMDD'),
+  p.sex,
+  e.exam_description,
+  e.accession_number,
+  TO_CHAR(e.scheduled_at, 'YYYYMMDD'),
+  TO_CHAR(e.scheduled_at, 'HH24MISS'),
+  e.physician_name,
+  e.modality,
+  e.priority,
+  e.encounter_type,
+  e.encounter_id,
+  e.unit_name,
+  e.procedure_code,
+  e.code_meaning,
+  e.code_scheme
+FROM exam_worklist e
+JOIN patients p ON p.patient_id = e.patient_id
+WHERE e.completed = 'N'
 ```
 
-### Exemplo 2: Query Real com Tabela de Pacientes
-```sql
-SELECT 
-  p.full_name AS col_patient_name,
-  p.patient_id AS col_patient_id,
-  TO_CHAR(p.birth_date, 'YYYYMMDD') AS col_birth_date,
-  p.sex AS col_patient_sex,
-  w.procedure_description AS col_exam_description,
-  w.accession_number AS col_accession_number,
-  TO_CHAR(w.scheduled_date, 'YYYYMMDD') AS col_exam_date,
-  TO_CHAR(w.scheduled_time, 'HH24MISS') AS col_exam_time,
-  d.full_name AS col_physician_name,
-  w.modality AS col_modality,
-  DECODE(w.priority, 'U', 'LOW', 'R', 'MEDIUM', 'H', 'HIGH', 'LOW') AS col_priority,
-  w.encounter_type AS col_encounter_type,
-  w.encounter_id AS col_encounter_id,
-  w.location_name AS col_unit_name,
-  w.procedure_code AS col_procedure_code,
-  w.code_meaning AS col_code_meaning,
-  w.code_scheme_designator AS col_code_scheme
-FROM worklist_view w
-JOIN patients p ON w.patient_id = p.patient_id
-JOIN doctors d ON w.doctor_id = d.doctor_id
-WHERE TRUNC(w.scheduled_date) >= TRUNC(SYSDATE) - 7
-ORDER BY w.scheduled_date DESC, w.scheduled_time ASC
-```
+Use the database test before testing DICOM. Run the query with the same read-only account used by FlowWorklist and confirm that dates, times, nulls, character encoding, and column order are correct. Avoid `FROM DUAL` dummy queries in production.
 
-### Exemplo 3: Query com Tabela Resumida (Se dados em tabela simples)
-```sql
-SELECT 
-  nome AS col_patient_name,
-  matricula AS col_patient_id,
-  TO_CHAR(data_nascimento, 'YYYYMMDD') AS col_birth_date,
-  sexo AS col_patient_sex,
-  descricao_exame AS col_exam_description,
-  numero_pedido AS col_accession_number,
-  TO_CHAR(data_agendada, 'YYYYMMDD') AS col_exam_date,
-  TO_CHAR(hora_agendada, 'HH24MISS') AS col_exam_time,
-  medico_responsavel AS col_physician_name,
-  modalidade AS col_modality,
-  prioridade AS col_priority,
-  tipo_atendimento AS col_encounter_type,
-  id_atendimento AS col_encounter_id,
-  setor AS col_unit_name,
-  codigo_procedimento AS col_procedure_code,
-  descricao_procedimento AS col_code_meaning,
-  tabela_codigo AS col_code_scheme
-FROM agendamentos
-WHERE data_agendada >= TRUNC(SYSDATE)
-AND status = 'ATIVO'
-ORDER BY data_agendada DESC, hora_agendada ASC
-```
-
-## Como Corrigir
-
-1. **Identifique** as tabelas reais no seu Oracle (ex: `patients`, `worklist`, `scheduled_procedures`)
-2. **Mapeie** os nomes de colunas reais para os 17 campos esperados
-3. **Use funções Oracle** para formatar datas e valores (TO_CHAR, DECODE, CONCAT)
-4. **Teste** a query no SQL Developer ou sqlplus:
-   ```sql
-   -- Deve retornar 17 colunas
-   SELECT * FROM (sua_query_aqui);
-   ```
-5. **Atualize** a chave `query` em `config.json` com sua query real
-
-## Verificação Rápida
-
-Para verificar quantas colunas sua query retorna:
-```sql
-SELECT COUNT(*) as column_count 
-FROM table(dbms_sql.describe_columns(...)...);
-```
-
-Ou execute a query e verifique no terminal quantas colunas aparecem.
-
-## Dicas Importantes
-
-- ✅ Use **exatamente 17 colunas** - nem mais, nem menos
-- ✅ Respeite a **ordem** das colunas (veja [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md))
-- ✅ Use **TO_CHAR()** para formatar datas e horas
-- ✅ Use **CONCAT()** ou **||** para separar nomes com `^`
-- ❌ Não use `FROM DUAL` com dados dummy em produção
-- ❌ Não adicione ou remova colunas - a ordem das 17 colunas é fixa no código
-
-## Teste Local
-
-Depois de atualizar a query, reinicie os serviços:
-```powershell
-# Terminal 1
-python flow.py start service
-
-# Terminal 2
-python flow.py start app
-
-# Acesse: http://localhost:5000/tests
-# Clique em "DICOM Worklist Test"
-```
-
-Você deve ver itens da worklist sendo retornados (count > 0).
+See [Column Mapping Guide](COLUMN_MAPPING_GUIDE.md) for detailed field behavior.

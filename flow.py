@@ -26,6 +26,9 @@ SERVICE_LOG_DIR = ROOT / "service_logs"
 
 SERVICE_LOG_DIR.mkdir(exist_ok=True)
 
+_STATUS_CACHE: dict = {"timestamp": 0.0, "value": None}
+_STATUS_CACHE_TTL_SECONDS = 1.0
+
 
 def _venv_python():
     if os.name == 'nt':
@@ -1048,6 +1051,10 @@ def restartservice(config_path: str | None = None):
 
 def status():
     """Show status for both App and Service using robust lock-based verification."""
+    now = time.monotonic()
+    cached = _STATUS_CACHE.get("value")
+    if cached is not None and now - _STATUS_CACHE["timestamp"] < _STATUS_CACHE_TTL_SECONDS:
+        return cached
     # Clean up any stale locks first
     _cleanup_stale_lock(APP_LOCK, APP_PID, 'app.py')
     _cleanup_stale_lock(SERVICE_LOCK, SERVICE_PID, 'mwl_service.py')
@@ -1192,7 +1199,9 @@ def status():
                 printer_status["timestamp"] = state.get("started_at")
         except Exception:
             pass
-    return {"app": app_status, "service": service_status, "mpps": mpps_status, "printer": printer_status}
+    result = {"app": app_status, "service": service_status, "mpps": mpps_status, "printer": printer_status}
+    _STATUS_CACHE.update(timestamp=time.monotonic(), value=result)
+    return result
 
 
 def _find_service_pids_windows() -> list[int]:

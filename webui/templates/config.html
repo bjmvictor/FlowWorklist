@@ -150,6 +150,7 @@
               <span data-i18n="database_type">Tipo</span>
             </label>
             <select 
+              id="database-type"
               name="database_type" 
               class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
             >
@@ -157,6 +158,45 @@
               <option value="postgres" data-i18n="db_type_postgresql" {% if cfg.get('database', {}).get('type', 'oracle') == 'postgres' %}selected{% endif %}>PostgreSQL</option>
               <option value="mysql" data-i18n="db_type_mysql" {% if cfg.get('database', {}).get('type', 'oracle') == 'mysql' %}selected{% endif %}>MySQL</option>
             </select>
+          </div>
+
+          <!-- Oracle Client (only used by Oracle Thick mode) -->
+          <div id="oracle-client-settings" class="md:col-span-2">
+            <label class="block text-lg font-semibold mb-3" for="database-oracle-client-lib-dir">
+              <i class="fas fa-folder-open text-orange-500 mr-2"></i>
+              Oracle Client directory
+              <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(optional, required for legacy password verifiers)</span>
+            </label>
+            <input
+              type="text"
+              id="database-oracle-client-lib-dir"
+              name="database_oracle_client_lib_dir"
+              list="oracle-client-directories"
+              value="{{ cfg.get('database', {}).get('oracle_client_lib_dir', '') }}"
+              placeholder="C:\oracle\instantclient_21_15"
+              autocomplete="off"
+              class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-orange-500 dark:bg-gray-700 dark:text-white transition font-mono"
+            >
+            <datalist id="oracle-client-directories">
+              {% for client_dir in oracle_client_dirs %}
+              <option value="{{ client_dir }}"></option>
+              {% endfor %}
+            </datalist>
+            {% if oracle_client_dirs %}
+            <div class="mt-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-3 text-sm text-green-800 dark:text-green-200">
+              <i class="fas fa-check-circle mr-1"></i>
+              Detected Oracle Client{% if oracle_client_dirs|length > 1 %}s{% endif %}:
+              <span class="font-mono">{{ oracle_client_dirs | join(', ') }}</span>
+            </div>
+            {% else %}
+            <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              No Oracle Client containing <code>oci.dll</code> was detected. Thin mode may still work with modern Oracle password verifiers.
+            </div>
+            {% endif %}
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Select a detected folder or enter the directory that directly contains <code>oci.dll</code>. Restart MWL after saving.
+            </p>
           </div>
 
           <!-- DSN -->
@@ -259,14 +299,14 @@
       <div class="flex gap-4 justify-end pt-6">
         <a 
           href="/" 
-          class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition flex items-center gap-2"
+          class="floating-back-button bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-full transition flex items-center gap-2"
         >
-          <i class="fas fa-times"></i>
+          <i class="fas fa-arrow-left"></i>
           <span data-i18n="back">Back</span>
         </a>
-        <button 
-          type="submit" 
-          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition flex items-center gap-2"
+        <button
+          type="submit"
+          class="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-2xl transition flex items-center gap-2"
         >
           <i class="fas fa-save"></i>
           <span data-i18n="save">Save</span>
@@ -278,6 +318,13 @@
 
 <script>
   let sqlEditor = null;
+
+  function updateOracleClientVisibility() {
+    const databaseType = document.getElementById('database-type');
+    const oracleSettings = document.getElementById('oracle-client-settings');
+    if (!databaseType || !oracleSettings) return;
+    oracleSettings.classList.toggle('hidden', databaseType.value !== 'oracle');
+  }
 
   function initSqlEditor() {
     const textarea = document.getElementById('database-query-editor');
@@ -344,6 +391,9 @@
   {% if notice %}
   setTimeout(closeNotification, 5000);
   {% endif %}
+
+  document.getElementById('database-type')?.addEventListener('change', updateOracleClientVisibility);
+  updateOracleClientVisibility();
 
   // Lazy-load CodeMirror assets for SQL editor
   (function loadSqlEditorAssets() {

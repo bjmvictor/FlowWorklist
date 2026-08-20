@@ -1,0 +1,32 @@
+{
+  "server": {
+    "aet": "FLOWMWL",
+    "port": 11112,
+    "host": "0.0.0.0",
+    "client_aet": "MODALITY_AE"
+  },
+  "database": {
+    "type": "mysql",
+    "user": "<DB_USER>",
+    "password": "<DB_PASSWORD>",
+    "dsn": "<DB_HOST>:3306/<DB_NAME>",
+    "oracle_client_lib_dir": "",
+    "query": "SELECT * FROM ..."
+  },
+  "ui": {
+    "language": "en"
+  },
+  "runtime": {
+    "autostart_services": false,
+    "ui_host": "127.0.0.1",
+    "ui_port": 5000,
+    "debug": false
+  },
+  "mpps": {
+    "enabled": false,
+    "start_with_worklist": true
+  },
+  "dicom_printer": {
+    "enabled": false
+  }
+}

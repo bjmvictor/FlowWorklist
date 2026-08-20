@@ -226,6 +226,10 @@ pyinstaller --name=FlowWorklist-Service --onefile --console --add-data="config.j
 
 ## Configuration
 
+Copy `config.example.json` to `config.json` before the first run. The local
+`config.json` is intentionally ignored because it contains environment-specific
+database credentials.
+
 ### config.json Reference (Remove comments to use)
 
 > ⚠️ JSON does not support comments. Remove all comments before using this file in production.
@@ -353,6 +357,9 @@ For detailed customization examples, see [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_M
 ---
 
 ## Deployment
+
+For a complete production setup, including automatic MWL/MPPS startup with
+NSSM, see the [production guide](docs/wiki/Production-NSSM.md).
 
 ### Local Testing (Development)
 
@@ -642,6 +649,8 @@ by the institution before clinical use, according to local regulations.
 ---
 
 ## Support & Documentation
+
+- **Complete Wiki**: Start at [docs/wiki/Home.md](docs/wiki/Home.md)
 
 - **Column Mapping**: See [COLUMN_MAPPING_GUIDE.md](docs/COLUMN_MAPPING_GUIDE.md)
 - **Logs**: Check `logs/mwl_server.log` for detailed diagnostics
