@@ -197,7 +197,7 @@ Dashboard URL: (http://localhost:5000)
 | `flow stop all` | Stop both Service and App gracefully (recommended) |
 | `flow stop app` | Stop management dashboard gracefully |
 | `flow stop service` | Stop DICOM MWL server |
-| `flow restart all|app|service [--config path]` | Restart targets |
+| `flow restart all/app/service [--config path]` | Restart targets |
 | `flow status` | Show App and Service status |
 
 ### Alternative: Windows Executable
