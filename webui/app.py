@@ -806,15 +806,25 @@ def config():
         if cfg_path.exists():
             try:
                 config_data = json.loads(cfg_path.read_text())
-            except:
-                config_data = {"server": {}, "database": {}}
+            except (OSError, json.JSONDecodeError):
+                config_data = {}
         else:
-            config_data = {"server": {}, "database": {}}
+            config_data = {}
+
+        # config.json may legitimately be partial (for example, changing the UI
+        # language first creates a file containing only the "ui" section).
+        # Normalize the editable sections before assigning individual fields.
+        if not isinstance(config_data, dict):
+            config_data = {}
+        if not isinstance(config_data.get("server"), dict):
+            config_data["server"] = {}
+        if not isinstance(config_data.get("database"), dict):
+            config_data["database"] = {}
         
         # Update server section
         config_data["server"]["aet"] = request.form.get('server_aet', 'MWLSCP')
         config_data["server"]["host"] = request.form.get('server_host', '0.0.0.0')
-        config_data["server"]["port"] = int(request.form.get('server_port', 11112))
+        config_data["server"]["port"] = _to_int(request.form.get('server_port'), 11112)
         config_data["server"]["client_aet"] = request.form.get('server_client_aet', 'Prima')
         
         # Update database section
