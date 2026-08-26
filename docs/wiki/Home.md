@@ -4,7 +4,7 @@ FlowWorklist provides DICOM MWL, optional MPPS processing and actions, optional 
 
 Start with:
 
-1. [README](../../README.md) for installation and basic configuration.
+1. [README](../README.md) for installation and basic configuration.
 2. [Architecture](Architecture.md) for the MWL-to-MPPS workflow.
 3. [Production Deployment](../DEPLOYMENT.md) for supervised operation.
 4. [Validation](Validation.md) before go-live.
