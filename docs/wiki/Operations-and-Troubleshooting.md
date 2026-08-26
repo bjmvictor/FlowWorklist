@@ -10,6 +10,12 @@ Monitor `/status`, free disk space, and logs. Retest after HIS/RIS, database, ne
 
 **Empty or incorrect worklist:** compare request filters, SQL output, and column order. Validate `YYYYMMDD`, `HHMMSS`, AE titles, and modality codes.
 
+**MPPS is received but no action runs:** confirm that MPPS is enabled, the action is enabled, and its N-CREATE/N-SET, status, calling AE, and modality filters match the received payload. Inspect `service_logs/mpps_service.log`.
+
+**MPPS action fails:** validate the API URL, authentication headers, network policy, SQL permissions, placeholders, and transaction behavior. Keep debug payload logging temporary and controlled.
+
+**DICOM Print does not produce output:** verify DCMTK, SumatraPDF, receiver port/AET, spool paths, Windows printer name, permissions, and paper settings.
+
 **Slow interface:** verify access to the Tailwind and Font Awesome CDNs. The Tests page uses in-process package metadata and the dashboard uses a short status cache.
 
 Locks are stored in `%LOCALAPPDATA%\FlowWorklist\instances`. Only terminate orphan processes after confirming that no valid installation owns them.
