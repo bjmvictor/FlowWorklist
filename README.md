@@ -75,7 +75,7 @@ python flow.py start app
 2. **⚠️ IMPORTANT**: Before starting the DICOM service, go to the **Configuration** tab and:
    - Configure the database connection (Oracle / PostgreSQL / MySQL)
    - Set the DICOM server parameters (AET, port)
-   - Paste your SQL query returning **17 columns** (see Column Mapping Guide)  
+   - Paste your SQL query returning **17 columns** (see [Column Mapping Guide](docs/COLUMN_MAPPING_GUIDE.md))
      *Or use a dummy query for testing*
 3. Go to **Tests** and click **“Test Database Connection”** and **“Test Worklist”**
 
@@ -184,21 +184,6 @@ The system is composed of two main components:
 Dashboard URL: (http://localhost:5000)
 
 ---
-
-### Available Flow Commands
-
-| Command | Purpose |
-|---------|---------|
-| `flow install [--add-to-path]` | Initialize CLI wrappers; optionally add to system PATH |
-| `flow uninstall` | Remove generated wrappers from the current folder |
-| `flow start all` | Start both App and Service together (recommended) |
-| `flow start app` | Start management dashboard (port 5000) |
-| `flow start service [--config path]` | Start DICOM MWL server (port 11112) |
-| `flow stop all` | Stop both Service and App gracefully (recommended) |
-| `flow stop app` | Stop management dashboard gracefully |
-| `flow stop service` | Stop DICOM MWL server |
-| `flow restart all/app/service [--config path]` | Restart targets |
-| `flow status` | Show App and Service status |
 
 ### Alternative: Windows Executable
 For easier deployment on Windows without Python installation:
