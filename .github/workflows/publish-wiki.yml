@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: publish-github-wiki
@@ -25,21 +25,12 @@ jobs:
       - name: Check out the main repository
         uses: actions/checkout@v4
 
-      - name: Validate wiki credentials
-        env:
-          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
-        run: |
-          if [ -z "$WIKI_TOKEN" ]; then
-            echo "The WIKI_TOKEN repository secret is required."
-            exit 1
-          fi
-
       - name: Clone the GitHub Wiki repository
         env:
-          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git clone \
-            "https://x-access-token:${WIKI_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" \
             .wiki-repository
 
       - name: Copy documentation pages
