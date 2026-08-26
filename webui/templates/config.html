@@ -149,15 +149,25 @@
               <i class="fas fa-cogs text-green-500 mr-2"></i>
               <span data-i18n="database_type">Tipo</span>
             </label>
-            <select 
-              id="database-type"
-              name="database_type" 
-              class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
-            >
-              <option value="oracle" data-i18n="db_type_oracle" {% if cfg.get('database', {}).get('type', 'oracle') == 'oracle' %}selected{% endif %}>Oracle</option>
-              <option value="postgres" data-i18n="db_type_postgresql" {% if cfg.get('database', {}).get('type', 'oracle') == 'postgres' %}selected{% endif %}>PostgreSQL</option>
-              <option value="mysql" data-i18n="db_type_mysql" {% if cfg.get('database', {}).get('type', 'oracle') == 'mysql' %}selected{% endif %}>MySQL</option>
-            </select>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-stretch">
+              <select
+                id="database-type"
+                name="database_type"
+                class="min-w-0 flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
+              >
+                <option value="oracle" data-i18n="db_type_oracle" {% if cfg.get('database', {}).get('type', 'oracle') == 'oracle' %}selected{% endif %}>Oracle</option>
+                <option value="postgres" data-i18n="db_type_postgresql" {% if cfg.get('database', {}).get('type', 'oracle') == 'postgres' %}selected{% endif %}>PostgreSQL</option>
+                <option value="mysql" data-i18n="db_type_mysql" {% if cfg.get('database', {}).get('type', 'oracle') == 'mysql' %}selected{% endif %}>MySQL</option>
+              </select>
+              <button
+                type="button"
+                id="install-database-plugin"
+                class="hidden shrink-0 px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-wait text-white font-semibold transition flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-download" aria-hidden="true"></i>
+                <span id="install-database-plugin-label" data-i18n="install_db_driver">Install DB Driver</span>
+              </button>
+            </div>
           </div>
 
           <!-- Oracle Client (only used by Oracle Thick mode) -->
@@ -205,9 +215,9 @@
               <i class="fas fa-location-dot text-green-500 mr-2"></i>
               <span data-i18n="database_dsn">DSN</span>
             </label>
-            <input 
-              type="text" 
-              name="database_dsn" 
+            <input
+              type="text"
+              name="database_dsn"
               value="{{ cfg.get('database', {}).get('dsn', '') }}"
               placeholder="192.168.1.X:1521/PRD"
               class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
@@ -221,9 +231,9 @@
               <i class="fas fa-user text-green-500 mr-2"></i>
               <span data-i18n="database_user">Usuário</span>
             </label>
-            <input 
-              type="text" 
-              name="database_user" 
+            <input
+              type="text"
+              name="database_user"
               value="{{ cfg.get('database', {}).get('user', '') }}"
               placeholder="db_user"
               class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
@@ -236,9 +246,9 @@
               <i class="fas fa-lock text-green-500 mr-2"></i>
               <span data-i18n="database_password">Senha</span>
             </label>
-            <input 
-              type="password" 
-              name="database_password" 
+            <input
+              type="password"
+              name="database_password"
               value="{{ cfg.get('database', {}).get('password', '') }}"
               placeholder="db_password"
               class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-green-500 dark:bg-gray-700 dark:text-white transition"
@@ -318,6 +328,121 @@
 
 <script>
   let sqlEditor = null;
+  const databasePluginStatus = {{ db_plugins | tojson }};
+  const databasePluginTranslations = {
+    pt: {
+      installing: 'Instalando...',
+      wait: 'A instalação pode levar alguns instantes.',
+      installError: 'Não foi possível instalar o plugin.',
+      installSuccess: 'Plugin instalado com sucesso.',
+    },
+    en: {
+      installing: 'Installing...',
+      wait: 'Installation may take a few moments.',
+      installError: 'The plugin could not be installed.',
+      installSuccess: 'Plugin installed successfully.',
+    },
+    es: {
+      installing: 'Instalando...',
+      wait: 'La instalación puede tardar unos instantes.',
+      installError: 'No se pudo instalar el complemento.',
+      installSuccess: 'Complemento instalado correctamente.',
+    },
+    fr: {
+      installing: 'Installation...',
+      wait: "L’installation peut prendre quelques instants.",
+      installError: "Le plugin n’a pas pu être installé.",
+      installSuccess: 'Plugin installé avec succès.',
+    },
+    zh: {
+      installing: '正在安装...',
+      wait: '安装可能需要一些时间。',
+      installError: '无法安装插件。',
+      installSuccess: '插件安装成功。',
+    },
+    ru: {
+      installing: 'Установка...',
+      wait: 'Установка может занять некоторое время.',
+      installError: 'Не удалось установить плагин.',
+      installSuccess: 'Плагин успешно установлен.',
+    },
+    ja: {
+      installing: 'インストール中...',
+      wait: 'インストールには少し時間がかかる場合があります。',
+      installError: 'プラグインをインストールできませんでした。',
+      installSuccess: 'プラグインをインストールしました。',
+    },
+    it: {
+      installing: 'Installazione...',
+      wait: "L’installazione potrebbe richiedere alcuni istanti.",
+      installError: 'Impossibile installare il plugin.',
+      installSuccess: 'Plugin installato correttamente.',
+    },
+    tr: {
+      installing: 'Yükleniyor...',
+      wait: 'Yükleme birkaç dakika sürebilir.',
+      installError: 'Eklenti yüklenemedi.',
+      installSuccess: 'Eklenti başarıyla yüklendi.',
+    },
+    fil: {
+      installing: 'Ini-install...',
+      wait: 'Maaaring tumagal nang ilang sandali ang pag-install.',
+      installError: 'Hindi ma-install ang plugin.',
+      installSuccess: 'Matagumpay na na-install ang plugin.',
+    },
+  };
+
+  function databasePluginText(key) {
+    const language = typeof currentLang === 'string' ? currentLang : 'en';
+    return databasePluginTranslations[language]?.[key]
+      || databasePluginTranslations.en[key];
+  }
+
+  function updateDatabasePluginButton() {
+    const databaseType = document.getElementById('database-type');
+    const installButton = document.getElementById('install-database-plugin');
+    const installLabel = document.getElementById('install-database-plugin-label');
+    if (!databaseType || !installButton) return;
+
+    const dbType = databaseType.value;
+    installButton.dataset.databaseType = dbType;
+    installButton.classList.toggle('hidden', Boolean(databasePluginStatus[dbType]));
+    installButton.disabled = false;
+    if (installLabel) installLabel.textContent = typeof t === 'function' ? t('install_db_driver') : 'Install DB Driver';
+  }
+
+  async function installSelectedDatabasePlugin() {
+    const databaseType = document.getElementById('database-type');
+    const installButton = document.getElementById('install-database-plugin');
+    const installLabel = document.getElementById('install-database-plugin-label');
+    const dbType = installButton?.dataset.databaseType;
+    if (!installButton || !dbType) return;
+
+    installButton.disabled = true;
+    if (databaseType) databaseType.disabled = true;
+    if (installLabel) installLabel.textContent = databasePluginText('installing');
+
+    try {
+      const response = await fetch(`/plugin/install/${encodeURIComponent(dbType)}`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok || !result.installed) {
+        throw new Error(result.message || databasePluginText('installError'));
+      }
+
+      databasePluginStatus[dbType] = true;
+      installButton.classList.add('hidden');
+      if (databaseType) databaseType.disabled = false;
+      showNotification(databasePluginText('installSuccess'), 'success', 5000, false);
+    } catch (error) {
+      installButton.disabled = false;
+      if (databaseType) databaseType.disabled = false;
+      if (installLabel) installLabel.textContent = typeof t === 'function' ? t('install_db_driver') : 'Install DB Driver';
+      showNotification(error.message || databasePluginText('installError'), 'error', 7000, false);
+    }
+  }
 
   function updateOracleClientVisibility() {
     const databaseType = document.getElementById('database-type');
@@ -392,8 +517,13 @@
   setTimeout(closeNotification, 5000);
   {% endif %}
 
-  document.getElementById('database-type')?.addEventListener('change', updateOracleClientVisibility);
+  document.getElementById('database-type')?.addEventListener('change', () => {
+    updateOracleClientVisibility();
+    updateDatabasePluginButton();
+  });
+  document.getElementById('install-database-plugin')?.addEventListener('click', installSelectedDatabasePlugin);
   updateOracleClientVisibility();
+  updateDatabasePluginButton();
 
   // Lazy-load CodeMirror assets for SQL editor
   (function loadSqlEditorAssets() {

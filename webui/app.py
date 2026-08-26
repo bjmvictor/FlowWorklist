@@ -883,6 +883,10 @@ def config():
             notice=notice,
             status=status,
             oracle_client_dirs=oracle_client_dirs,
+            db_plugins={
+                db_type: is_db_plugin_installed(db_type)
+                for db_type in ('oracle', 'postgres', 'mysql')
+            },
         )
 
 
@@ -1122,14 +1126,32 @@ def plugin_install(name):
     }
     pkg = mapping.get(name)
     if not pkg:
+        if request.accept_mimetypes.best == 'application/json':
+            return jsonify({'ok': False, 'installed': False, 'message': f'Unknown plugin {name}'}), 404
         return redirect(url_for('plugins_page', notice=f'Unknown plugin {name}', status='error'))
     _py, pip_exe = _venv_python_and_pip()
     if name == 'oracle':
         ok, msg = _install_oracle_driver(pip_exe)
-        return redirect(url_for('plugins_page', notice=msg, status='success' if ok else 'error'))
-    ok, msg = _run_pip_command(pip_exe, ['install', pkg])
+    else:
+        ok, msg = _run_pip_command(pip_exe, ['install', pkg])
+
     if ok:
-        return redirect(url_for('plugins_page', notice=f'Installed {pkg}', status='success'))
+        _PACKAGE_STATUS_CACHE.clear()
+    installed = is_db_plugin_installed(name) if ok else False
+    success_message = msg if name == 'oracle' else f'Installed {pkg}'
+
+    if request.accept_mimetypes.best == 'application/json':
+        response_message = success_message
+        if ok and not installed:
+            response_message = f'{success_message}. Installation completed, but the driver was not detected.'
+        return jsonify({
+            'ok': bool(ok and installed),
+            'installed': installed,
+            'message': response_message if ok else f'Install failed: {msg}',
+        }), 200 if ok and installed else 500
+
+    if ok:
+        return redirect(url_for('plugins_page', notice=success_message, status='success'))
     return redirect(url_for('plugins_page', notice=f'Install failed: {msg}', status='error'))
 
 
@@ -1191,6 +1213,12 @@ def plugin_uninstall(name):
             removed.append(one_pkg)
         else:
             errors.append(f"{one_pkg}: {msg}")
+
+    # Package metadata is cached to keep page navigation fast. Invalidate it
+    # after an uninstall attempt so the redirected plugins page renders the
+    # new state and swaps the action button immediately.
+    _PACKAGE_STATUS_CACHE.clear()
+
     if errors:
         return redirect(url_for('plugins_page', notice=f"Uninstall failed: {' ; '.join(errors)}", status='error'))
     if removed:
