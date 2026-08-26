@@ -1,22 +1,12 @@
-# FlowWorklist
+# FlowWorklist documentation
 
-FlowWorklist is a DICOM Modality Worklist server with a web dashboard for configuration, operation, and diagnostics. It queries a HIS/RIS database and answers modality C-FIND requests. MPPS and DICOM Print are optional.
+FlowWorklist provides DICOM MWL, optional MPPS processing and actions, optional DICOM Print, and a management interface.
 
-## Start here
+Start with:
 
-1. [Architecture](Architecture.md)
-2. [Windows installation](Windows-Installation.md)
-3. [Production with NSSM](Production-NSSM.md)
-4. [Configuration](Configuration.md)
-5. [Validation](Validation.md)
-6. [Operations and troubleshooting](Operations-and-Troubleshooting.md)
-7. [Security and backup](Security.md)
+1. [README](../../README.md) for installation and basic configuration.
+2. [Architecture](Architecture.md) for the MWL-to-MPPS workflow.
+3. [Production Deployment](../DEPLOYMENT.md) for supervised operation.
+4. [Validation](Validation.md) before go-live.
 
-| Component | Default port | Recommended exposure |
-|---|---:|---|
-| Web dashboard | 5000 | Localhost or management network |
-| MWL SCP | 11112 | Modality network |
-| MPPS SCP | 4101 | Modality network |
-| Print SCP | 4100 | Modality network |
-
-> The institution must validate the system before clinical use. It does not replace a certified RIS/PACS.
+The complete topic map is in the [documentation index](../INDEX.md). Canonical documents contain the full instructions; wiki pages stay intentionally concise to avoid duplication.

@@ -1,525 +1,178 @@
-# FlowWorklist - Deployment Guide
+# Production deployment
 
-Guide for deploying FlowWorklist in different environments.
+This is the canonical production guide. For a local first run, use the [README](../README.md). For packaging, use the [Build Guide](BUILD_GUIDE.md).
 
-## Quick Start
+## Deployment model
 
-### Windows - Development
+Run one supervised management process. When `runtime.autostart_services` is enabled, that process starts and monitors MWL and, when configured, MPPS. Do not simultaneously configure separate supervisors for the same child services.
 
-```powershell
-# 1. Activate virtual environment
-& .\Scripts\Activate.ps1
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure database in config.json
-# Edit the file with your database credentials
-
-# 4. Start management App (Flow CLI)
-python .\flow.py install
-.\flow start app
-# Open http://127.0.0.1:5000
+```text
+Process supervisor
+  |
+  +-- FlowWorklist management app (127.0.0.1:5000)
+        |
+        +-- MWL SCP (configured server host/port)
+        +-- MPPS SCP (when enabled and start_with_worklist=true)
 ```
 
-### Windows - Service Installation
+## Production configuration
 
-#### Using NSSM (Recommended)
+Create `config.json` from `config.example.json`. Use the web interface to edit it or manage it as a protected deployment file.
 
-```powershell
-# Download NSSM from https://nssm.cc/download
-# Extract and add to PATH
-
-# Install service
-nssm install FlowMWL "C:\FlowWorklist\Scripts\python.exe" "C:\FlowWorklist\mwl_service.py"
-nssm set FlowMWL AppDirectory "C:\FlowWorklist"
-nssm set FlowMWL AppStdout "C:\FlowWorklist\logs\service.log"
-nssm set FlowMWL AppStderr "C:\FlowWorklist\logs\service.log"
-
-# Start/Stop/Restart
-nssm start FlowMWL
-nssm stop FlowMWL
-nssm restart FlowMWL
-
-# Verify
-nssm status FlowMWL
+```json
+{
+  "server": {
+    "aet": "FLOWMWL",
+    "host": "0.0.0.0",
+    "port": 11112,
+    "client_aet": "MODALITY_AE"
+  },
+  "database": {
+    "type": "postgres",
+    "user": "<DB_USER>",
+    "password": "<DB_PASSWORD>",
+    "dsn": "<DB_HOST>:5432/<DB_NAME>",
+    "oracle_client_lib_dir": "",
+    "query": "SELECT ..."
+  },
+  "ui": { "language": "en" },
+  "runtime": {
+    "autostart_services": true,
+    "ui_host": "127.0.0.1",
+    "ui_port": 5000,
+    "debug": false
+  },
+  "mpps": {
+    "enabled": true,
+    "start_with_worklist": true
+  },
+  "dicom_printer": { "enabled": false }
+}
 ```
 
-#### Using Task Scheduler
+Keep the UI on localhost unless an authenticated TLS reverse proxy is required. Restrict database privileges to the MWL query and to the exact statements required by enabled MPPS SQL actions.
+
+## Windows with NSSM
+
+Use a dedicated service account with read access to the application, execute access to Python, modify access to runtime/log directories, and only the required database/network permissions.
 
 ```powershell
-# Create a scheduled task that runs MWLSCP.py at startup
-$action = New-ScheduledTaskAction -Execute "C:\FlowWorklist\Scripts\python.exe" `
-  -Argument "C:\FlowWorklist\MWLSCP.py"
-$trigger = New-ScheduledTaskTrigger -AtStartup
-Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "FlowMWL" `
-  -Description "DICOM Modality Worklist Server" -RunLevel Highest
+nssm install FlowWorklist "C:\FlowWorklist\.venv\Scripts\python.exe" "C:\FlowWorklist\webui\app.py"
+nssm set FlowWorklist AppDirectory "C:\FlowWorklist"
+nssm set FlowWorklist Start SERVICE_AUTO_START
+nssm set FlowWorklist AppExit Default Restart
+nssm set FlowWorklist AppRestartDelay 5000
+nssm set FlowWorklist AppStdout "C:\FlowWorklist\service_logs\nssm-stdout.log"
+nssm set FlowWorklist AppStderr "C:\FlowWorklist\service_logs\nssm-stderr.log"
+nssm start FlowWorklist
+nssm status FlowWorklist
 ```
 
----
+Do not point NSSM directly at `mwl_service.py` when the management app owns automatic service startup.
 
-## Linux / macOS Deployment
+## Linux with systemd
 
-### Systemd Service (Recommended)
+Create a dedicated user and install the application under a controlled directory such as `/opt/flowworklist`.
 
-```bash
-# 1. Create user for the service
-sudo useradd -r -s /bin/bash dicom
-
-# 2. Copy application to /opt/
-sudo cp -r FlowWorklist /opt/
-
-# 3. Set permissions
-sudo chown -R dicom:dicom /opt/FlowWorklist
-
-# 4. Create systemd service file
-sudo tee /etc/systemd/system/flowmwl.service > /dev/null << EOF
+```ini
 [Unit]
-Description=FlowWorklist DICOM MWL Server
-After=network.target
+Description=FlowWorklist
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=dicom
-Group=dicom
-WorkingDirectory=/opt/FlowWorklist
-ExecStart=/opt/FlowWorklist/venv/bin/python /opt/FlowWorklist/mwl_service.py
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+User=flowworklist
+Group=flowworklist
+WorkingDirectory=/opt/flowworklist
+ExecStart=/opt/flowworklist/.venv/bin/python /opt/flowworklist/webui/app.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
-EOF
+```
 
-# 5. Start service
+```bash
 sudo systemctl daemon-reload
-sudo systemctl enable flowmwl
-sudo systemctl start flowmwl
-
-# 6. Check status
-sudo systemctl status flowmwl
-sudo journalctl -u flowmwl -f
+sudo systemctl enable --now flowworklist
+sudo systemctl status flowworklist
 ```
 
-### Standalone (Without Systemd)
-
-```bash
-# 1. Create shell script
-cat > /opt/FlowWorklist/start.sh << 'EOF'
-#!/bin/bash
-cd /opt/FlowWorklist
-source venv/bin/activate
-python MWLSCP.py >> logs/mwl_server.log 2>&1 &
-echo $! > /var/run/flowmwl.pid
-EOF
-
-chmod +x /opt/FlowWorklist/start.sh
-
-# 2. Add to crontab
-crontab -e
-# Add: @reboot /opt/FlowWorklist/start.sh
-```
-
----
-
-## Docker Deployment
-
-### Build and Run
-
-```dockerfile
-# Dockerfile
-FROM python:3.10-slim
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libaio1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy application
-COPY . .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expose ports
-EXPOSE 11112 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import socket; s = socket.socket(); s.connect(('localhost', 11112)); s.close()" || exit 1
-
-# Run MWLSCP server
-CMD ["python", "mwl_service.py"]
-```
-
-### Build and Run
-
-```bash
-# Build image
-docker build -t flowworklist:latest .
-
-# Run container
-docker run -d \
-  --name flowmwl \
-  -p 11112:11112 \
-  -p 5000:5000 \
-  -v /path/to/config.json:/app/config.json:ro \
-  -v /path/to/logs:/app/logs \
-  flowworklist:latest
-
-# Monitor
-docker logs -f flowmwl
-docker stats flowmwl
-```
-
-### Docker Compose
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  flowmwl:
-    image: flowworklist:latest
-    container_name: flowmwl
-    ports:
-      - "11112:11112"
-      - "5000:5000"
-    volumes:
-      - ./config.json:/app/config.json:ro
-      - ./logs:/app/logs
-    restart: always
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 11112))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-```
-
-```bash
-docker-compose up -d
-docker-compose logs -f
-docker-compose down
-```
-
----
-
-## Kubernetes Deployment
-
-```yaml
-# kubernetes.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flowmwl
-  labels:
-    app: flowmwl
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: flowmwl
-  template:
-    metadata:
-      labels:
-        app: flowmwl
-    spec:
-      containers:
-      - name: flowmwl
-        image: flowworklist:latest
-        ports:
-        - containerPort: 11112
-          name: dicom
-        - containerPort: 5000
-          name: dashboard
-        volumeMounts:
-        - name: config
-          mountPath: /app/config.json
-          subPath: config.json
-          readOnly: true
-        - name: logs
-          mountPath: /app/logs
-        livenessProbe:
-          tcpSocket:
-            port: 11112
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          tcpSocket:
-            port: 11112
-          initialDelaySeconds: 5
-          periodSeconds: 5
-      volumes:
-      - name: config
-        configMap:
-          name: flowmwl-config
-      - name: logs
-        emptyDir: {}
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: flowmwl-dicom
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 11112
-    targetPort: 11112
-    protocol: TCP
-    name: dicom
-  selector:
-    app: flowmwl
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: flowmwl-dashboard
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 5000
-    targetPort: 5000
-    protocol: TCP
-    name: dashboard
-  selector:
-    app: flowmwl
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: flowmwl-config
-data:
-  config.json: |
-    {
-      "server": {
-        "aet": "FlowMWL",
-        "port": 11112,
-        "host": "0.0.0.0",
-        "client_aet": "Console"
-      },
-      "database": {
-        "type": "oracle",
-        "user": "YOUR_USER",
-        "password": "YOUR_PASSWORD",
-        "dsn": "YOUR_HOST:1521/YOUR_DB",
-        "query": "SELECT ..."
-      }
-    }
-```
-
-```bash
-# Deploy
-kubectl apply -f kubernetes.yaml
-
-# Monitor
-kubectl get pods
-kubectl logs -f deployment/flowmwl
-kubectl port-forward svc/flowmwl-dashboard 5000:5000
-```
-
----
-
-## Network Configuration
-
-### Firewall Rules
-
-#### Windows Firewall
-```powershell
-# Allow DICOM port (11112)
-New-NetFirewallRule -DisplayName "FlowMWL DICOM" `
-  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 11112
-
-# Allow Dashboard port (5000)
-New-NetFirewallRule -DisplayName "FlowMWL Dashboard" `
-  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5000
-```
-
-#### Linux (iptables)
-```bash
-# Allow DICOM port
-sudo iptables -A INPUT -p tcp --dport 11112 -j ACCEPT
-
-# Allow Dashboard port
-sudo iptables -A INPUT -p tcp --dport 5000 -j ACCEPT
-
-# Save rules
-sudo netfilter-persistent save
-```
-
-#### Linux (firewalld)
-```bash
-sudo firewall-cmd --permanent --add-port=11112/tcp
-sudo firewall-cmd --permanent --add-port=5000/tcp
-sudo firewall-cmd --reload
-```
-
----
-
-## Reverse Proxy Configuration
-
-### Nginx (For Dashboard)
-
-```nginx
-upstream flowmwl_dashboard {
-    server localhost:5000;
-}
-
-server {
-    listen 80;
-    server_name worklist.hospital.com;
-
-    location / {
-        proxy_pass http://flowmwl_dashboard;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### Apache (For Dashboard)
-
-```apache
-<VirtualHost *:80>
-    ServerName worklist.hospital.com
-
-    ProxyPreserveHost On
-    ProxyPass / http://localhost:5000/
-    ProxyPassReverse / http://localhost:5000/
-</VirtualHost>
-```
-
----
-
-## Security Considerations
-
-### 1. Configuration Security
-- Store `config.json` outside of web-accessible directories
-- Use environment variables for sensitive credentials
-- Rotate database passwords regularly
-- Implement file-level access controls
-
-### 2. Network Security
-- Use VPN or private network for database connections
-- Restrict DICOM port (11112) to known imaging equipment IPs
-- Use TLS/SSL for dashboard (reverse proxy with HTTPS)
-- Implement rate limiting on API endpoints
-
-### 3. Access Control
-- Run service under dedicated non-privileged user account
-- Restrict file permissions (config.json: 600)
-- Implement authentication for dashboard (reverse proxy)
-- Audit logs regularly
-
-### Example: Secured Environment Variables
-```bash
-# .env file (keep secure!)
-export DB_USER="hospital_user"
-export DB_PASSWORD="secure_password_here"
-export DB_DSN="prod-db.hospital.local:1521/PROD"
-```
-
-```python
-# In app.py/MWLSCP.py
-import os
-db_user = os.getenv('DB_USER')
-db_password = os.getenv('DB_PASSWORD')
-```
-
----
-
-## Monitoring and Troubleshooting
-
-### Log Files
-- **MWLSCP Server**: `logs/mwl_server.log`
-- **Dashboard**: `service_logs/*.log`
-- **System**: Check OS system logs
-
-### Health Checks
-
-```bash
-# Check if DICOM port is listening
-netstat -an | findstr 11112          # Windows
-netstat -an | grep 11112            # Linux
-
-# Test connection
-(New-Object System.Net.Sockets.TcpClient).Connect("localhost", 11112)  # Windows
-
-# Query logs
-tail -f logs/mwl_server.log         # Linux
-Get-Content logs\mwl_server.log     # Windows
-```
-
-### Performance Tuning
-- Monitor CPU and memory usage
-- Check database query performance
-- Adjust DICOM timeout values if needed
-- Consider caching for frequently-queried data
-
----
-
-## Backup and Recovery
-
-### Backup Configuration
-```bash
-# Backup config.json daily
-0 0 * * * cp /opt/FlowWorklist/config.json /backup/config.json.$(date +\%Y\%m\%d)
-
-# Keep 30 days of backups
-find /backup/config.json.* -mtime +30 -delete
-```
-
-### Recovery
-```bash
-# Restore from backup
-cp /backup/config.json.20251216 /opt/FlowWorklist/config.json
-
-# Restart service
-sudo systemctl restart flowmwl
-```
-
----
-
-## Version Management
-
-### Git Workflow
-```bash
-# Clone repository
-git clone https://github.com/yourusername/FlowWorklist.git
-cd FlowWorklist
-
-# Create deployment branch
-git checkout -b deploy/production
-
-# Update configuration for production
-# (Don't commit sensitive data!)
-git checkout -- config.json
-
-# Tag version
-git tag -a v1.0.0 -m "Production Release 1.0.0"
-git push origin v1.0.0
-```
-
----
-
-## Support
-
-For issues during deployment:
-1. Check `logs/mwl_server.log` for error messages
-2. Review [README.md](README.md) for configuration guide
-3. Consult [COLUMN_MAPPING_GUIDE.md](COLUMN_MAPPING_GUIDE.md) for database queries
-4. Test endpoints using dashboard at http://localhost:5000
-
----
-
-**Last Updated**: December 2025  
-**Version**: 1.0.0
+Validate database drivers and DICOM networking on the target Linux distribution before production use.
+
+## Network policy
+
+Allow only the connections required by the deployment:
+
+| Source | Destination | Purpose |
+|---|---|---|
+| approved modalities | MWL host and configured port | C-ECHO and C-FIND |
+| approved modalities | MPPS host and configured port | N-CREATE and N-SET |
+| FlowWorklist host | database DSN | MWL query and configured MPPS SQL actions |
+| FlowWorklist host | approved API endpoints | configured MPPS API actions |
+| administrators or reverse proxy | UI localhost port | management |
+
+Do not expose the Flask development server directly to untrusted networks. If remote administration is required, place it behind an authenticated TLS reverse proxy and host firewall.
+
+## MPPS action safety
+
+MPPS actions can modify downstream systems.
+
+1. Start with MPPS enabled and no actions to verify receipt.
+2. Use the test payload and debug output only in a controlled test environment.
+3. Add explicit event filters for N-CREATE or N-SET.
+4. Add explicit status filters where appropriate.
+5. Test API and SQL actions against non-production targets.
+6. Confirm idempotency because modalities may retry DICOM messages.
+7. Disable debug payload logging before go-live if it may contain patient data.
+
+## Validation
+
+Before go-live:
+
+- load every management page and verify there are no server or browser errors;
+- confirm the selected database driver and database test;
+- validate all 17 query columns with production-like data;
+- run C-ECHO and C-FIND from an approved modality;
+- verify MWL filtering by patient, accession number, date, and modality as applicable;
+- send MPPS N-CREATE and N-SET and verify DICOM success responses;
+- prove that unmatched MPPS actions are skipped and matched actions run once as designed;
+- restart the process and reboot the host;
+- confirm log rotation, monitoring, backup, and restore procedures.
+
+## Monitoring and logs
+
+- `logs/`: management application logs;
+- `service_logs/`: MWL, MPPS, print, and supervisor output;
+- `.\flow.ps1 status` or `python flow.py status`: current process state;
+- `http://127.0.0.1:5000/status`: management status endpoint.
+
+Alert on repeated process restarts, database failures, DICOM association failures, MPPS action failures, and disk growth.
+
+## Backup and recovery
+
+Back up:
+
+- `config.json`;
+- `mpps-actions/`;
+- any local print configuration needed by the site;
+- supervisor configuration and service-account documentation.
+
+Exclude credentials and clinical data from general-purpose source repositories. Test restoration on a non-production host.
+
+## Upgrade procedure
+
+1. Back up configuration and action definitions.
+2. Review `CHANGELOG.md`.
+3. Stop the supervisor.
+4. Deploy the new code and update the virtual environment with `pip install -r requirements.txt`.
+5. Run syntax, database, and DICOM tests.
+6. Start the supervisor and verify MWL and MPPS state.
+7. Keep a tested rollback package until acceptance is complete.
+
+## Troubleshooting
+
+Use [Operations and Troubleshooting](wiki/Operations-and-Troubleshooting.md) for common failures. For production incidents, preserve the relevant logs and configuration metadata without copying credentials or patient data into tickets.

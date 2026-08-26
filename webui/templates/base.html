@@ -142,15 +142,6 @@
         overflow: visible;
       }
       
-      /* Dropdown chevron rotation */
-      .dropdown-chevron {
-        transition: transform 0.3s ease;
-      }
-      
-      .group:hover .dropdown-chevron {
-        transform: rotate(90deg);
-      }
-      
       /* Hide scrollbar but keep scroll functionality */
       .scrollable-hidden::-webkit-scrollbar {
         display: none;
@@ -159,6 +150,55 @@
       .scrollable-hidden {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+
+      .app-header-brand,
+      .app-header-nav,
+      .app-header-actions {
+        align-self: center;
+        align-items: center;
+      }
+
+      .app-header-nav > a,
+      .app-header-nav > .group > button,
+      .app-header-actions > div > button {
+        height: 2.5rem;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      .app-header-actions > div {
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .app-header-nav > .group {
+        height: 2.5rem;
+        align-items: center;
+      }
+
+      .app-header-actions > div > button {
+        display: inline-flex;
+      }
+
+      .app-header-logo {
+        display: block;
+        width: 4rem;
+        height: 4rem;
+        max-width: 4rem;
+        object-fit: contain;
+        flex: 0 0 auto;
+        margin-block: 0;
+      }
+
+      @media (min-width: 768px) {
+        .app-header-logo {
+          width: 5rem;
+          height: 5rem;
+          max-width: 5rem;
+        }
       }
     </style>
     <script>
@@ -1203,18 +1243,18 @@
   </head>
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
     <nav class="fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900 dark:to-indigo-900 shadow-lg z-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16 md:h-20">
+      <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 lg:gap-8 h-16 md:h-20">
           <!-- Logo/Title -->
-          <div class="flex items-center gap-3">
-            <img src="{{ url_for('static', filename='brand/logo-mark.png') }}" alt="FlowWorklist" class="h-10 md:h-12" style="max-width: 120px; height: auto;">
-            <div class="hidden sm:block">
+          <div class="app-header-brand flex gap-3 justify-self-start min-w-0">
+            <img src="{{ url_for('static', filename='brand/logo-mark.png') }}" alt="FlowWorklist" class="app-header-logo">
+            <div class="hidden sm:flex sm:flex-col sm:justify-center">
               <h1 class="text-white font-bold text-lg md:text-xl">FlowWorklist</h1>
               <p class="text-blue-100 text-xs" data-i18n="app_subtitle">DICOM Worklist Server</p>
             </div>
           </div>
           <!-- Navigation Links -->
-          <div class="hidden md:flex items-center gap-6">
+          <div class="app-header-nav hidden md:flex justify-center gap-1 lg:gap-2 xl:gap-3 justify-self-center whitespace-nowrap">
             <a href="/" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2" data-i18n-title="home">
               <i class="fas fa-home"></i>
               <span data-i18n="home">Home</span>
@@ -1244,11 +1284,11 @@
               <span data-i18n="logs">Logs</span>
             </a>
             <!-- Dropdown Menu -->
-            <div class="relative group 2xl:hidden">
+            <div class="relative group flex 2xl:hidden">
               <button class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-2">
-                <i class="fas fa-chevron-down dropdown-chevron"></i>
+                <i class="fas fa-chevron-down"></i>
               </button>
-              <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
+              <div class="absolute top-full right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50">
                 <a href="/plugins" class="lg:hidden w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm flex items-center gap-2">
                   <i class="fas fa-plug"></i>
                   <span data-i18n="plugins">Plugins</span>
@@ -1269,7 +1309,7 @@
             </div>
           </div>
           <!-- Right Controls -->
-          <div class="flex items-center gap-4">
+          <div class="app-header-actions flex gap-2 sm:gap-4 justify-self-end">
             <!-- Notification Bell -->
             <div class="relative">
               <button onclick="toggleNotificationDropdown()" id="notification-bell" class="text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition relative" data-i18n-title="title_notifications">
@@ -1292,7 +1332,7 @@
                 <i class="fas fa-globe"></i>
                 <span id="langCode">PT</span>
               </button>
-              <div class="absolute right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto scrollable-hidden">
+              <div class="absolute top-full right-0 mt-0 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl hidden group-hover:block py-2 z-50 max-h-80 overflow-y-auto scrollable-hidden">
                 <button onclick="setLang('pt');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Português</button>
                 <button onclick="setLang('en');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> English</button>
                 <button onclick="setLang('fr');" class="block w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"> Français</button>
