@@ -53,4 +53,4 @@ The MWL response does not directly invoke MPPS. The modality consumes a schedule
 - The management UI supervises child services only when configured to do so.
 - DICOM Print is optional and independent from MWL and MPPS.
 
-See [Production Deployment](../DEPLOYMENT.md) for process ownership and network policy.
+See [Production Deployment](https://github.com/bjmvictor/FlowWorklist/blob/main/docs/DEPLOYMENT.md) for process ownership and network policy.

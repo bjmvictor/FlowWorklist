@@ -13,7 +13,7 @@ Create `config.json` from `config.example.json`. The real file is local, contain
 
 Use the **Config** page for MWL and database settings, **MPPS** for listener/action settings, and **DICOM Printer** for print settings. Install optional drivers from **Config** or **Plugins**.
 
-The worklist query is positional and must return exactly 17 columns. Use the [SQL Query Guide](../SQL_QUERY_GUIDE.md) as the contract and the [Column Mapping Guide](../COLUMN_MAPPING_GUIDE.md) for detailed behavior.
+The worklist query is positional and must return exactly 17 columns. Use the [SQL Query Guide](https://github.com/bjmvictor/FlowWorklist/blob/main/docs/SQL_QUERY_GUIDE.md) as the contract and the [Column Mapping Guide](https://github.com/bjmvictor/FlowWorklist/blob/main/docs/COLUMN_MAPPING_GUIDE.md) for detailed behavior.
 
 MPPS actions are stored separately under `mpps-actions/`. Each action can filter N-CREATE/N-SET events and MPPS statuses, then call an API, execute SQL, or perform both. No downstream action runs when no enabled action matches.
 
@@ -27,4 +27,4 @@ Production-safe defaults:
 - `mpps.debug_output: false` after validation;
 - secrets and internal addresses excluded from source control and support bundles.
 
-The complete example and first-run sequence are maintained in the [README](../../README.md).
+The complete example and first-run sequence are maintained in the [README](https://github.com/bjmvictor/FlowWorklist/blob/main/README.md).
