@@ -9,7 +9,11 @@ import psutil
 import hashlib
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+from flowworklist_paths import BINARY_ROOT, DATA_ROOT, SOURCE_ROOT, bundled_executable, ensure_data_layout
+
+ensure_data_layout()
+ROOT = DATA_ROOT
+CODE_ROOT = SOURCE_ROOT
 # Default paths (will be overridden after instance dir is computed)
 APP_PID = ROOT / "app.pid"
 APP_LOCK = ROOT / "app.lock"
@@ -84,14 +88,9 @@ def _instance_dir(iid: str) -> Path:
         p = Path(base_override).expanduser().resolve() / iid
         p.mkdir(parents=True, exist_ok=True)
         return p
-    if os.name == 'nt':
-        local = os.environ.get('LOCALAPPDATA') or os.environ.get('APPDATA')
-        if local:
-            p = Path(local) / 'FlowWorklist' / 'instances' / iid
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-    # Fallback (Linux/macOS or missing env): use ~/.local/share
-    p = Path.home() / '.local' / 'share' / 'FlowWorklist' / 'instances' / iid
+    # Keep locks with the selected installed or portable data root so a
+    # service account and management process observe the same instance.
+    p = DATA_ROOT / 'instances' / iid
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -124,7 +123,8 @@ def _find_pids_by_id(script_name: str, instance_id: str) -> list[int]:
             try:
                 cmdline_list = proc.info.get('cmdline') or []
                 cmd = ' '.join(cmdline_list).lower()
-                if script_name.lower() in cmd and 'python' in cmd and '--instance-id' in cmd and instance_id.lower() in cmd:
+                marker = Path(script_name).stem.lower()
+                if marker in cmd and '--instance-id' in cmd and instance_id.lower() in cmd:
                     pids.append(proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
@@ -152,7 +152,8 @@ def _is_process_alive(pid: int, cmdline_match: str = None) -> bool:
         if cmdline_match:
             try:
                 cmdline = ' '.join(proc.cmdline()).lower()
-                if cmdline_match.lower() not in cmdline:
+                needle = cmdline_match.lower()
+                if needle not in cmdline and Path(needle).stem not in cmdline:
                     return False
             except (psutil.AccessDenied, psutil.NoSuchProcess):
                 # If we can't access cmdline but process exists, assume it's valid
@@ -439,8 +440,9 @@ def start_mpps_service(config_path: str | None = None):
             print(f"[INFO] {msg}")
             return {"ok": False, "msg": msg, "error_type": "already_running", "pid": pid}
 
-    script = ROOT / "mpps_service.py"
-    if not script.exists():
+    script = CODE_ROOT / "mpps_service.py"
+    packaged_service = bundled_executable("FlowWorklist")
+    if not packaged_service and not script.exists():
         msg = f"MPPS script not found: {script}"
         print(f"[ERROR] {msg}")
         return {"ok": False, "msg": msg, "error_type": "script_not_found", "error_detail": msg}
@@ -455,7 +457,7 @@ def start_mpps_service(config_path: str | None = None):
     log_path = SERVICE_LOG_DIR / f"mpps_{ts}.log"
     try:
         with open(log_path, "ab") as out:
-            args = [python_path, str(script), '--instance-id', iid]
+            args = ([str(packaged_service), '--role', 'mpps'] if packaged_service else [python_path, str(script)]) + ['--instance-id', iid]
             if config_path:
                 args += ["--config", config_path]
             creationflags = 0
@@ -784,8 +786,9 @@ def startservice(config_path: str | None = None):
     
     # Determine Python executable
     python_path = _venv_python()
-    script = ROOT / "mwl_service.py"
-    if not script.exists():
+    script = CODE_ROOT / "mwl_service.py"
+    packaged_service = bundled_executable("FlowWorklist")
+    if not packaged_service and not script.exists():
         msg = f"Service script not found: {script}"
         print(f"[ERROR] {msg}")
         return {"ok": False, "msg": msg, "error_type": "script_not_found", "error_detail": msg}
@@ -803,7 +806,7 @@ def startservice(config_path: str | None = None):
     # Start detached process
     try:
         with open(log_path, "ab") as out:
-            args = [python_path, str(script), '--instance-id', iid]
+            args = ([str(packaged_service), '--role', 'mwl'] if packaged_service else [python_path, str(script)]) + ['--instance-id', iid]
             if config_path:
                 args += ["--config", config_path]
             

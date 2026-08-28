@@ -29,37 +29,14 @@
         <span data-i18n="desc_db_conn">Test database connectivity</span>
         <span>(</span><span data-i18n="current">current</span>: {{ db_type|upper }})
       </p>
-      {% if plugin_installed %}
-        <button
-          onclick="runTest('db')"
-          id="btn-db"
-          class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-        >
-          <i class="fas fa-database"></i>
-          <span data-i18n="test_connection">Test Connection</span>
-        </button>
-      {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button
-            onclick="runTest('db')"
-            id="btn-db"
-            class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-          >
-            <i class="fas fa-database"></i>
-            <span data-i18n="test_connection">Test Connection</span>
-          </button>
-          <form action="/install-driver" method="POST" onsubmit="return pluginFormSubmit()">
-            <button
-              type="submit"
-              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
-              data-i18n-title="title_install_db_driver"
-            >
-              <i class="fas fa-download"></i>
-              <span data-i18n="install_db_driver">Install DB Driver</span>
-            </button>
-          </form>
-        </div>
-      {% endif %}
+      <button
+        onclick="runTest('db')"
+        id="btn-db"
+        class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3"
+      >
+        <i class="fas fa-database"></i>
+        <span data-i18n="test_connection">Test Connection</span>
+      </button>
       <div id="result-db" class="mt-4 hidden">
         <div class="p-4 rounded-lg text-white" id="result-db-box"></div>
       </div>
@@ -286,7 +263,6 @@
           </div>
           <p class="mb-3">${escapeTestOutput(data.message || 'Test failed')}</p>
           ${data.error ? `<pre class="test-result-scroll bg-black bg-opacity-30 p-3 rounded text-xs" tabindex="0" aria-label="Test error details">${escapeTestOutput(data.error)}</pre>` : ''}
-          ${data.canInstall ? `<div class='mt-3'><form action='/plugin/install/pynetdicom' method='POST'><button type='submit' class='bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2'><i class="fas fa-download"></i><span data-i18n="install_pynetdicom_plugin">Install pynetdicom Plugin</span></button></form></div>` : ''}
         `;
         logToConsole(data.message || 'Test failed!', 'error');
       }

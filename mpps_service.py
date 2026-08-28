@@ -11,6 +11,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict
 
+from flowworklist_paths import DATA_ROOT, ensure_data_layout
+
 # Workaround for broken NumPy builds on some Windows/Python setups.
 # pydicom/pynetdicom flows used here can run without NumPy.
 if os.environ.get('FLOWWORKLIST_DISABLE_NUMPY', '1') == '1':
@@ -22,7 +24,8 @@ from pynetdicom import AE, evt
 from mpps_actions import execute_mpps_actions, merge_mpps_config
 
 
-BASE_DIR = Path(__file__).parent
+ensure_data_layout()
+BASE_DIR = DATA_ROOT
 LOCK_FILE = BASE_DIR / "mpps_server.lock"
 CONFIG_FILE = BASE_DIR / "config.json"
 

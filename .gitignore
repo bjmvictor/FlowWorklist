@@ -3,3 +3,8 @@
 !/.github/
 !/.github/workflows/
 !/.github/workflows/publish-wiki.yml
+!/.github/workflows/build-release.yml
+!/flowworklist_paths.py
+!/config.initial.json
+!/packaging/
+!/packaging/**

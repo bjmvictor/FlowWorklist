@@ -32,6 +32,84 @@ FlowWorklist maps query results by position. SQL aliases are descriptive only; t
 - Normalize unsupported nulls to empty strings or a clinically approved default in SQL.
 - Validate character encoding and person-name separators with every target modality.
 
+## Quick dummy queries
+
+Use one of these queries to validate database connectivity, the 17-column contract, and a basic MWL C-FIND before connecting FlowWorklist to real worklist tables. Each query returns one fictitious CT procedure scheduled for the current date.
+
+These queries are for validation only. Do not use fictitious patients or unconditional dummy rows in production.
+
+### Oracle
+
+```sql
+SELECT
+  'FLOWTEST^PATIENT'                         AS patient_name,
+  'FLOWTEST001'                              AS patient_id,
+  '19900101'                                 AS birth_date,
+  'O'                                        AS sex,
+  'FlowWorklist validation CT'               AS procedure_description,
+  'FLOW-ACC-001'                             AS accession_number,
+  TO_CHAR(SYSDATE, 'YYYYMMDD')               AS scheduled_date,
+  TO_CHAR(SYSDATE, 'HH24MISS')               AS scheduled_time,
+  'FLOWTEST^PHYSICIAN'                       AS physician_name,
+  'CT'                                       AS modality,
+  'MEDIUM'                                   AS priority,
+  'OUTPATIENT'                               AS encounter_type,
+  'FLOW-ENC-001'                             AS encounter_id,
+  'FLOWWORKLIST_TEST'                        AS location,
+  'FLOW-CT-001'                              AS procedure_code,
+  'FlowWorklist validation CT'               AS code_meaning,
+  '99FLOW'                                   AS coding_scheme
+FROM DUAL
+```
+
+### PostgreSQL
+
+```sql
+SELECT
+  'FLOWTEST^PATIENT'                         AS patient_name,
+  'FLOWTEST001'                              AS patient_id,
+  '19900101'                                 AS birth_date,
+  'O'                                        AS sex,
+  'FlowWorklist validation CT'               AS procedure_description,
+  'FLOW-ACC-001'                             AS accession_number,
+  TO_CHAR(CURRENT_DATE, 'YYYYMMDD')           AS scheduled_date,
+  TO_CHAR(CURRENT_TIMESTAMP, 'HH24MISS')      AS scheduled_time,
+  'FLOWTEST^PHYSICIAN'                       AS physician_name,
+  'CT'                                       AS modality,
+  'MEDIUM'                                   AS priority,
+  'OUTPATIENT'                               AS encounter_type,
+  'FLOW-ENC-001'                             AS encounter_id,
+  'FLOWWORKLIST_TEST'                        AS location,
+  'FLOW-CT-001'                              AS procedure_code,
+  'FlowWorklist validation CT'               AS code_meaning,
+  '99FLOW'                                   AS coding_scheme
+```
+
+### MySQL
+
+```sql
+SELECT
+  'FLOWTEST^PATIENT'                         AS patient_name,
+  'FLOWTEST001'                              AS patient_id,
+  '19900101'                                 AS birth_date,
+  'O'                                        AS sex,
+  'FlowWorklist validation CT'               AS procedure_description,
+  'FLOW-ACC-001'                             AS accession_number,
+  DATE_FORMAT(CURRENT_DATE, '%Y%m%d')         AS scheduled_date,
+  DATE_FORMAT(CURRENT_TIMESTAMP, '%H%i%s')    AS scheduled_time,
+  'FLOWTEST^PHYSICIAN'                       AS physician_name,
+  'CT'                                       AS modality,
+  'MEDIUM'                                   AS priority,
+  'OUTPATIENT'                               AS encounter_type,
+  'FLOW-ENC-001'                             AS encounter_id,
+  'FLOWWORKLIST_TEST'                        AS location,
+  'FLOW-CT-001'                              AS procedure_code,
+  'FlowWorklist validation CT'               AS code_meaning,
+  '99FLOW'                                   AS coding_scheme
+```
+
+After saving the selected query, run **Database Test**, start MWL, and query for patient ID `FLOWTEST001` or modality `CT`. Remove the dummy query before configuring production data.
+
 ## Customization examples
 
 Add a controlled prefix without changing column position:

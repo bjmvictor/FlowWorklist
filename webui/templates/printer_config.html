@@ -30,7 +30,7 @@
       <form method="post" action="{{ url_for('install_printer_tool', name='dcmtk') }}">
         <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
           <i class="fas fa-download"></i>
-          <span data-i18n="printer_install_dcmtk_btn">Instalar DCMTK e ir para Plugins</span>
+          <span data-i18n="printer_install_dcmtk_btn">Instalar DCMTK</span>
         </button>
       </form>
     {% else %}
@@ -43,7 +43,7 @@
       <form method="post" action="{{ url_for('install_printer_tool', name='sumatra') }}">
         <button type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
           <i class="fas fa-download"></i>
-          <span data-i18n="printer_install_sumatra_btn">Instalar SumatraPDF e ir para Plugins</span>
+          <span data-i18n="printer_install_sumatra_btn">Instalar SumatraPDF</span>
         </button>
       </form>
     {% else %}
@@ -249,8 +249,8 @@
     const pt = {
       printer_page_title: 'Impressora Virtual DICOM',
       printer_title_help: 'Esta funcionalidade sobe um listener DICOM Print (AET/porta proprios), recebe os arquivos no spool/database, converte para PDF e envia para a impressora Windows configurada com o formato escolhido.',
-      printer_install_dcmtk_btn: 'Instalar DCMTK e ir para Plugins',
-      printer_install_sumatra_btn: 'Instalar SumatraPDF e ir para Plugins',
+      printer_install_dcmtk_btn: 'Instalar DCMTK',
+      printer_install_sumatra_btn: 'Instalar SumatraPDF',
       printer_dcmtk_installed: 'DCMTK instalado',
       printer_sumatra_installed: 'SumatraPDF instalado',
       printer_control_section: 'Controle',
@@ -297,8 +297,8 @@
     const en = {
       printer_page_title: 'Virtual DICOM Printer',
       printer_title_help: 'This feature starts a DICOM Print listener (separate AET/port), receives files in spool/database, converts to PDF, and sends to the configured Windows printer.',
-      printer_install_dcmtk_btn: 'Install DCMTK and go to Plugins',
-      printer_install_sumatra_btn: 'Install SumatraPDF and go to Plugins',
+      printer_install_dcmtk_btn: 'Install DCMTK',
+      printer_install_sumatra_btn: 'Install SumatraPDF',
       printer_dcmtk_installed: 'DCMTK installed',
       printer_sumatra_installed: 'SumatraPDF installed',
       printer_control_section: 'Control',

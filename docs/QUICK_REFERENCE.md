@@ -24,7 +24,6 @@ Default URL: `http://127.0.0.1:5000`
 | Home | Service state, lifecycle controls, and recent logs |
 | Config | MWL server, database, and query settings |
 | Tests | Database, C-ECHO, C-FIND, and integration checks |
-| Plugins | Optional Python drivers and system tools |
 | MPPS | Listener settings, test payload, and action definitions |
 | DICOM Printer | Optional receiver and print worker |
 | Logs | Application and service diagnostics |
@@ -67,4 +66,4 @@ Confirm the actual values in `config.json` before testing.
 .\flow.ps1 logs
 ```
 
-Then check `logs/`, `service_logs/`, the selected database driver, bind ports, AE titles, DSN reachability, and query output. See [Operations and Troubleshooting](wiki/Operations-and-Troubleshooting.md).
+Then check `logs/`, `service_logs/`, bind ports, AE titles, DSN reachability, and query output. Release packages already contain all supported database drivers. See [Operations and Troubleshooting](wiki/Operations-and-Troubleshooting.md).

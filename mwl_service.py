@@ -22,6 +22,8 @@ import atexit
 import json
 from pathlib import Path
 
+from flowworklist_paths import DATA_ROOT, ensure_data_layout
+
 from logging.handlers import RotatingFileHandler
 from typing import List, Dict, Any, Tuple
 from datetime import datetime
@@ -39,7 +41,8 @@ from pynetdicom.sop_class import ModalityWorklistInformationFind
 from dicom_printer_service import DicomPrinterRuntime
 
 # --- LOCKFILE PARA EVITAR EXECUÇÃO DO CÓDIGO DUPLICADO ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ensure_data_layout()
+BASE_DIR = str(DATA_ROOT)
 LOCK_FILE = os.path.join(BASE_DIR, "mwl_server.lock")
 
 def is_process_running(pid):
@@ -90,7 +93,7 @@ def cleanup():
 atexit.register(cleanup)
 
 # --- CONFIGURAÇÃO DE LOGGING DETALHADO ---
-LOG_DIR = "logs"
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 

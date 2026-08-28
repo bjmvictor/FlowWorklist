@@ -1,0 +1,20 @@
+<service>
+  <id>FlowWorklist</id>
+  <name>FlowWorklist</name>
+  <description>DICOM Worklist management interface and service supervisor.</description>
+  <env name="FLOWWORKLIST_DATA_DIR" value="%ProgramData%\FlowWorklist" />
+  <env name="FLOWWORKLIST_AUTOSTART_SERVICES" value="1" />
+  <executable>%BASE%\FlowWorklist.exe</executable>
+  <workingdirectory>%BASE%</workingdirectory>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="15 sec" />
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>30 sec</stoptimeout>
+  <logpath>%ProgramData%\FlowWorklist\service_logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10485760</sizeThreshold>
+    <keepFiles>4</keepFiles>
+  </log>
+</service>

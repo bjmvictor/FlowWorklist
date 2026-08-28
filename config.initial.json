@@ -1,0 +1,32 @@
+{
+  "server": {
+    "aet": "",
+    "port": 11112,
+    "host": "0.0.0.0",
+    "client_aet": ""
+  },
+  "database": {
+    "type": "",
+    "user": "",
+    "password": "",
+    "dsn": "",
+    "oracle_client_lib_dir": "",
+    "query": ""
+  },
+  "ui": {
+    "language": "en"
+  },
+  "runtime": {
+    "autostart_services": false,
+    "ui_host": "127.0.0.1",
+    "ui_port": 5000,
+    "debug": false
+  },
+  "mpps": {
+    "enabled": false,
+    "start_with_worklist": true
+  },
+  "dicom_printer": {
+    "enabled": false
+  }
+}

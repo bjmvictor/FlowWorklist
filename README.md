@@ -50,7 +50,31 @@
 
 MWL and MPPS are related operationally but are separate DICOM services. MWL sends scheduled procedure data in response to a modality query. The modality later reports procedure progress or completion to the MPPS receiver. FlowWorklist only performs an MPPS action when that action is enabled and its event/status filters match.
 
-## Quick start
+## Install a release
+
+Release packages include Python, Waitress, DICOM libraries, and all supported database drivers. The application does not download Python packages at runtime.
+
+### Windows installer
+
+Download `FlowWorklist-Setup-VERSION-Windows-x64.exe`, run it as an administrator, and open **FlowWorklist** from the Start menu. The installer registers an automatically restarted Windows service and keeps writable data under `%ProgramData%\FlowWorklist`.
+
+### Windows portable
+
+Extract `FlowWorklist-Portable-VERSION-Windows-x64.zip` into a writable directory and run `FlowWorklist.exe`. Portable configuration and logs are stored in the package's `data` directory.
+
+### Linux portable or service
+
+```bash
+tar -xzf FlowWorklist-Portable-VERSION-Linux-x64.tar.gz
+cd FlowWorklist
+./FlowWorklist
+```
+
+For a system service, run `sudo ./install-service.sh`. This installs the application under `/opt/flowworklist`, stores data under `/var/lib/flowworklist`, and enables the `flowworklist.service` systemd unit.
+
+Open `http://127.0.0.1:5000`, complete **Config**, and run the database and DICOM tests before starting MWL. Oracle, PostgreSQL, and MySQL drivers are already included.
+
+## Run from source
 
 ### Requirements
 
@@ -67,7 +91,7 @@ pip install -r requirements.txt
 .\flow start app
 ```
 
-Open `http://127.0.0.1:5000`, complete **Config**, install the selected database driver when prompted, and run the database and DICOM tests before starting the MWL service.
+Open `http://127.0.0.1:5000`, complete **Config**, and run the database and DICOM tests before starting the MWL service.
 
 ```powershell
 .\flow start service
@@ -146,7 +170,7 @@ Production deployments should:
 3. bind the management UI to localhost unless it is protected by an authenticated TLS reverse proxy;
 4. restrict MWL and MPPS ports to approved modality networks;
 5. store `config.json` outside version control and restrict its file permissions;
-6. supervise the application with NSSM, systemd, or another process manager;
+6. use the service installed by the release package, or supervise source deployments with systemd or another process manager;
 7. enable `runtime.autostart_services` only when the management process should own MWL/MPPS startup;
 8. validate database connectivity, C-ECHO, C-FIND, MPPS, action filters, logs, restart behavior, and backup recovery before go-live.
 
@@ -159,7 +183,7 @@ See the canonical [Production Deployment Guide](docs/DEPLOYMENT.md).
 - [Production deployment](docs/DEPLOYMENT.md)
 - [SQL query contract](docs/SQL_QUERY_GUIDE.md)
 - [DICOM column mapping](docs/COLUMN_MAPPING_GUIDE.md)
-- [Windows build guide](docs/BUILD_GUIDE.md)
+- [Build and release guide](docs/BUILD_GUIDE.md)
 - [Architecture](docs/wiki/Architecture.md)
 - [Operations and troubleshooting](docs/wiki/Operations-and-Troubleshooting.md)
 - [Security](docs/wiki/Security.md)

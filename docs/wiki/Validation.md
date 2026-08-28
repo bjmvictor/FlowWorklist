@@ -3,7 +3,7 @@
 ## Production checklist
 
 - Valid JSON with no placeholders and a least-privilege database account. Use read-only access unless an enabled MPPS SQL action explicitly requires constrained writes.
-- Installed driver for the selected database engine.
+- Successful connection using the bundled driver for the selected database engine.
 - Correct query shape and column order.
 - Successful C-ECHO and C-FIND between server and modality.
 - Correct AE titles, ports, dates, times, modalities, and accession numbers.

@@ -23,7 +23,7 @@ Each topic has one canonical document. Supporting wiki pages provide short opera
 
 ## Packaging and source control
 
-- [Build Guide](BUILD_GUIDE.md): Windows executable packaging.
+- [Build and Release Guide](BUILD_GUIDE.md): Windows installer, Windows portable, Linux portable, service setup, and automated releases.
 - [Git Quick Start](GIT_QUICKSTART.md): repository setup and release basics.
 
 ## Documentation ownership

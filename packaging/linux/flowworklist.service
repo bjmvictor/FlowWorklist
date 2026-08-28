@@ -1,0 +1,20 @@
+[Unit]
+Description=FlowWorklist DICOM Worklist Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=flowworklist
+Group=flowworklist
+WorkingDirectory=/opt/flowworklist
+Environment=FLOWWORKLIST_DATA_DIR=/var/lib/flowworklist
+Environment=FLOWWORKLIST_AUTOSTART_SERVICES=1
+ExecStart=/opt/flowworklist/FlowWorklist
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

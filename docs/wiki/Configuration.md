@@ -11,7 +11,7 @@ Create `config.json` from `config.example.json`. The real file is local, contain
 | `mpps` | optional MPPS listener and startup behavior |
 | `dicom_printer` | optional DICOM Print receiver and worker |
 
-Use the **Config** page for MWL and database settings, **MPPS** for listener/action settings, and **DICOM Printer** for print settings. Install optional drivers from **Config** or **Plugins**.
+Use the **Config** page for MWL and database settings, **MPPS** for listener/action settings, and **DICOM Printer** for print settings. Release packages include all supported Oracle, PostgreSQL, and MySQL drivers.
 
 The worklist query is positional and must return exactly 17 columns. Use the [SQL Query Guide](https://github.com/bjmvictor/FlowWorklist/blob/main/docs/SQL_QUERY_GUIDE.md) as the contract and the [Column Mapping Guide](https://github.com/bjmvictor/FlowWorklist/blob/main/docs/COLUMN_MAPPING_GUIDE.md) for detailed behavior.
 

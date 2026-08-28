@@ -101,7 +101,6 @@ FlowWorklist/                          ~220 KB (without venv)
 │       ├── config.html                 5.2 KB
 │       ├── logs.html                   4.8 KB
 │       ├── tests.html                  9.5 KB
-│       ├── plugins.html                6.2 KB
 │       └── view_log.html               3.6 KB
 └── 📁 logs/
     └── .gitkeep                       (empty, maintains directory)

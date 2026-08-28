@@ -17,15 +17,22 @@ import threading
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
+_BOOTSTRAP_ROOT = Path(__file__).resolve().parent.parent
+if str(_BOOTSTRAP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BOOTSTRAP_ROOT))
+
+from flowworklist_paths import ASSET_ROOT, SOURCE_ROOT, ensure_data_layout
+
 # Workaround for broken NumPy builds on some Windows/Python setups.
 # pydicom is used in tests and can run without NumPy for these flows.
 if os.environ.get('FLOWWORKLIST_DISABLE_NUMPY', '1') == '1':
     sys.modules.setdefault('numpy', None)
 
-# Ensure project root on sys.path before importing local modules
-ROOT = Path(__file__).parent.parent  # Parent of webui/
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+# Keep writable configuration and logs outside installed binaries.
+ROOT = ensure_data_layout()
+CODE_ROOT = SOURCE_ROOT
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
 
 import flow as manager
 from mpps_actions import (
@@ -37,14 +44,19 @@ from mpps_actions import (
     delete_action_file,
 )
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+WEB_ASSETS = ASSET_ROOT / "webui"
+app = Flask(
+    __name__,
+    template_folder=str(WEB_ASSETS / "templates"),
+    static_folder=str(WEB_ASSETS / "static"),
+)
 
 # Ensure project root is on sys.path so service_manager and other modules resolve
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
 
 # Ensure venv site-packages is in sys.path for proper module imports
-_lib_path = ROOT / 'Lib' / 'site-packages'
+_lib_path = CODE_ROOT / 'Lib' / 'site-packages'
 if _lib_path.exists() and str(_lib_path) not in sys.path:
     sys.path.insert(0, str(_lib_path))
 
@@ -883,10 +895,7 @@ def config():
             notice=notice,
             status=status,
             oracle_client_dirs=oracle_client_dirs,
-            db_plugins={
-                db_type: is_db_plugin_installed(db_type)
-                for db_type in ('oracle', 'postgres', 'mysql')
-            },
+            db_plugins={db_type: True for db_type in ('oracle', 'postgres', 'mysql')},
         )
 
 
@@ -1091,7 +1100,8 @@ def tests():
     cfg_path = ROOT / "config.json"
     cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
     db_type = (cfg.get('database', {}).get('type') or 'oracle').lower()
-    plugin_installed = is_db_plugin_installed(db_type)
+    # Complete distributions always include every supported database driver.
+    plugin_installed = True
     printer_enabled = bool((cfg.get('dicom_printer') or {}).get('enabled'))
     mpps_enabled = bool((cfg.get('mpps') or {}).get('enabled'))
     return render_template(
@@ -1107,15 +1117,18 @@ def tests():
 
 @app.route('/plugins')
 def plugins_page():
-    items, current = plugins_status()
-    notice = request.args.get('notice')
-    status = request.args.get('status')
-    manual_url = request.args.get('manual_url')
-    return render_template('plugins.html', plugins=items, current=current, notice=notice, status=status, manual_url=manual_url)
+    return redirect(url_for('config'))
 
 
 @app.route('/plugin/install/<name>', methods=['POST'])
 def plugin_install(name):
+    return jsonify({
+        'ok': False,
+        'installed': True,
+        'message': 'Runtime plugin management was removed; supported drivers are bundled.',
+    }), 410
+
+    # Legacy implementation retained below for source compatibility history.
     name = (name or '').lower()
     mapping = {
         'oracle': ORACLE_PY_PACKAGES,
@@ -1190,6 +1203,12 @@ def uninstall_printer_tool(name):
 
 @app.route('/plugin/uninstall/<name>', methods=['POST'])
 def plugin_uninstall(name):
+    return jsonify({
+        'ok': False,
+        'message': 'Bundled drivers cannot be removed at runtime.',
+    }), 410
+
+    # Legacy implementation retained below for source compatibility history.
     name = (name or '').lower()
     mapping = {
         'oracle': ORACLE_PY_PACKAGES,
@@ -1439,18 +1458,8 @@ def test_db():
 
 @app.route('/install-driver', methods=['POST'])
 def install_driver_route():
-    """Install the database driver for the current config."""
-    log_action("Plugin: Install driver", "User requested database driver installation")
-    try:
-        cfg_path = ROOT / "config.json"
-        cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
-        db_type = cfg.get('database', {}).get('type', 'oracle')
-        ok, msg = install_db_driver(db_type)
-        log_action("Plugin: Install driver result", f"Driver={db_type}, Success={ok}, Message={msg}")
-        status = 'success' if ok else 'error'
-        return redirect(url_for('tests', notice=msg, status=status))
-    except Exception as e:
-        return redirect(url_for('tests', notice=f'Install error: {e}', status='error'))
+    """Compatibility redirect: supported drivers are included in the distribution."""
+    return redirect(url_for('tests'))
 
 
 @app.route('/logs/clear', methods=['POST'])
@@ -2016,17 +2025,23 @@ def setlang(lang):
 def set_language():
     try:
         data = request.get_json(silent=True) or {}
-        lang = (data.get('lang') or 'en').lower()[:2]
-        log_action("Language changed", f"User changed language to: {lang}")
-        if not lang:
-            return jsonify({'ok': False, 'message': 'Missing lang'}), 400
+        requested_lang = str(data.get('lang') or '').strip().lower()
+        lang = requested_lang if requested_lang == 'fil' else requested_lang[:2]
+        supported_languages = {'pt', 'en', 'es', 'fr', 'zh', 'ru', 'ja', 'it', 'tr', 'fil'}
+        if not lang or lang not in supported_languages:
+            return jsonify({'ok': False, 'message': 'Unsupported language'}), 400
         cfg_path = ROOT / 'config.json'
-        cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+        cfg = json.loads(cfg_path.read_text(encoding='utf-8')) if cfg_path.exists() else {}
         ui = cfg.get('ui') or {}
+        configured_lang = str(ui.get('language') or '').strip().lower()
+        previous_lang = configured_lang if configured_lang == 'fil' else configured_lang[:2]
+        if previous_lang == lang:
+            return jsonify({'ok': True, 'changed': False})
         ui['language'] = lang
         cfg['ui'] = ui
-        cfg_path.write_text(json.dumps(cfg, indent=2))
-        return jsonify({'ok': True})
+        cfg_path.write_text(json.dumps(cfg, indent=2), encoding='utf-8')
+        log_action("Language changed", f"User changed language from {previous_lang or 'unset'} to: {lang}")
+        return jsonify({'ok': True, 'changed': True})
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
 
@@ -2086,4 +2101,8 @@ if __name__ == '__main__':
     host = os.environ.get("FLOWWORKLIST_UI_HOST", str(runtime_cfg.get("ui_host", "127.0.0.1")))
     port = _to_int(os.environ.get("FLOWWORKLIST_UI_PORT", runtime_cfg.get("ui_port", 5000)), 5000)
     debug = _to_bool(os.environ.get("FLOWWORKLIST_DEBUG"), _to_bool(runtime_cfg.get("debug"), False))
-    app.run(host=host, port=port, debug=debug, use_reloader=False)
+    if debug:
+        app.run(host=host, port=port, debug=True, use_reloader=False)
+    else:
+        from waitress import serve
+        serve(app, host=host, port=port, threads=8)

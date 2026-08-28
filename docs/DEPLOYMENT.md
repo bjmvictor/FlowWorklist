@@ -52,7 +52,15 @@ Create `config.json` from `config.example.json`. Use the web interface to edit i
 
 Keep the UI on localhost unless an authenticated TLS reverse proxy is required. Restrict database privileges to the MWL query and to the exact statements required by enabled MPPS SQL actions.
 
-## Windows with NSSM
+## Windows release installer
+
+Use `FlowWorklist-Setup-VERSION-Windows-x64.exe` for normal production installation. It installs immutable binaries under `C:\Program Files\FlowWorklist`, stores writable site data under `C:\ProgramData\FlowWorklist`, and registers the automatically started `FlowWorklist` Windows service through the bundled WinSW wrapper.
+
+The service runs the management interface through Waitress and sets `FLOWWORKLIST_AUTOSTART_SERVICES=1`, allowing the management process to supervise MWL and MPPS. Use the Start menu shortcut to open `http://127.0.0.1:5000`.
+
+Release packages include the Oracle Thin, PostgreSQL, and MySQL Python drivers. Do not install or remove packages inside an installed release.
+
+## Windows source deployment
 
 Use a dedicated service account with read access to the application, execute access to Python, modify access to runtime/log directories, and only the required database/network permissions.
 
@@ -70,7 +78,11 @@ nssm status FlowWorklist
 
 Do not point NSSM directly at `mwl_service.py` when the management app owns automatic service startup.
 
-## Linux with systemd
+## Linux release with systemd
+
+Extract the Linux portable archive and run `sudo ./install-service.sh`. The installer copies the bundle to `/opt/flowworklist`, creates the non-login `flowworklist` account, stores writable data under `/var/lib/flowworklist`, and enables `flowworklist.service`.
+
+## Linux source deployment with systemd
 
 Create a dedicated user and install the application under a controlled directory such as `/opt/flowworklist`.
 
@@ -168,7 +180,7 @@ Exclude credentials and clinical data from general-purpose source repositories. 
 1. Back up configuration and action definitions.
 2. Review `CHANGELOG.md`.
 3. Stop the supervisor.
-4. Deploy the new code and update the virtual environment with `pip install -r requirements.txt`.
+4. For an installed release, run the newer installer over the existing version. For a source deployment, deploy the new code and update the virtual environment with `pip install -r requirements.txt`.
 5. Run syntax, database, and DICOM tests.
 6. Start the supervisor and verify MWL and MPPS state.
 7. Keep a tested rollback package until acceptance is complete.
